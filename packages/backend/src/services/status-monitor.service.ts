@@ -214,22 +214,53 @@ export class StatusMonitorService {
 
 
              try {
-                 // 使用 df -kP / 获取 POSIX 标准格式输出，更稳定
-                 const dfOutput = await this.executeSshCommand(sshClient, "df -kP /");
-                 const lines = dfOutput.split('\n');
-                 if (lines.length >= 2) {
-                     const parts = lines[1].split(/\s+/);
-                     if (parts.length >= 5) {
-                         const total = parseInt(parts[1], 10);
-                         const used = parseInt(parts[2], 10);
-                         const percentMatch = parts[4].match(/(\d+)%/);
-                         if (!isNaN(total) && !isNaN(used) && percentMatch) {
-                             status.diskTotal = total; status.diskUsed = used;
-                             status.diskPercent = parseFloat(percentMatch[1]);
-                         }
+                 let dfCommand = "df -kP /"; // 优先尝试 POSIX 标准格式
+                 let dfOutput: string;
+                 try {
+                     dfOutput = await this.executeSshCommand(sshClient, dfCommand);
+                 } catch (errP) {
+                     dfCommand = "df -k /"; // 备用方案
+                     try {
+                        dfOutput = await this.executeSshCommand(sshClient, dfCommand);
+                     } catch (errK) {
+                        dfOutput = "";
                      }
                  }
-             } catch (err) { /* 静默处理 */ }
+
+                 if (dfOutput) {
+                     const lines = dfOutput.split('\n');
+                     let parsedDiskInfo = false;
+                     // 从第二行开始查找根挂载点信息 (跳过表头)
+                     for (let i = 1; i < lines.length; i++) {
+                         const line = lines[i].trim();
+                         // 确保是根挂载点，通常以 " /" 结尾
+                         if (line.endsWith(" /")) {
+                             const parts = line.split(/\s+/);
+                             // 预期 parts 至少包含: 文件系统, 总量(KB), 已用(KB), 可用(KB), 百分比%, 挂载点
+                             // 例如: /dev/sda1 10307920 3841884 5941800 40% /
+                             if (parts.length >= 5) {
+                                 const total = parseInt(parts[1], 10);
+                                 const used = parseInt(parts[2], 10);
+                                 const percentStr = parts.find(p => p.endsWith('%')); // 查找百分比字符串
+
+                                 if (percentStr) {
+                                     const percentMatch = percentStr.match(/(\d+)%/);
+                                     if (!isNaN(total) && !isNaN(used) && percentMatch && percentMatch[1]) {
+                                         status.diskTotal = total; // KB
+                                         status.diskUsed = used;   // KB
+                                         status.diskPercent = parseFloat(percentMatch[1]);
+                                         parsedDiskInfo = true;
+                                         break;
+                                     }
+                                 }
+                             }
+                         }
+                     }
+
+                 }
+             } catch (err) {
+                 // 如果捕获到错误 (例如 executeSshCommand 内部的 Promise reject), disk* 字段将保持 undefined
+             }
 
             try {
                 const procStatOutput = await this.executeSshCommand(sshClient, 'cat /proc/stat');
