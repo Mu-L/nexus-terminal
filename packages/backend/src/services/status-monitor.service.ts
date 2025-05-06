@@ -155,32 +155,61 @@ export class StatusMonitorService {
 
 
              try {
-                 const freeOutput = await this.executeSshCommand(sshClient, 'free -m');
+                 let freeCommand = 'free -m';
+                 let isBusyBox = false;
+                 try {
+                     const busyboxCheck = await this.executeSshCommand(sshClient, 'busybox --help');
+                     if (busyboxCheck.includes('BusyBox')) {
+                         freeCommand = 'free';
+                         isBusyBox = true;
+                     }
+                 } catch (err) {
+                     // 如果检查失败，默认使用 free -m
+                 }
+                 const freeOutput = await this.executeSshCommand(sshClient, freeCommand);
                  const lines = freeOutput.split('\n');
                  const memLine = lines.find(line => line.startsWith('Mem:'));
                  const swapLine = lines.find(line => line.startsWith('Swap:'));
                  if (memLine) {
                      const parts = memLine.split(/\s+/);
-                     if (parts.length >= 4) {
-                         const total = parseInt(parts[1], 10);
-                         const used = parseInt(parts[2], 10);
-                         if (!isNaN(total) && !isNaN(used)) {
-                             status.memTotal = total; status.memUsed = used;
-                             status.memPercent = total > 0 ? parseFloat(((used / total) * 100).toFixed(1)) : 0;
+                     if (parts.length >= 3) {
+                         let totalVal = parseInt(parts[1], 10);
+                         let usedVal = parseInt(parts[2], 10);
+
+                         if (isBusyBox) { 
+                             if (!isNaN(totalVal)) totalVal = Math.round(totalVal / 1024);
+                             if (!isNaN(usedVal)) usedVal = Math.round(usedVal / 1024);
+                         }
+
+                         if (!isNaN(totalVal) && !isNaN(usedVal)) {
+                             status.memTotal = totalVal;
+                             status.memUsed = usedVal;
+                             status.memPercent = totalVal > 0 ? parseFloat(((usedVal / totalVal) * 100).toFixed(1)) : 0;
                          }
                      }
                  }
                  if (swapLine) {
                      const parts = swapLine.split(/\s+/);
-                     if (parts.length >= 4) {
-                         const total = parseInt(parts[1], 10);
-                         const used = parseInt(parts[2], 10);
-                         if (!isNaN(total) && !isNaN(used)) {
-                             status.swapTotal = total; status.swapUsed = used;
-                             status.swapPercent = total > 0 ? parseFloat(((used / total) * 100).toFixed(1)) : 0;
+                     if (parts.length >= 3) {
+                         let totalVal = parseInt(parts[1], 10);
+                         let usedVal = parseInt(parts[2], 10);
+
+                         if (isBusyBox) {
+                             if (!isNaN(totalVal)) totalVal = Math.round(totalVal / 1024);
+                             if (!isNaN(usedVal)) usedVal = Math.round(usedVal / 1024);
+                         }
+
+                         if (!isNaN(totalVal) && !isNaN(usedVal)) {
+                             status.swapTotal = totalVal;
+                             status.swapUsed = usedVal;
+                             status.swapPercent = totalVal > 0 ? parseFloat(((usedVal / totalVal) * 100).toFixed(1)) : 0;
                          }
                      }
-                 } else { status.swapTotal = 0; status.swapUsed = 0; status.swapPercent = 0; }
+                 } else {
+                     status.swapTotal = 0;
+                     status.swapUsed = 0;
+                     status.swapPercent = 0;
+                 }
              } catch (err) { /* 静默处理 */ }
 
 
