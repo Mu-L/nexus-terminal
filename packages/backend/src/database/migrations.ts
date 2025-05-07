@@ -40,6 +40,16 @@ const columnExists = async (db: Database, tableName: string, columnName: string)
     });
 };
 
+// 辅助函数：获取表的创建 SQL
+const getTableCreateSQL = async (db: Database, tableName: string): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+        db.get("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", [tableName], (err, row: any) => {
+            if (err) reject(err);
+            else resolve(row ? row.sql : null);
+        });
+    });
+};
+
 
 const definedMigrations: Migration[] = [
     {
@@ -119,6 +129,102 @@ const definedMigrations: Migration[] = [
         sql: `
             -- Add the notes column to the connections table, allowing NULL values
             ALTER TABLE connections ADD COLUMN notes TEXT NULL;
+        `
+    },
+    {
+        id: 5,
+        name: 'Update connections table to allow VNC type in CHECK constraint',
+        check: async (db: Database): Promise<boolean> => {
+            const createSQL = await getTableCreateSQL(db, 'connections');
+            if (createSQL) {
+                // 检查 CHECK 约束是否已经包含了 VNC
+                // 这会检查 'VNC' 是否是允许的类型之一
+                // 例如: CHECK(type IN ('SSH', 'RDP', 'VNC'))
+                const constraintRegex = /CHECK\s*\(\s*LOWER\(type\)\s+IN\s*\(([^)]+)\)\s*\)/i; // 兼容大小写不敏感的检查
+                const constraintRegexStrict = /CHECK\s*\(\s*type\s+IN\s*\(([^)]+)\)\s*\)/i;
+                
+                let match = createSQL.match(constraintRegex);
+                if (!match) {
+                    match = createSQL.match(constraintRegexStrict);
+                }
+
+                if (match && match[1]) {
+                    const allowedTypes = match[1].split(',').map(t => t.trim().replace(/'/g, "").toLowerCase());
+                    return !allowedTypes.includes('vnc'); // 如果 'vnc' 不在允许类型中，则需要运行迁移
+                }
+                // 如果没有找到明确的 CHECK 约束或格式不匹配，保守地运行迁移
+                console.warn('[Migrations] Check for VNC in connections.type: Could not parse CHECK constraint from SQL. Assuming migration is needed.');
+                return true;
+            }
+            console.warn('[Migrations] Check for VNC in connections.type: Could not get table create SQL. Assuming migration is needed.');
+            return true; // 如果表不存在或无法获取 SQL，则运行迁移
+        },
+        sql: `
+            PRAGMA foreign_keys=off;
+
+            -- 步骤 1: 重命名旧表
+            ALTER TABLE connections RENAME TO connections_old_for_vnc_constraint_update;
+            ALTER TABLE connection_tags RENAME TO connection_tags_old_for_vnc_constraint_update;
+
+            -- 步骤 2: 创建新表 (与 schema.ts 中的定义一致)
+            CREATE TABLE connections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NULL,
+                type TEXT NOT NULL CHECK(type IN ('SSH', 'RDP', 'VNC')) DEFAULT 'SSH',
+                host TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                auth_method TEXT NOT NULL CHECK(auth_method IN ('password', 'key')),
+                encrypted_password TEXT NULL,
+                encrypted_private_key TEXT NULL,
+                encrypted_passphrase TEXT NULL,
+                proxy_id INTEGER NULL,
+                ssh_key_id INTEGER NULL,
+                notes TEXT NULL,
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                last_connected_at INTEGER NULL,
+                FOREIGN KEY (proxy_id) REFERENCES proxies(id) ON DELETE SET NULL,
+                FOREIGN KEY (ssh_key_id) REFERENCES ssh_keys(id) ON DELETE SET NULL
+            );
+
+            CREATE TABLE connection_tags (
+                connection_id INTEGER NOT NULL,
+                tag_id INTEGER NOT NULL,
+                PRIMARY KEY (connection_id, tag_id),
+                FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+            );
+
+            -- 步骤 3: 从旧表复制数据到新表
+            INSERT INTO connections (
+                id, name, type, host, port, username, auth_method,
+                encrypted_password, encrypted_private_key, encrypted_passphrase,
+                proxy_id, ssh_key_id, notes, created_at, updated_at, last_connected_at
+            )
+            SELECT
+                id, name,
+                CASE
+                    WHEN UPPER(type) = 'RDP' THEN 'RDP'
+                    WHEN UPPER(type) = 'SSH' THEN 'SSH'
+                    WHEN UPPER(type) = 'VNC' THEN 'VNC'
+                    ELSE 'SSH'
+                END,
+                host, port, username, auth_method,
+                encrypted_password, encrypted_private_key, encrypted_passphrase,
+                proxy_id, ssh_key_id, notes, created_at, updated_at, last_connected_at
+            FROM connections_old_for_vnc_constraint_update;
+
+            INSERT INTO connection_tags (connection_id, tag_id)
+            SELECT connection_id, tag_id FROM connection_tags_old_for_vnc_constraint_update;
+
+            -- 步骤 4: 删除旧表
+            DROP TABLE connections_old_for_vnc_constraint_update;
+            DROP TABLE connection_tags_old_for_vnc_constraint_update;
+
+            PRAGMA foreign_keys=on;
+
+            ANALYZE; -- 重新分析数据库模式
         `
     },
     // --- 未来可以添加更多迁移 ---
