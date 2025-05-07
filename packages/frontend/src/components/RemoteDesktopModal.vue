@@ -25,6 +25,11 @@ const rdpDisplayRef = ref<HTMLDivElement | null>(null);
 const rdpContainerRef = ref<HTMLDivElement | null>(null);
 const guacClient = ref<any | null>(null);
 const connectionStatus = ref<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+const isResizing = ref(false);
+const resizeStartX = ref(0);
+const resizeStartY = ref(0);
+const initialModalWidthForResize = ref(0); // Renamed to avoid conflict if other 'initialModalWidth' exists
+const initialModalHeightForResize = ref(0); // Renamed
 const statusMessage = ref('');
 const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
@@ -502,6 +507,11 @@ onUnmounted(() => {
   disconnectGuacamole(); // 这里已经调用了 removeInputListeners
   document.removeEventListener('mousemove', onRestoreButtonMouseMove);
   document.removeEventListener('mouseup', onRestoreButtonMouseUp);
+  // Clean up resize listeners if component is unmounted while resizing
+  if (isResizing.value) {
+    document.removeEventListener('mousemove', doResize);
+    document.removeEventListener('mouseup', stopResize);
+  }
 });
 
 watch(() => props.connection, (newConnection, oldConnection) => {
@@ -529,6 +539,59 @@ const computedModalStyle = computed(() => {
   };
 });
 
+// Watch for modal size changes to update Guacamole client
+watchEffect(() => {
+  const currentStyle = computedModalStyle.value; // Dependency
+  if (guacClient.value && connectionStatus.value === 'connected' && rdpContainerRef.value) {
+    nextTick(() => {
+      if (rdpContainerRef.value && guacClient.value) {
+        const displayWidth = rdpContainerRef.value.offsetWidth;
+        const displayHeight = rdpContainerRef.value.offsetHeight;
+        if (displayWidth > 0 && displayHeight > 0) {
+          // console.log(`[RDP Modal] Resizing Guacamole display to: ${displayWidth}x${displayHeight} due to style change.`);
+          guacClient.value.sendSize(displayWidth, displayHeight);
+        }
+      }
+    });
+  }
+});
+
+const initResize = (event: MouseEvent) => {
+  isResizing.value = true;
+  resizeStartX.value = event.clientX;
+  resizeStartY.value = event.clientY;
+  initialModalWidthForResize.value = desiredModalWidth.value;
+  initialModalHeightForResize.value = desiredModalHeight.value;
+
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('mouseup', stopResize);
+  event.preventDefault();
+};
+
+const doResize = (event: MouseEvent) => {
+  if (!isResizing.value) return;
+
+  const deltaX = event.clientX - resizeStartX.value;
+  const deltaY = event.clientY - resizeStartY.value;
+
+  let newWidth = initialModalWidthForResize.value + deltaX;
+  let newHeight = initialModalHeightForResize.value + deltaY;
+
+  newWidth = Math.max(MIN_MODAL_WIDTH, newWidth);
+  newHeight = Math.max(MIN_MODAL_HEIGHT, newHeight);
+
+  desiredModalWidth.value = newWidth;
+  desiredModalHeight.value = newHeight;
+};
+
+const stopResize = () => {
+  if (!isResizing.value) return;
+  isResizing.value = false;
+  document.removeEventListener('mousemove', doResize);
+  document.removeEventListener('mouseup', stopResize);
+  // Guacamole size update is handled by the watchEffect above
+};
+
 </script>
 <template>
   <div
@@ -552,7 +615,7 @@ const computedModalStyle = computed(() => {
     <div
       v-show="!isMinimized"
       :style="computedModalStyle"
-      class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border pointer-events-auto"
+      class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border pointer-events-auto relative"
     >
       <div class="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
         <h3 class="text-base font-semibold truncate">
@@ -637,8 +700,14 @@ const computedModalStyle = computed(() => {
              </button>
          </div>
        </div>
-    </div>
-  </div>
+       <!-- Resize Handle -->
+       <div
+         class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-10 bg-transparent hover:bg-primary-dark hover:bg-opacity-30"
+         title="Resize"
+         @mousedown.stop="initResize"
+       ></div>
+   </div>
+ </div>
 </template>
 <style scoped>
 .rdp-display-container {
