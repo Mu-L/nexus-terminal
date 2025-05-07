@@ -920,6 +920,9 @@
     },
     "reconnectTooltip": "Reconnect to the remote desktop"
   },
+  "vncModal": {
+    "title": "VNC Session"
+  },
   "commandInputBar": {
     "placeholder": "Enter command and press Enter to send...",
     "searchPlaceholder": "Search in terminal...",

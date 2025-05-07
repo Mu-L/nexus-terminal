@@ -589,6 +589,9 @@
         "title": "リモートデスクトップ",
         "titlePlaceholder": "リモートデスクトップ接続"
     },
+    "vncModal": {
+        "title": "VNCセッション"
+    },
     "settings": {
         "appearance": {
             "customizeButton": "外観をカスタマイズ",
