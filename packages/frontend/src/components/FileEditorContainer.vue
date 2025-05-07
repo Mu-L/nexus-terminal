@@ -328,7 +328,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <span v-if="currentTabSaveStatus === 'success'" class="save-status success">✅ {{ t('fileManager.saveSuccess') }}</span>
           <span v-if="currentTabSaveStatus === 'error'" class="save-status error">❌ {{ t('fileManager.saveError') }}: {{ currentTabSaveError }}</span>
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab || !currentTabIsModified" class="save-btn">
-            {{ currentTabIsSaving ? t('fileManager.saving') : t('fileManager.actions.save') }}
+            {{ t('fileManager.actions.save') }}
           </button>
           <!-- 关闭/最小化按钮已移除 -->
         </div>

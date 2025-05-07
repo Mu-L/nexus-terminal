@@ -509,7 +509,7 @@ onBeforeUnmount(() => {
           <span v-if="currentTabSaveStatus === 'success'" class="save-status success">✅ {{ t('fileManager.saveSuccess') }}</span>
           <span v-if="currentTabSaveStatus === 'error'" class="save-status error">❌ {{ t('fileManager.saveError') }}: {{ currentTabSaveError }}</span>
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab" class="save-btn">
-            {{ currentTabIsSaving ? t('fileManager.saving') : t('fileManager.actions.save') }}
+            {{ t('fileManager.actions.save') }}
           </button>
           <button @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
         </div>
