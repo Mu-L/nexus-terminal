@@ -306,15 +306,8 @@ const handleConnect = (connectionId: number, event?: MouseEvent | KeyboardEvent)
 
   closeContextMenu(); // 关闭右键菜单
 
-  if (connection.type === 'RDP') {
-    console.log(`[WkspConnList] RDP connection clicked (ID: ${connectionId}). Calling sessionStore.openRdpModal.`);
-    // --- 修改：调用 Store Action ---
-    sessionStore.openRdpModal(connection);
-  } else {
-    console.log(`[WkspConnList] Non-RDP connection clicked (ID: ${connectionId}, Type: ${connection.type}). Emitting connect-request.`);
-    // 对于非 RDP 连接，保持原有逻辑，发出事件给父组件处理
-    emit('connect-request', connectionId);
-  }
+  // 统一发出 connect-request 事件，让 sessionStore.handleConnectRequest 处理模态框和会话
+  emit('connect-request', connectionId);
 };
 
 // --- 移除 closeRdpModal 方法 ---

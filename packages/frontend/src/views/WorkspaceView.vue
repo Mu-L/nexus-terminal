@@ -10,6 +10,7 @@ import TerminalTabBar from '../components/TerminalTabBar.vue';
 import LayoutRenderer from '../components/LayoutRenderer.vue';
 import LayoutConfigurator from '../components/LayoutConfigurator.vue';
 import RemoteDesktopModal from '../components/RemoteDesktopModal.vue';
+import VncModal from '../components/VncModal.vue'; // +++ 引入 VncModal 组件 +++
 import Terminal from '../components/Terminal.vue'; // +++ 引入 Terminal 组件 +++
 import CommandInputBar from '../components/CommandInputBar.vue'; // +++ 引入 CommandInputBar 组件 +++
 import VirtualKeyboard from '../components/VirtualKeyboard.vue'; // +++ 引入 VirtualKeyboard 组件 +++
@@ -33,7 +34,7 @@ const breakpoints = useBreakpoints(breakpointsTailwind); // +++ 初始化 Breakp
 const isMobile = breakpoints.smaller('md'); // +++ 定义 isMobile (小于 md 断点) +++
 
 // --- 从 Store 获取响应式状态和 Getters ---
-const { sessionTabsWithStatus, activeSessionId, activeSession, isRdpModalOpen, rdpConnectionInfo } = storeToRefs(sessionStore); // 使用 storeToRefs 获取 RDP 状态
+const { sessionTabsWithStatus, activeSessionId, activeSession, isRdpModalOpen, rdpConnectionInfo, isVncModalOpen, vncConnectionInfo } = storeToRefs(sessionStore); // 使用 storeToRefs 获取 RDP 和 VNC 状态
 const { shareFileEditorTabsBoolean, layoutLockedBoolean } = storeToRefs(settingsStore); // +++ Add layoutLockedBoolean +++
 const { orderedTabs: globalEditorTabs, activeTabId: globalActiveEditorTabId } = storeToRefs(fileEditorStore);
 const { layoutTree } = storeToRefs(layoutStore); // 只获取布局树
@@ -448,14 +449,13 @@ const handleCloseEditorTab = (tabId: string) => {
 
  // --- 连接列表操作处理 (用于 WorkspaceConnectionList) ---
  const handleConnectRequest = (id: number) => {
-    console.log(`[WorkspaceView] Received 'connect-request' event for ID: ${id}`);
-    // +++ 修复：传递 ConnectionInfo 而不是 ID +++
-    const connectionInfo = connectionsStore.connections.find(c => c.id === id);
-    if (connectionInfo) {
-      sessionStore.handleConnectRequest(connectionInfo);
-    } else {
-      console.error(`[WorkspaceView] handleConnectRequest: 未找到 ID 为 ${id} 的连接信息。`);
-    }
+   const connectionInfo = connectionsStore.connections.find(c => c.id === id);
+   // console.log(`[WorkspaceView] Received 'connect-request' event for ID: ${id}`); // 保留原始日志或移除
+   if (connectionInfo) {
+     sessionStore.handleConnectRequest(connectionInfo);
+   } else {
+     console.error(`[WorkspaceView] handleConnectRequest: Connection info not found for ID ${id}.`); // 保留错误日志
+   }
  };
  const handleOpenNewSession = (id: number) => {
     console.log(`[WorkspaceView] Received 'open-new-session' event for ID: ${id}`);
@@ -650,11 +650,8 @@ const toggleVirtualKeyboard = () => {
       @close="handleCloseLayoutConfigurator"
     />
 
-    <RemoteDesktopModal
-      v-if="isRdpModalOpen"
-      :connection="rdpConnectionInfo"
-      @close="sessionStore.closeRdpModal()"
-    />
+    <!-- RDP Modal is now rendered in App.vue -->
+    <!-- VNC Modal is now rendered in App.vue -->
   </div>
 </template>
 

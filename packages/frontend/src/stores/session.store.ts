@@ -134,6 +134,10 @@ export const useSessionStore = defineStore('session', () => {
   const isRdpModalOpen = ref(false);
   const rdpConnectionInfo = ref<ConnectionInfo | null>(null);
 
+  // --- VNC Modal State ---
+  const isVncModalOpen = ref(false);
+  const vncConnectionInfo = ref<ConnectionInfo | null>(null);
+
   // --- Getters ---
   const sessionTabs = computed(() => {
     return Array.from(sessions.value.values()).map(session => ({
@@ -409,11 +413,14 @@ export const useSessionStore = defineStore('session', () => {
    *   - 否则，打开一个新的会话标签页并导航到 Workspace。
    */
   const handleConnectRequest = (connection: ConnectionInfo) => {
-    console.log(`[SessionStore] handleConnectRequest called for connection: ${connection.name} (ID: ${connection.id}, Type: ${connection.type})`);
+    // console.log(`[SessionStore] handleConnectRequest called for connection: ${connection.name} (ID: ${connection.id}, Type: ${connection.type})`); // 保留原始日志或移除
 
     if (connection.type === 'RDP') {
-      // RDP: 直接打开模态框
+      // RDP: 直接打开 RDP 模态框
       openRdpModal(connection);
+    } else if (connection.type === 'VNC') {
+      // VNC: 直接打开 VNC 模态框
+      openVncModal(connection);
     } else {
       // 非 RDP (e.g., SSH): 处理会话和导航
       const connIdStr = String(connection.id);
@@ -785,15 +792,28 @@ export const useSessionStore = defineStore('session', () => {
 
   // --- RDP Modal Actions ---
   const openRdpModal = (connection: ConnectionInfo) => {
-    console.log(`[SessionStore] Opening RDP modal for connection: ${connection.name} (ID: ${connection.id})`);
+    // console.log(`[SessionStore] Opening RDP modal for connection: ${connection.name} (ID: ${connection.id})`); // 保留原始日志或移除
     rdpConnectionInfo.value = connection;
     isRdpModalOpen.value = true;
   };
 
   const closeRdpModal = () => {
-    console.log('[SessionStore] Closing RDP modal.');
+    // console.log('[SessionStore] Closing RDP modal.'); // 保留原始日志或移除
     isRdpModalOpen.value = false;
     rdpConnectionInfo.value = null; // 清除连接信息
+  };
+
+  // --- VNC Modal Actions ---
+  const openVncModal = (connection: ConnectionInfo) => {
+    // console.log(`[SessionStore] Opening VNC modal for connection: ${connection.name} (ID: ${connection.id})`); // 保留原始日志或移除
+    vncConnectionInfo.value = connection;
+    isVncModalOpen.value = true;
+  };
+
+  const closeVncModal = () => {
+    // console.log('[SessionStore] Closing VNC modal.'); // 保留原始日志或移除
+    isVncModalOpen.value = false;
+    vncConnectionInfo.value = null; // 清除连接信息
   };
 
   /**
@@ -815,6 +835,8 @@ export const useSessionStore = defineStore('session', () => {
     activeSessionId,
     isRdpModalOpen,         // 导出 RDP 模态框状态
     rdpConnectionInfo,      // 导出 RDP 连接信息
+    isVncModalOpen,         // 导出 VNC 模态框状态
+    vncConnectionInfo,      // 导出 VNC 连接信息
     // Getters
     sessionTabs,
     sessionTabsWithStatus, // 导出新的 getter
@@ -841,6 +863,8 @@ export const useSessionStore = defineStore('session', () => {
     // --- RDP Modal Actions ---
     openRdpModal,           // 导出打开 RDP 模态框 Action
     closeRdpModal,          // 导出关闭 RDP 模态框 Action
+    openVncModal,           // 导出打开 VNC 模态框 Action
+    closeVncModal,          // 导出关闭 VNC 模态框 Action
     // --- 命令输入框 Action ---
     updateSessionCommandInput, // 导出更新命令输入 Action
   };

@@ -291,7 +291,7 @@ export const useConnectionsStore = defineStore('connections', {
             // this.error = null;
             try {
                 // 调用后端 API GET /connections/:id/vnc-session
-                const response = await apiClient.get<{ token: string }>(`/connections/${connectionId}/vnc-session`);
+                const response = await apiClient.post<{ token: string }>(`/connections/${connectionId}/vnc-session`);
                 return response.data.token;
             } catch (err: any) {
                 console.error(`获取 VNC 会话令牌失败 (连接 ID: ${connectionId}):`, err);

@@ -287,10 +287,7 @@ const sidebarProps = computed(() => (paneName: PaneName | null, side: 'left' | '
      return {
        ...baseProps,
        // Event forwarding
-       onConnectRequest: (id: number) => {
-         console.log(`[LayoutRenderer Sidebar] Forwarding 'connect-request' for ID: ${id}`);
-         emit('connect-request', id);
-       },
+       onConnectRequest: (id: number) => emit('connect-request', id),
        onOpenNewSession: (id: number) => {
           console.log(`[LayoutRenderer Sidebar] Forwarding 'open-new-session' for ID: ${id}`);
           emit('open-new-session', id);

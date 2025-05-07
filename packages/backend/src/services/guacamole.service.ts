@@ -1,11 +1,25 @@
 import axios from 'axios';
 import { ConnectionWithTags } from '../types/connection.types';
 
-// RDP 后端服务的 Base URL，从环境变量读取，提供默认值
-const RDP_BACKEND_API_BASE = process.env.RDP_BACKEND_API_BASE || 'http://nexus-rdp:9090'; // 假设 RDP 服务名为 nexus-rdp
+// RDP 后端服务的 Base URL
+const RDP_BACKEND_API_BASE = process.env.DEPLOYMENT_MODE === 'local'
+    ? (process.env.RDP_BACKEND_API_BASE_LOCAL || 'http://localhost:9090')
+    : (process.env.RDP_BACKEND_API_BASE_DOCKER || 'http://nexus-rdp:9090');
 
-// VNC 后端服务的 Base URL，从环境变量读取，提供默认值
-const VNC_BACKEND_API_BASE = process.env.VNC_BACKEND_API_BASE || 'http://nexus-vnc:9091'; // 假设 VNC 服务名为 nexus-vnc，端口为 9091
+console.log(`[GuacamoleService] DEPLOYMENT_MODE: ${process.env.DEPLOYMENT_MODE}`);
+console.log(`[GuacamoleService] RDP_BACKEND_API_BASE_LOCAL: ${process.env.RDP_BACKEND_API_BASE_LOCAL}`);
+console.log(`[GuacamoleService] RDP_BACKEND_API_BASE_DOCKER: ${process.env.RDP_BACKEND_API_BASE_DOCKER}`);
+console.log(`[GuacamoleService] Using RDP Backend API Base: ${RDP_BACKEND_API_BASE}`);
+    
+
+// VNC 后端服务的 Base URL
+const VNC_BACKEND_API_BASE = process.env.DEPLOYMENT_MODE === 'local'
+    ? (process.env.VNC_BACKEND_API_BASE_LOCAL || 'http://localhost:9091')
+    : (process.env.VNC_BACKEND_API_BASE_DOCKER || 'http://nexus-vnc:9091');
+
+console.log(`[GuacamoleService] VNC_BACKEND_API_BASE_LOCAL: ${process.env.VNC_BACKEND_API_BASE_LOCAL}`);
+console.log(`[GuacamoleService] VNC_BACKEND_API_BASE_DOCKER: ${process.env.VNC_BACKEND_API_BASE_DOCKER}`);
+console.log(`[GuacamoleService] Using VNC Backend API Base: ${VNC_BACKEND_API_BASE}`);
 
 /**
  * 从 RDP 后端服务获取 Guacamole 令牌
