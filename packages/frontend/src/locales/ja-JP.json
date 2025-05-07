@@ -336,9 +336,47 @@
         },
         "changeEncodingTooltip": "ファイルエンコーディングを変更",
         "loadingEncoding": "読み込み中...",
-        "noSearchResults": "検索結果が見つかりませんでした"
-    },
-    "focusSwitcher": {
+        "noSearchResults": "検索結果が見つかりませんでした",
+        "modals": {
+          "titles": {
+            "delete": "\"{name}\" を削除",
+            "deleteMultiple": "{count} 個のアイテムを削除",
+            "rename": "\"{name}\" の名前を変更",
+            "chmod": "\"{name}\" の権限を変更",
+            "newFile": "新しいファイルを作成",
+            "newFolder": "新しいフォルダーを作成"
+          },
+          "buttons": {
+            "delete": "削除",
+            "rename": "名前を変更",
+            "changePermissions": "権限を設定",
+            "create": "作成",
+            "confirm": "確認",
+            "cancel": "キャンセル",
+            "close": "閉じる"
+          },
+          "messages": {
+            "confirmDelete": "{type} \"{name}\" を削除してもよろしいですか？この操作は元に戻せません。",
+            "confirmDeleteMultiple": "これらの {count} 個のアイテムを削除してもよろしいですか？この操作は元に戻せません。\nアイテム: {names}"
+          },
+          "labels": {
+            "newName": "新しい名前:",
+            "newPermissions": "新しい権限 (8進数):",
+            "fileName": "ファイル名:",
+            "folderName": "フォルダー名:",
+            "folder": "フォルダー",
+            "file": "ファイル"
+          },
+          "placeholders": {
+            "newName": "新しい名前を入力",
+            "newPermissions": "例: 755 または 0755",
+            "newFile": "ファイル名を入力",
+            "newFolder": "フォルダー名を入力"
+          },
+          "chmodHelp": "8進数形式で権限を入力してください (例: 755 または 0755)。"
+        }
+      },
+      "focusSwitcher": {
         "allInputsConfigured": "すべての利用可能な入力ソースが設定されました",
         "altSwitchHint": "ヒント：Alt キーを押すと、設定された入力ソース間でフォーカスを素早く切り替えることができます。",
         "availableInputs": "利用可能な入力ソース",

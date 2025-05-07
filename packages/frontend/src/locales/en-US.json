@@ -338,7 +338,45 @@
     "dropFilesHere": "Drop files here to upload",
     "changeEncodingTooltip": "Change file encoding",
     "loadingEncoding": "Loading...",
-    "noSearchResults": "No search results found"
+    "noSearchResults": "No search results found",
+    "modals": {
+      "titles": {
+        "delete": "Delete \"{name}\"",
+        "deleteMultiple": "Delete {count} Items",
+        "rename": "Rename \"{name}\"",
+        "chmod": "Change Permissions for \"{name}\"",
+        "newFile": "Create New File",
+        "newFolder": "Create New Folder"
+      },
+      "buttons": {
+        "delete": "Delete",
+        "rename": "Rename",
+        "changePermissions": "Set Permissions",
+        "create": "Create",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "close": "Close"
+      },
+      "messages": {
+        "confirmDelete": "Are you sure you want to delete the {type} \"{name}\"? This action cannot be undone.",
+        "confirmDeleteMultiple": "Are you sure you want to delete these {count} items? This action cannot be undone.\nItems: {names}"
+      },
+      "labels": {
+        "newName": "New name:",
+        "newPermissions": "New permissions (octal):",
+        "fileName": "File name:",
+        "folderName": "Folder name:",
+        "folder": "folder",
+        "file": "file"
+      },
+      "placeholders": {
+        "newName": "Enter new name",
+        "newPermissions": "e.g., 755 or 0755",
+        "newFile": "Enter file name",
+        "newFolder": "Enter folder name"
+      },
+      "chmodHelp": "Enter permissions in octal format (e.g., 755 or 0755)."
+    }
   },
   "statusMonitor": {
     "title": "Server Status",

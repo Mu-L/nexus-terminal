@@ -338,7 +338,45 @@
     "dropFilesHere": "将文件拖拽到此处上传",
     "changeEncodingTooltip": "更改文件编码",
     "loadingEncoding": "加载中...",
-"noSearchResults": "未找到匹配的搜索结果"
+    "noSearchResults": "未找到匹配的搜索结果",
+    "modals": {
+      "titles": {
+        "delete": "删除 \"{name}\"",
+        "deleteMultiple": "删除 {count} 个项目",
+        "rename": "重命名 \"{name}\"",
+        "chmod": "修改 \"{name}\" 的权限",
+        "newFile": "创建新文件",
+        "newFolder": "创建新文件夹"
+      },
+      "buttons": {
+        "delete": "删除",
+        "rename": "重命名",
+        "changePermissions": "设置权限",
+        "create": "创建",
+        "confirm": "确认",
+        "cancel": "取消",
+        "close": "关闭"
+      },
+      "messages": {
+        "confirmDelete": "您确定要删除{type} \"{name}\" 吗？此操作无法撤销。",
+        "confirmDeleteMultiple": "您确定要删除这 {count} 个项目吗？此操作无法撤销。\n项目: {names}"
+      },
+      "labels": {
+        "newName": "新名称:",
+        "newPermissions": "新权限 (八进制):",
+        "fileName": "文件名:",
+        "folderName": "文件夹名称:",
+        "folder": "文件夹",
+        "file": "文件"
+      },
+      "placeholders": {
+        "newName": "输入新名称",
+        "newPermissions": "例如 755 或 0755",
+        "newFile": "输入文件名",
+        "newFolder": "输入文件夹名称"
+      },
+      "chmodHelp": "请输入八进制格式的权限 (例如 755 或 0755)。"
+    }
   },
   "statusMonitor": {
     "title": "服务器状态",
