@@ -815,7 +815,9 @@
     "reconnect": "Reconnect",
     "retry": "Retry",
     "sortAscending": "Ascending",
-    "sortDescending": "Descending"
+    "sortDescending": "Descending",
+    "restore": "Restore",
+    "minimize": "Minimize"
   },
   "layoutConfigurator": {
     "title": "Layout Configurator",

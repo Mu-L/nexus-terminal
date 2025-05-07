@@ -86,7 +86,9 @@
         "sortAscending": "昇順",
         "sortDescending": "降順",
         "testing": "テスト中...",
-        "width": "幅"
+        "width": "幅",
+        "restore": "元に戻す",
+        "minimize": "最小化"
     },
     "connections": {
         "actions": {
