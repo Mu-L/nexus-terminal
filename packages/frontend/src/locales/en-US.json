@@ -1085,7 +1085,9 @@
     "filterTags": {
       "all": "All Tags"
     },
-    "noConnectionsWithTag": "No connections found with this tag"
+    "noConnectionsWithTag": "No connections found with this tag",
+    "noConnectionsMatchSearch": "No connections match your search.",
+    "searchConnectionsPlaceholder": "Search connections..."
   },
   "terminalTabBar": {
     "selectServerTitle": "Select server to connect"

@@ -1088,7 +1088,9 @@
     "filterTags": {
       "all": "所有标签"
     },
-    "noConnectionsWithTag": "该标签下没有连接记录"
+    "noConnectionsWithTag": "该标签下没有连接记录",
+    "noConnectionsMatchSearch": "没有连接匹配搜索条件",
+    "searchConnectionsPlaceholder": "搜索连接..."
   },
   "terminalTabBar": {
     "selectServerTitle": "选择要连接的服务器"

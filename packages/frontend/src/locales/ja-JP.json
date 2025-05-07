@@ -199,6 +199,8 @@
             "all": "すべてのタグ"
         },
         "noConnectionsWithTag": "このタグには接続記録がありません",
+        "noConnectionsMatchSearch": "検索条件に一致する接続はありません。",
+        "searchConnectionsPlaceholder": "接続を検索...",
         "viewAllConnections": "すべての接続を表示",
         "viewFullAuditLog": "完全な監査ログを表示"
     },

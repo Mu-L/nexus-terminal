@@ -43,9 +43,10 @@ const getInitialSelectedTagId = (): number | null => {
   return storedValue && storedValue !== 'null' ? parseInt(storedValue, 10) : null;
 };
 const selectedTagId = ref<number | null>(getInitialSelectedTagId());
-
+const searchQuery = ref(''); // +++ 新增搜索查询状态 +++
+ 
 const maxRecentLogs = 5;
-
+ 
 const sortOptions: { value: SortField; labelKey: string }[] = [
   { value: 'last_connected_at', labelKey: 'dashboard.sortOptions.lastConnected' },
   { value: 'name', labelKey: 'dashboard.sortOptions.name' },
@@ -60,14 +61,27 @@ const filteredAndSortedConnections = computed(() => {
   const sortOrderVal = localSortOrder.value;
   const factor = sortOrderVal === 'desc' ? -1 : 1;
   const filterTagId = selectedTagId.value;
-
+  const query = searchQuery.value.toLowerCase().trim(); // +++ 获取搜索查询 +++
+ 
   // 1. Filter by selected tag
-  const filtered = filterTagId === null
+  let filteredByTag = filterTagId === null
     ? [...connections.value] // No tag selected, show all
     : connections.value.filter(conn => conn.tag_ids?.includes(filterTagId));
-
-  // 2. Sort the filtered connections
-  return filtered.sort((a, b) => {
+ 
+  // 2. Filter by search query
+  let searchedConnections = filteredByTag;
+  if (query) {
+    searchedConnections = filteredByTag.filter(conn => {
+      const nameMatch = conn.name?.toLowerCase().includes(query);
+      const usernameMatch = conn.username?.toLowerCase().includes(query);
+      const hostMatch = conn.host?.toLowerCase().includes(query);
+      const portMatch = conn.port?.toString().includes(query);
+      return nameMatch || usernameMatch || hostMatch || portMatch;
+    });
+  }
+ 
+  // 3. Sort the searched connections
+  return searchedConnections.sort((a, b) => {
     let valA: any;
     let valB: any;
 
@@ -247,9 +261,17 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
 
       <!-- Connection List -->
       <div class="bg-card text-card-foreground shadow rounded-lg overflow-hidden border border-border min-h-[400px]">
-        <div class="px-4 py-3 border-b border-border flex justify-between items-center">
-          <h2 class="text-lg font-medium">{{ t('dashboard.connectionList', '连接列表') }} ({{ filteredAndSortedConnections.length }})</h2>
-          <div class="flex items-center space-x-2 flex-wrap gap-y-2"> <!-- Added flex-wrap and gap-y for responsiveness -->
+        <div class="px-4 py-3 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <h2 class="text-lg font-medium flex-shrink-0">{{ t('dashboard.connectionList', '连接列表') }} ({{ filteredAndSortedConnections.length }})</h2>
+          <div class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <!-- Search Input -->
+            <input
+              type="text"
+              v-model="searchQuery"
+              :placeholder="t('dashboard.searchConnectionsPlaceholder', '搜索连接...')"
+              class="h-8 px-3 py-1 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-48"
+            />
+            <div class="flex items-center space-x-2"> <!-- Wrapper for existing controls -->
              <!-- Tag Filter Dropdown -->
              <select
                 v-model="selectedTagId"
@@ -287,6 +309,7 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
               >
                 <i :class="['fas', isAscending ? 'fa-arrow-up-a-z' : 'fa-arrow-down-z-a', 'w-4 h-4']"></i>
               </button>
+            </div>
           </div>
         </div>
         <div class="p-4">
@@ -321,8 +344,9 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
               </button>
             </li>
           </ul>
-          <!-- Adjust no connections message based on filtering -->
-          <div v-else-if="!isLoadingConnections && selectedTagId !== null" class="text-center text-text-secondary">{{ t('dashboard.noConnectionsWithTag', '该标签下没有连接记录') }}</div>
+          <!-- Adjust no connections message based on filtering and search -->
+          <div v-else-if="!isLoadingConnections && searchQuery && filteredAndSortedConnections.length === 0" class="text-center text-text-secondary">{{ t('dashboard.noConnectionsMatchSearch', '没有连接匹配搜索条件') }}</div>
+          <div v-else-if="!isLoadingConnections && selectedTagId !== null && filteredAndSortedConnections.length === 0" class="text-center text-text-secondary">{{ t('dashboard.noConnectionsWithTag', '该标签下没有连接记录') }}</div>
           <div v-else class="text-center text-text-secondary">{{ t('dashboard.noConnections', '没有连接记录') }}</div>
         </div>
       </div>
