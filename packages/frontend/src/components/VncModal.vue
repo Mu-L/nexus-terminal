@@ -566,7 +566,7 @@ const stopResize = () => {
      >
       <div class="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
         <h3 class="text-base font-semibold truncate">
-          <i class="fas fa-desktop mr-2 text-text-secondary"></i>
+          <i class="fas fa-plug mr-2 text-text-secondary"></i>
           {{ t('vncModal.title') }} - {{ props.connection?.name || props.connection?.host || t('remoteDesktopModal.titlePlaceholder') }}
         </h3>
         <div class="flex items-center space-x-1">

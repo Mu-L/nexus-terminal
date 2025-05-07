@@ -320,7 +320,7 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
             <li v-for="conn in filteredAndSortedConnections" :key="conn.id" class="flex items-center justify-between p-3 bg-header/50 border border-border/50 rounded transition duration-150 ease-in-out">
               <div class="flex-grow mr-4 overflow-hidden">
                 <span class="font-medium block truncate flex items-center" :title="conn.name || ''">
-                  <i :class="['fas', conn.type === 'RDP' || conn.type === 'VNC' ? 'fa-desktop' : 'fa-server', 'mr-2 w-4 text-center text-text-secondary']"></i>
+                  <i :class="['fas', conn.type === 'VNC' ? 'fa-plug' : (conn.type === 'RDP' ? 'fa-desktop' : 'fa-server'), 'mr-2 w-4 text-center text-text-secondary']"></i>
                   <span>{{ conn.name || t('connections.unnamed') }}</span>
                 </span>
                 <span class="text-sm text-text-secondary block truncate" :title="`${conn.username}@${conn.host}:${conn.port}`">

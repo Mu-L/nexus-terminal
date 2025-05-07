@@ -683,7 +683,7 @@ const cancelEditingTag = () => {
                  @click.right.prevent
                  @contextmenu.prevent="showContextMenu($event, conn)"
                >
-                 <i :class="['fas', conn.type === 'RDP' ? 'fa-desktop' : 'fa-server', 'mr-2.5 w-4 text-center text-text-secondary group-hover:text-primary', { 'text-white': conn.id === highlightedConnectionId }]"></i>
+                 <i :class="['fas', conn.type === 'RDP' ? 'fa-desktop' : (conn.type === 'VNC' ? 'fa-plug' : 'fa-server'), 'mr-2.5 w-4 text-center text-text-secondary group-hover:text-primary', { 'text-white': conn.id === highlightedConnectionId }]"></i>
                  <span class="overflow-hidden text-ellipsis whitespace-nowrap flex-grow text-sm" :title="conn.name || conn.host">
                    {{ conn.name || conn.host }}
                  </span>
@@ -703,7 +703,7 @@ const cancelEditingTag = () => {
                 @click.right.prevent
                 @contextmenu.prevent="showContextMenu($event, conn)"
               >
-                <i :class="['fas', conn.type === 'RDP' ? 'fa-desktop' : 'fa-server', 'mr-2.5 w-4 text-center text-text-secondary group-hover:text-primary', { 'text-white': conn.id === highlightedConnectionId }]"></i>
+                <i :class="['fas', conn.type === 'RDP' ? 'fa-desktop' : (conn.type === 'VNC' ? 'fa-chalkboard' : 'fa-server'), 'mr-2.5 w-4 text-center text-text-secondary group-hover:text-primary', { 'text-white': conn.id === highlightedConnectionId }]"></i>
                 <span class="overflow-hidden text-ellipsis whitespace-nowrap flex-grow text-sm" :title="conn.name || conn.host">
                   {{ conn.name || conn.host }}
                 </span>
