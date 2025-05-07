@@ -72,7 +72,7 @@
       <div v-if="formData.channel_type === 'email'" class="space-y-4">
         <div>
           <label for="email-to" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.emailTo') }}</label>
-          <input type="email" id="email-to" v-model="emailConfig.to" required placeholder="recipient1@example.com, recipient2@example.com"
+          <input type="email" id="email-to" v-model="emailConfig.to" required multiple placeholder="recipient1@example.com, recipient2@example.com"
                  class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
           <small class="block mt-1 text-xs text-text-secondary">{{ $t('settings.notifications.form.emailToHelp') }}</small>
         </div>
