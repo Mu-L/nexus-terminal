@@ -41,6 +41,13 @@ const MIN_MODAL_HEIGHT = 600;
 const desiredModalWidth = ref(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth));
 const desiredModalHeight = ref(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight));
 const isKeyboardDisabledForInput = ref(false);
+const isMinimized = ref(false);
+const restoreButtonRef = ref<HTMLButtonElement | null>(null);
+const isDraggingRestoreButton = ref(false);
+const restoreButtonPosition = ref({ x: 16, y: window.innerHeight / 2 - 25 }); // 16px from left, vertically centered (25 is half of button height 50px)
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let hasDragged = false;
 
 let vncWsBaseUrl: string;
 const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082';
@@ -293,6 +300,57 @@ const enableVncKeyboard = () => {
   });
 };
 
+const minimizeModal = () => {
+  isMinimized.value = true;
+};
+
+const restoreModal = () => {
+  isMinimized.value = false;
+};
+
+const onRestoreButtonMouseDown = (event: MouseEvent) => {
+  if (!restoreButtonRef.value) return;
+  hasDragged = false; // Reset drag flag
+  isDraggingRestoreButton.value = true;
+  dragOffsetX = event.clientX - restoreButtonRef.value.getBoundingClientRect().left;
+  dragOffsetY = event.clientY - restoreButtonRef.value.getBoundingClientRect().top;
+  // Prevent text selection while dragging
+  event.preventDefault();
+  document.addEventListener('mousemove', onRestoreButtonMouseMove);
+  document.addEventListener('mouseup', onRestoreButtonMouseUp);
+};
+
+const onRestoreButtonMouseMove = (event: MouseEvent) => {
+  if (!isDraggingRestoreButton.value) return;
+  hasDragged = true; // Set drag flag if mouse moves
+  let newX = event.clientX - dragOffsetX;
+  let newY = event.clientY - dragOffsetY;
+
+  // Constrain movement within viewport
+  const buttonWidth = 50; // As defined in style
+  const buttonHeight = 50; // As defined in style
+  newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
+  newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
+
+  restoreButtonPosition.value = { x: newX, y: newY };
+};
+
+const onRestoreButtonMouseUp = () => {
+  isDraggingRestoreButton.value = false;
+  document.removeEventListener('mousemove', onRestoreButtonMouseMove);
+  document.removeEventListener('mouseup', onRestoreButtonMouseUp);
+  // Click event will fire after mouseup. If we dragged, we don't want click to restore.
+  // The handleClickRestoreButton will check hasDragged.
+};
+
+const handleClickRestoreButton = () => {
+  if (!hasDragged) {
+    restoreModal();
+  }
+  // Reset for next interaction
+  hasDragged = false;
+};
+
 const disconnectGuacamole = () => {
   removeInputListeners();
   isKeyboardDisabledForInput.value = false;
@@ -382,6 +440,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   disconnectGuacamole();
+  document.removeEventListener('mousemove', onRestoreButtonMouseMove);
+  document.removeEventListener('mouseup', onRestoreButtonMouseUp);
 });
 
 watch(() => props.connection, (newConnection, oldConnection) => {
@@ -426,17 +486,35 @@ watchEffect(() => {
 
 </script>
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4">
+  <div
+    :class="[
+      'fixed inset-0 z-50 flex items-center justify-center p-4',
+      isMinimized ? '' : 'bg-overlay',
+      isMinimized ? 'pointer-events-none' : '' // 允许恢复按钮接收事件
+    ]"
+  >
+     <button
+        ref="restoreButtonRef"
+        v-if="isMinimized"
+        @mousedown="onRestoreButtonMouseDown"
+        @click="handleClickRestoreButton"
+        :style="{ left: `${restoreButtonPosition.x}px`, top: `${restoreButtonPosition.y}px`, width: '50px', height: '50px' }"
+        class="fixed z-[100] flex items-center justify-center bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 pointer-events-auto cursor-grab active:cursor-grabbing"
+        :title="t('common.restore')"
+      >
+        <i class="fas fa-window-restore fa-lg"></i>
+      </button>
      <div
+        v-show="!isMinimized"
         :style="computedModalStyle"
-        class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border"
+        class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border pointer-events-auto"
      >
       <div class="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
         <h3 class="text-base font-semibold truncate">
           <i class="fas fa-desktop mr-2 text-text-secondary"></i>
           {{ t('vncModal.title') }} - {{ props.connection?.name || props.connection?.host || t('remoteDesktopModal.titlePlaceholder') }}
         </h3>
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1">
             <span class="text-xs px-2 py-0.5 rounded"
                   :class="{
                     'bg-yellow-200 text-yellow-800': connectionStatus === 'connecting',
@@ -446,6 +524,13 @@ watchEffect(() => {
                   }">
               {{ t('remoteDesktopModal.status.' + connectionStatus) }}
             </span>
+            <button
+                @click="minimizeModal"
+                class="text-text-secondary hover:text-foreground transition-colors duration-150 p-1 rounded hover:bg-hover"
+                :title="t('common.minimize')"
+            >
+                <i class="fas fa-window-minimize fa-sm"></i>
+            </button>
              <button
                 @click="closeModal"
                 class="text-text-secondary hover:text-foreground transition-colors duration-150 p-1 rounded hover:bg-hover"
