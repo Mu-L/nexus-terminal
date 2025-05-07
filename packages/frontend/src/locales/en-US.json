@@ -676,7 +676,11 @@
       "showConnectionTagsDescription": "Disable to hide tags in the connection list and exclude them from search.",
       "showQuickCommandTagsTitle": "Show Quick Command Tags",
       "showQuickCommandTagsLabel": "Show tags in quick command list",
-      "showQuickCommandTagsDescription": "Disable to hide tags in the quick command list and exclude them from search."
+      "showQuickCommandTagsDescription": "Disable to hide tags in the quick command list and exclude them from search.",
+      "fileManagerDeleteConfirmTitle": "File Manager Delete Confirmation",
+      "fileManagerShowDeleteConfirmationLabel": "Show confirmation dialog when deleting files or folders",
+      "fileManagerDeleteConfirmSuccess": "File manager delete confirmation setting saved.",
+      "fileManagerDeleteConfirmError": "Failed to save file manager delete confirmation setting."
     },
     "terminalScrollback": {
       "title": "Terminal Scrollback Limit",

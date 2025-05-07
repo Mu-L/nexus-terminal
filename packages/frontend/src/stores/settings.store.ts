@@ -57,6 +57,7 @@ interface SettingsState {
   showQuickCommandTags?: string; // 'true' or 'false'
   layoutLocked?: string; // 'true' or 'false' - NEW: 布局锁定状态
   terminalScrollbackLimit?: string; // NEW: 终端回滚行数上限 (e.g., '5000', '0' for unlimited)
+  fileManagerShowDeleteConfirmation?: string; // NEW: 'true' or 'false' - 文件管理器删除确认提示
   [key: string]: string | undefined;
 }
 
@@ -276,8 +277,13 @@ export const useSettingsStore = defineStore('settings', () => {
           settings.value.terminalScrollbackLimit = '5000'; // 默认 5000 行
           console.log(`[SettingsStore] terminalScrollbackLimit not found, set to default: ${settings.value.terminalScrollbackLimit}`);
       }
-    
-    
+      // NEW: File Manager Delete Confirmation default
+      if (settings.value.fileManagerShowDeleteConfirmation === undefined) {
+        settings.value.fileManagerShowDeleteConfirmation = 'true'; // 默认显示删除确认
+        console.log(`[SettingsStore] fileManagerShowDeleteConfirmation not found, set to default: ${settings.value.fileManagerShowDeleteConfirmation}`);
+      }
+        
+        
       // --- 语言设置 ---
       const langFromSettings = settings.value.language;
       console.log(`[SettingsStore] Language from fetched settings: ${langFromSettings}`); // <-- 添加日志
@@ -364,7 +370,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'showConnectionTags', // NEW
         'showQuickCommandTags', // NEW
         'layoutLocked', // NEW
-        'terminalScrollbackLimit' // NEW
+        'terminalScrollbackLimit', // NEW
+        'fileManagerShowDeleteConfirmation' // NEW
       ];
       if (!allowedKeys.includes(key)) {
           console.error(`[SettingsStore] 尝试更新不允许的设置键: ${key}`);
@@ -450,7 +457,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'showConnectionTags', // NEW
         'showQuickCommandTags', // NEW
         'layoutLocked', // NEW
-        'terminalScrollbackLimit' // NEW
+        'terminalScrollbackLimit', // NEW
+        'fileManagerShowDeleteConfirmation' // NEW
       ];
       const filteredUpdates: Partial<SettingsState> = {};
       let languageUpdate: string | undefined = undefined;
@@ -738,6 +746,11 @@ export const useSettingsStore = defineStore('settings', () => {
       return val; // Return 0 if it's 0, or the positive number
   });
 
+  // NEW: Getter for File Manager delete confirmation, returning boolean
+  const fileManagerShowDeleteConfirmationBoolean = computed(() => {
+      return settings.value.fileManagerShowDeleteConfirmation !== 'false'; // Default to true
+  });
+ 
  return {
     settings, // 只包含通用设置
     isLoading,
@@ -779,5 +792,6 @@ export const useSettingsStore = defineStore('settings', () => {
     // NEW: Expose layout locked getter
     layoutLockedBoolean,
     terminalScrollbackLimitNumber, // NEW: Expose terminal scrollback limit getter
+    fileManagerShowDeleteConfirmationBoolean, // NEW: Expose file manager delete confirmation getter
   };
   });

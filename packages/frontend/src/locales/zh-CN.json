@@ -676,7 +676,11 @@
       "showConnectionTagsDescription": "关闭后将隐藏连接列表中的标签，并从搜索中排除标签。",
       "showQuickCommandTagsTitle": "显示快捷指令标签",
       "showQuickCommandTagsLabel": "在快捷指令列表中显示标签",
-      "showQuickCommandTagsDescription": "关闭后将隐藏快捷指令列表中的标签，并从搜索中排除标签。"
+      "showQuickCommandTagsDescription": "关闭后将隐藏快捷指令列表中的标签，并从搜索中排除标签。",
+      "fileManagerDeleteConfirmTitle": "文件管理器删除确认",
+      "fileManagerShowDeleteConfirmationLabel": "删除文件或文件夹时显示确认提示框",
+      "fileManagerDeleteConfirmSuccess": "文件管理器删除确认设置已保存。",
+      "fileManagerDeleteConfirmError": "保存文件管理器删除确认设置失败。"
     },
     "terminalScrollback": {
       "title": "终端回滚行数",

@@ -105,9 +105,10 @@ const {
   fileManagerRowSizeMultiplierNumber, // +++ 获取行大小 getter +++
   fileManagerColWidthsObject, // +++ 获取列宽 getter +++
   showPopupFileEditorBoolean, // +++ 获取弹窗设置状态 +++
+  fileManagerShowDeleteConfirmationBoolean, // +++ 获取删除确认设置状态 +++
 } = storeToRefs(settingsStore); // 使用 storeToRefs 保持响应性
-
-
+ 
+ 
 
 // --- UI 状态 Refs (Remain mostly the same) ---
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -377,10 +378,19 @@ const handleDeleteSelectedClick = () => {
                                .map(filename => currentSftpManager.value?.fileList.value.find((f: FileListItem) => f.filename === filename))
                                .filter((item): item is FileListItem => item !== undefined);
    if (itemsToDelete.length === 0) return;
-
-   openActionModal('delete', null, itemsToDelete);
+ 
+    // 根据设置决定是否显示确认模态框
+    if (settingsStore.fileManagerShowDeleteConfirmationBoolean) {
+        openActionModal('delete', null, itemsToDelete);
+    } else {
+        // 直接执行删除
+        if (currentSftpManager.value) {
+            currentSftpManager.value.deleteItems(itemsToDelete);
+            selectedItems.value.clear(); // Clear selection after delete
+        }
+    }
 };
-
+ 
 const handleRenameContextMenuClick = (item: FileListItem) => { // item 已有类型
     if (!props.wsDeps.isConnected.value || !item) return; // 恢复使用 props.wsDeps
     if (!currentSftpManager.value) return;

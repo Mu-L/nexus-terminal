@@ -914,7 +914,11 @@
             "showConnectionTagsDescription": "無効にすると、接続リストのタグが非表示になり、検索から除外されます。",
             "showQuickCommandTagsTitle": "クイックコマンドタグを表示",
             "showQuickCommandTagsLabel": "クイックコマンドリストにタグを表示",
-            "showQuickCommandTagsDescription": "無効にすると、クイックコマンドリストのタグが非表示になり、検索から除外されます。"
+            "showQuickCommandTagsDescription": "無効にすると、クイックコマンドリストのタグが非表示になり、検索から除外されます。",
+            "fileManagerDeleteConfirmTitle": "ファイルマネージャー削除確認",
+            "fileManagerShowDeleteConfirmationLabel": "ファイルまたはフォルダーを削除する際に確認ダイアログを表示する",
+            "fileManagerDeleteConfirmSuccess": "ファイルマネージャーの削除確認設定を保存しました。",
+            "fileManagerDeleteConfirmError": "ファイルマネージャーの削除確認設定の保存に失敗しました。"
         },
         "terminalScrollback": {
           "title": "ターミナルスクロールバック制限",

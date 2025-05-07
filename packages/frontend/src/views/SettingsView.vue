@@ -504,6 +504,25 @@
                    </div>
                  </form>
               </div>
+              <hr class="border-border/50"> <!-- NEW: Separator -->
+             <!-- File Manager Delete Confirmation -->
+             <div class="settings-section-content">
+                <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.workspace.fileManagerDeleteConfirmTitle', '文件管理器删除确认') }}</h3>
+                <form @submit.prevent="handleUpdateFileManagerDeleteConfirmation" class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="fileManagerShowDeleteConfirmation" v-model="fileManagerShowDeleteConfirmationLocal"
+                               class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
+                        <label for="fileManagerShowDeleteConfirmation" class="text-sm text-foreground cursor-pointer select-none">{{ $t('settings.workspace.fileManagerShowDeleteConfirmationLabel', '删除文件或文件夹时显示确认提示框') }}</label>
+                    </div>
+                    <div class="flex items-center justify-between pt-2">
+                       <button type="submit"
+                               class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
+                         {{ $t('common.save') }}
+                       </button>
+                       <p v-if="fileManagerShowDeleteConfirmationMessage" :class="['text-sm', fileManagerShowDeleteConfirmationSuccess ? 'text-success' : 'text-error']">{{ fileManagerShowDeleteConfirmationMessage }}</p>
+                    </div>
+                </form>
+             </div>
             </div>
           </div>
 
@@ -687,9 +706,10 @@ const {
     showConnectionTagsBoolean, // NEW: Import connection tag visibility getter
     showQuickCommandTagsBoolean, // NEW: Import quick command tag visibility getter
     terminalScrollbackLimitNumber, // NEW: Import terminal scrollback limit getter
+    fileManagerShowDeleteConfirmationBoolean, // NEW: Import file manager delete confirmation getter
 } = storeToRefs(settingsStore);
-
-// Removed Passkey state import from authStore
+ 
+ // Removed Passkey state import from authStore
 
 
 // --- Local state for forms ---
@@ -714,8 +734,9 @@ const ipBlacklistEnabled = ref(true); // <-- Local state for IP Blacklist switch
 const showConnectionTagsLocal = ref(true); // NEW: Local state for connection tags switch
 const showQuickCommandTagsLocal = ref(true); // NEW: Local state for quick command tags switch
 const terminalScrollbackLimitLocal = ref<number | null>(null); // NEW: Local state for terminal scrollback limit input (allow null for empty input)
-
-// --- Local UI feedback state ---
+const fileManagerShowDeleteConfirmationLocal = ref(true); // NEW: Local state for file manager delete confirmation
+ 
+ // --- Local UI feedback state ---
 const ipWhitelistLoading = ref(false);
 const ipWhitelistMessage = ref('');
 const ipWhitelistSuccess = ref(false);
@@ -767,6 +788,9 @@ const showQuickCommandTagsSuccess = ref(false); // NEW
 const terminalScrollbackLimitLoading = ref(false); // NEW
 const terminalScrollbackLimitMessage = ref(''); // NEW
 const terminalScrollbackLimitSuccess = ref(false); // NEW
+const fileManagerShowDeleteConfirmationLoading = ref(false); // NEW
+const fileManagerShowDeleteConfirmationMessage = ref(''); // NEW
+const fileManagerShowDeleteConfirmationSuccess = ref(false); // NEW
 // CAPTCHA Form State
 const captchaForm = reactive<UpdateCaptchaSettingsDto>({ // Use reactive for the form object
     enabled: false,
@@ -819,7 +843,9 @@ watch(settings, (newSettings, oldSettings) => {
   showQuickCommandTagsLocal.value = showQuickCommandTagsBoolean.value; // NEW: Sync quick command tags state
   // NEW: Directly sync terminal scrollback limit from store getter to local state
   terminalScrollbackLimitLocal.value = terminalScrollbackLimitNumber.value;
-
+  // NEW: Sync file manager delete confirmation
+  fileManagerShowDeleteConfirmationLocal.value = fileManagerShowDeleteConfirmationBoolean.value;
+ 
 }, { deep: true, immediate: true }); // immediate: true to run on initial load
 
 // Watcher for CAPTCHA settings
@@ -1076,9 +1102,28 @@ const handleUpdateTerminalScrollbackLimit = async () => {
     } finally {
         terminalScrollbackLimitLoading.value = false;
     }
-};
-
-// --- 外观设置 ---
+  };
+   
+  // --- File Manager Delete Confirmation setting method ---
+  const handleUpdateFileManagerDeleteConfirmation = async () => {
+      fileManagerShowDeleteConfirmationLoading.value = true;
+      fileManagerShowDeleteConfirmationMessage.value = '';
+      fileManagerShowDeleteConfirmationSuccess.value = false;
+      try {
+          const valueToSave = fileManagerShowDeleteConfirmationLocal.value ? 'true' : 'false';
+          await settingsStore.updateSetting('fileManagerShowDeleteConfirmation', valueToSave);
+          fileManagerShowDeleteConfirmationMessage.value = t('settings.workspace.fileManagerDeleteConfirmSuccess', '文件管理器删除确认设置已保存。'); // 需要添加翻译
+          fileManagerShowDeleteConfirmationSuccess.value = true;
+      } catch (error: any) {
+          console.error('更新文件管理器删除确认设置失败:', error);
+          fileManagerShowDeleteConfirmationMessage.value = error.message || t('settings.workspace.fileManagerDeleteConfirmError', '保存文件管理器删除确认设置失败。'); // 需要添加翻译
+          fileManagerShowDeleteConfirmationSuccess.value = false;
+      } finally {
+          fileManagerShowDeleteConfirmationLoading.value = false;
+      }
+  };
+   
+   // --- 外观设置 ---
 const openStyleCustomizer = () => {
     appearanceStore.toggleStyleCustomizer(true);
 };
