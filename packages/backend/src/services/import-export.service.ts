@@ -7,7 +7,7 @@ import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/conn
 
 interface ImportedConnectionData {
     name: string;
-    type: 'SSH' | 'RDP'; // Add type field
+    type: 'SSH' | 'RDP' | 'VNC'; // Add type field
     host: string;
     port: number;
     username: string;
@@ -158,7 +158,7 @@ export const importConnections = async (fileBuffer: Buffer): Promise<ImportResul
              try {
 
                 // Validate imported data, including type
-                if (!connData.type || !['SSH', 'RDP'].includes(connData.type)) {
+                if (!connData.type || !['SSH', 'RDP', 'VNC'].includes(connData.type)) {
                     throw new Error('缺少或无效的连接类型 (type)。');
                 }
                 if (!connData.name || !connData.host || !connData.port || !connData.username) {
@@ -205,7 +205,7 @@ export const importConnections = async (fileBuffer: Buffer): Promise<ImportResul
                 }
 
                 // Prepare data for repository, ensuring correct auth_method for RDP
-                const authMethodForDb = connData.type === 'RDP' ? 'password' : connData.auth_method!;
+                const authMethodForDb = (connData.type === 'RDP' || connData.type === 'VNC') ? 'password' : connData.auth_method!;
                 connectionsToInsert.push({
                     name: connData.name,
                     type: connData.type, // Add type
