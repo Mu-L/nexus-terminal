@@ -213,6 +213,30 @@ const handleConnection = async () => {
   }
 };
 
+const trySyncClipboardOnDisplayFocus = async () => {
+  if (!guacClient.value) {
+    return;
+  }
+  try {
+    const currentClipboardText = await navigator.clipboard.readText();
+    if (currentClipboardText && guacClient.value) {
+      // @ts-ignore
+      const stream = guacClient.value.createClipboardStream('text/plain');
+      // @ts-ignore
+      const writer = new Guacamole.StringWriter(stream);
+      writer.sendText(currentClipboardText);
+      writer.sendEnd();
+      console.log('[RemoteDesktopModal] Sent clipboard to RDP on display focus:', currentClipboardText.substring(0, 50) + (currentClipboardText.length > 50 ? '...' : ''));
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      // console.log('[RemoteDesktopModal] Clipboard read on display focus skipped: Document not focused or permission denied.');
+    } else {
+      console.warn('[RemoteDesktopModal] Could not read clipboard on display focus, or other error:', err);
+    }
+  }
+};
+
 const setupInputListeners = () => {
     if (!guacClient.value || !rdpDisplayRef.value) return;
     try {
@@ -226,6 +250,10 @@ const setupInputListeners = () => {
           if (activeElement && (activeElement.id === 'modal-width' || activeElement.id === 'modal-height')) {
             activeElement.blur();
             console.log('[RDP Modal] Blurred input field on RDP display click.');
+          }
+          // Ensure the RDP display element gets focus when clicked
+          if (displayEl && typeof displayEl.focus === 'function') {
+            displayEl.focus();
           }
         };
         displayEl.addEventListener('click', handleRdpDisplayClick);
@@ -290,6 +318,9 @@ const setupInputListeners = () => {
                 guacClient.value.sendKeyEvent(0, keysym);
              }
         };
+        
+        // Listen for display focus to sync clipboard
+        displayEl.addEventListener('focus', trySyncClipboardOnDisplayFocus);
 
     } catch (inputError) {
         console.error("Error setting up input listeners:", inputError); // 添加错误日志
@@ -305,6 +336,7 @@ const removeInputListeners = () => {
             if (displayEl) {
                 // 恢复默认光标样式
                 displayEl.style.cursor = 'default';
+                displayEl.removeEventListener('focus', trySyncClipboardOnDisplayFocus);
             }
         } catch (e) {
              console.warn("Could not reset cursor or remove listeners on display element during listener removal:", e);
