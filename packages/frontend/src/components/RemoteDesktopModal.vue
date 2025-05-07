@@ -42,26 +42,10 @@ const LOCAL_BACKEND_URL = 'ws://localhost:3001'; // For RDP proxy via main backe
 // Determine WebSocket URL based on hostname for RDP
 if (window.location.hostname === 'localhost') {
   backendBaseUrl = LOCAL_BACKEND_URL;
-  console.log(`[RemoteDesktopModal] Using localhost RDP WebSocket base URL: ${backendBaseUrl}`);
 } else {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHostAndPort = window.location.host;
   backendBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws`; // Assuming RDP proxy is at /ws path
-  console.log(`[RemoteDesktopModal] Using production RDP WebSocket base URL (from window.location): ${backendBaseUrl}`);
-}
-
-// NEW: VNC WebSocket URL determination
-let vncWsBaseUrl: string;
-const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082'; // Get from env or default
-
-if (window.location.hostname === 'localhost') {
-  vncWsBaseUrl = `ws://localhost:${VNC_WS_PORT_FROM_ENV}`;
-  console.log(`[RemoteDesktopModal] Using localhost VNC WebSocket base URL: ${vncWsBaseUrl}`);
-} else {
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // Assuming VNC proxy runs on the same host but different port (or path if configured)
-  vncWsBaseUrl = `${wsProtocol}//${window.location.hostname}:${VNC_WS_PORT_FROM_ENV}`;
-  console.log(`[RemoteDesktopModal] Using production VNC WebSocket base URL: ${vncWsBaseUrl}`);
 }
 
 const handleConnection = async () => {
@@ -106,27 +90,7 @@ const handleConnection = async () => {
         heightToSend = Math.max(100, heightToSend);
       }
       tunnelUrl = `${backendBaseUrl}/rdp-proxy?token=${encodeURIComponent(token)}&width=${widthToSend}&height=${heightToSend}&dpi=${dpiToSend}`;
-      console.log(`[RemoteDesktopModal] Connecting to RDP tunnel: ${tunnelUrl}`);
 
-    } else if (props.connection.type === 'VNC') {
-      token = await connectionsStore.getVncSessionToken(props.connection.id);
-      if (!token) {
-        throw new Error('VNC Token not found from store action');
-      }
-      statusMessage.value = t('remoteDesktopModal.status.connectingWs'); // Generic message
-      tunnelUrl = `${vncWsBaseUrl}?token=${encodeURIComponent(token)}`;
-      // Optional: Add width/height if VNC proxy needs them, though Guacamole usually handles this post-connection.
-      // await nextTick();
-      // let widthToSend = 800;
-      // let heightToSend = 600;
-      // if (rdpContainerRef.value) {
-      //   widthToSend = rdpContainerRef.value.clientWidth;
-      //   heightToSend = rdpContainerRef.value.clientHeight - 1;
-      //   widthToSend = Math.max(100, widthToSend);
-      //   heightToSend = Math.max(100, heightToSend);
-      //   tunnelUrl += `&width=${widthToSend}&height=${heightToSend}`;
-      // }
-      console.log(`[RemoteDesktopModal] Connecting to VNC tunnel: ${tunnelUrl}`);
     } else {
       throw new Error(`Unsupported connection type: ${props.connection.type}`);
     }
@@ -158,7 +122,7 @@ const handleConnection = async () => {
           currentStatus = 'disconnected';
           break;
         case 1: // CONNECTING
-          i18nKeyPart = props.connection?.type === 'VNC' ? 'connectingVnc' : 'connectingRdp';
+          i18nKeyPart = 'connectingRdp';
           currentStatus = 'connecting';
           break;
         case 2: // WAITING

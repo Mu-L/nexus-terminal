@@ -47,11 +47,9 @@ const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082';
 
 if (window.location.hostname === 'localhost') {
   vncWsBaseUrl = `ws://localhost:${VNC_WS_PORT_FROM_ENV}`;
-  console.log(`[VncModal] Using localhost VNC WebSocket base URL: ${vncWsBaseUrl}`);
 } else {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   vncWsBaseUrl = `${wsProtocol}//${window.location.hostname}:${VNC_WS_PORT_FROM_ENV}`;
-  console.log(`[VncModal] Using production VNC WebSocket base URL: ${vncWsBaseUrl}`);
 }
 
 const handleConnection = async () => {
@@ -77,7 +75,7 @@ const handleConnection = async () => {
     }
     statusMessage.value = t('remoteDesktopModal.status.connectingWs');
     const tunnelUrl = `${vncWsBaseUrl}?token=${encodeURIComponent(token)}`;
-    console.log(`[VncModal] Connecting to VNC tunnel: ${tunnelUrl}`);
+  
 
     // @ts-ignore
     const tunnel = new Guacamole.WebSocketTunnel(tunnelUrl);
@@ -320,10 +318,9 @@ const closeModal = () => {
 
 watch(desiredModalWidth, (newWidth, oldWidth) => {
   if (newWidth === oldWidth && typeof newWidth === 'number' && typeof oldWidth === 'number') {
-      // console.log(`[VncModal] 宽度监听触发，但值 (${newWidth}) 未改变。跳过。`);
       return;
   }
-  // console.log(`[VncModal] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`);
+
   
   const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
 
@@ -335,7 +332,6 @@ watch(desiredModalWidth, (newWidth, oldWidth) => {
 
   if (saveWidthTimeout) clearTimeout(saveWidthTimeout);
   saveWidthTimeout = setTimeout(() => {
-    // console.log(`[VncModal] 防抖保存 - 保存宽度: ${validatedWidth}`);
     if (String(validatedWidth) !== settingsStore.settings.vncModalWidth) {
          settingsStore.updateSetting('vncModalWidth', String(validatedWidth));
     } else {
@@ -370,9 +366,8 @@ watch(desiredModalHeight, (newHeight, oldHeight) => {
   }, DEBOUNCE_DELAY);
 });
 
-// The watchEffect that was here (lines 359-372) is removed as its functionality
-// is now covered by the direct initialization of desiredModalWidth/Height from the store
-// and the updated watch listeners.
+
+
 
 onMounted(() => {
   if (props.connection) {
