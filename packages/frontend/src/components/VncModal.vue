@@ -149,6 +149,10 @@ const setupInputListeners = () => {
           if (activeElement && (activeElement.id === 'modal-width' || activeElement.id === 'modal-height')) {
             activeElement.blur();
           }
+          // Ensure the VNC display element gets focus when clicked
+          if (displayEl && typeof displayEl.focus === 'function') {
+            displayEl.focus();
+          }
         };
         displayEl.addEventListener('click', handleVncDisplayClick);
 
