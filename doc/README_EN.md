@@ -65,11 +65,22 @@ Create a new folder
 ```bash
 mkdir ./nexus-terminal && cd ./nexus-terminal
 ```
-Download the repository's [**docker-compose.yml**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/docker-compose.yml) and  [**.env**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/.env) files into the directory
+好的，这是对应的英文版本说明：
+
+---
+
+Download the [**docker-compose.yml**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/docker-compose.yml) and [**.env**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/.env) files from the repository to your current directory.
+
 
 ```bash
 wget https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/docker-compose.yml -O docker-compose.yml && wget https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/.env -O .env
 ```
+
+
+> ⚠️ **Note:**
+>
+> * For **arm64** users, replace `guacamole/guacd:latest` with `guacamole/guacd:1.6.0-RC1` in the `docker-compose.yml` file.
+> * For **armv7** users, please refer to the additional notes below.
 
 Configure nginx
 ```conf
@@ -164,7 +175,8 @@ Here are some implicit practical features.
 
 1.  **Dual File Managers**: You can add two file manager components in the layout (experimental feature, may be unstable).
 2.  **Multiple Text Editors**: The functionality to add multiple text editors in the same layout has not yet been implemented.
-3. ARM users, please use the [docker-compose.yml](https://github.com/Heavrnl/nexus-terminal/blob/main/doc/arm/docker-compose.yml) provided here. Since Apache Guacamole does not provide an ARM architecture image for `guacd`, the RDP feature has been disabled, and the related image will no longer be pulled for the time being.
+3. For **ARMv7** users, please use the [docker-compose.yml](https://github.com/Heavrnl/nexus-terminal/blob/main/doc/arm/docker-compose.yml) provided here.
+Since Apache Guacamole does not provide an ARMv7-compatible image for `guacd`, the RDP feature has been disabled, and related images will not be pulled for now.
 4. Since I don't have an ARM machine on hand, I haven't conducted actual testing, so unexpected bugs may occur during runtime.
 5. For data backup, please back up the **data** folder in the directory yourself. This project does not provide any backup functionality.
 
