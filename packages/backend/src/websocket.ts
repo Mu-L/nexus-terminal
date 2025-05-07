@@ -530,26 +530,27 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
 
 
             // Determine RDP target URL based on deployment mode
-            const deploymentMode = process.env.DEPLOYMENT_MODE; // Default to docker mode
-            let rdpBaseUrl: string;
+            const deploymentMode = process.env.DEPLOYMENT_MODE;
+            let remoteGatewayWsBaseUrl: string;
             if (deploymentMode === 'local') {
-                rdpBaseUrl = process.env.RDP_SERVICE_URL_LOCAL || 'ws://localhost:8081'; // Default for local, fallback to localhost:3001
-                console.log(`[WebSocket RDP Proxy] Using LOCAL deployment mode. RDP Target Base: ${rdpBaseUrl}`);
-            } else if (deploymentMode === 'docker') { // Explicitly check for docker mode
-                rdpBaseUrl = process.env.RDP_SERVICE_URL_DOCKER || 'ws://rdp:8081'; // Default for docker, fallback to localhost:3001
-                console.log(`[WebSocket RDP Proxy] Using DOCKER deployment mode. RDP Target Base: ${rdpBaseUrl}`);
-            } else { // Handle unknown modes
-                rdpBaseUrl = 'ws://localhost:8081'; // Fallback to a safe default for unknown modes
-                console.warn(`[WebSocket RDP Proxy] Unknown deployment mode '${deploymentMode}'. Defaulting to safe fallback RDP Target Base: ${rdpBaseUrl}`);
+                remoteGatewayWsBaseUrl = process.env.REMOTE_GATEWAY_WS_URL_LOCAL || 'ws://localhost:8080'; // 更新端口和环境变量名
+                console.log(`[WebSocket Remote Desktop Proxy] Using LOCAL deployment mode. Target Base: ${remoteGatewayWsBaseUrl}`);
+            } else if (deploymentMode === 'docker') {
+                remoteGatewayWsBaseUrl = process.env.REMOTE_GATEWAY_WS_URL_DOCKER || 'ws://remote-gateway:8080'; // 更新服务名、端口和环境变量名
+                console.log(`[WebSocket Remote Desktop Proxy] Using DOCKER deployment mode. Target Base: ${remoteGatewayWsBaseUrl}`);
+            } else {
+                remoteGatewayWsBaseUrl = 'ws://localhost:8080'; // 更新默认端口
+                console.warn(`[WebSocket Remote Desktop Proxy] Unknown deployment mode '${deploymentMode}'. Defaulting to safe fallback Target Base: ${remoteGatewayWsBaseUrl}`);
             }
 
-            const cleanRdpBaseUrl = rdpBaseUrl.endsWith('/') ? rdpBaseUrl.slice(0, -1) : rdpBaseUrl;
+            const cleanRemoteGatewayWsBaseUrl = remoteGatewayWsBaseUrl.endsWith('/') ? remoteGatewayWsBaseUrl.slice(0, -1) : remoteGatewayWsBaseUrl;
 
-            const rdpTargetUrl = `${cleanRdpBaseUrl}/?token=${encodeURIComponent(rdpToken)}&width=${encodeURIComponent(rdpWidth)}&height=${encodeURIComponent(rdpHeight)}&dpi=${encodeURIComponent(calculatedDpi)}`; // 使用 calculatedDpi
+            // 构建目标 URL 时，协议 (RDP/VNC) 信息现在由 remote-gateway 处理，我们只需要传递令牌和尺寸
+            const remoteDesktopTargetUrl = `${cleanRemoteGatewayWsBaseUrl}/?token=${encodeURIComponent(rdpToken)}&width=${encodeURIComponent(rdpWidth)}&height=${encodeURIComponent(rdpHeight)}&dpi=${encodeURIComponent(calculatedDpi)}`;
 
-            console.log(`WebSocket: RDP Proxy for ${ws.username} attempting to connect to ${rdpTargetUrl}`);
+            console.log(`WebSocket: Remote Desktop Proxy for ${ws.username} attempting to connect to ${remoteDesktopTargetUrl}`);
 
-            const rdpWs = new WebSocket(rdpTargetUrl);
+            const rdpWs = new WebSocket(remoteDesktopTargetUrl);
             let clientWsClosed = false;
             let rdpWsClosed = false;
 
@@ -586,7 +587,7 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
             });
             rdpWs.on('error', (error) => {
 
-                 console.error(`[RDP 代理 RDP WS 错误] 用户: ${ws.username}, 会话: ${ws.sessionId}, 连接到 ${rdpTargetUrl} 时出错:`, error);
+                 console.error(`[RDP 代理 RDP WS 错误] 用户: ${ws.username}, 会话: ${ws.sessionId}, 连接到 ${remoteDesktopTargetUrl} 时出错:`, error);
                  if (!clientWsClosed && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
                     console.log(`[RDP 代理] 因 RDP WS 错误关闭客户端 WS。会话: ${ws.sessionId}`);
                     ws.close(1011, `RDP WS Error: ${error.message}`);
@@ -610,7 +611,7 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
             rdpWs.on('close', (code, reason) => {
                 rdpWsClosed = true;
                  // --- 添加中文日志 ---
-                 console.log(`[RDP 代理 RDP WS 关闭] 用户: ${ws.username}, 会话: ${ws.sessionId}, 到 ${rdpTargetUrl} 的连接已关闭。代码: ${code}, 原因: ${reason.toString()}`);
+                 console.log(`[RDP 代理 RDP WS 关闭] 用户: ${ws.username}, 会话: ${ws.sessionId}, 到 ${remoteDesktopTargetUrl} 的连接已关闭。代码: ${code}, 原因: ${reason.toString()}`);
                  // --- 结束日志 ---
                 if (!clientWsClosed && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
                     console.log(`[RDP 代理] 因 RDP WS 关闭而关闭客户端 WS。会话: ${ws.sessionId}`);
@@ -620,7 +621,7 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
             });
 
             rdpWs.on('open', () => {
-                 console.log(`[RDP 代理 RDP WS 打开] 用户: ${ws.username}, 会话: ${ws.sessionId}, 到 ${rdpTargetUrl} 的连接已建立。开始转发消息。`);
+                 console.log(`[RDP 代理 RDP WS 打开] 用户: ${ws.username}, 会话: ${ws.sessionId}, 到 ${remoteDesktopTargetUrl} 的连接已建立。开始转发消息。`);
             });
 
         // --- 标准 (SSH/SFTP/Docker) 连接处理 ---

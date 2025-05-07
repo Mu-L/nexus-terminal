@@ -6,7 +6,7 @@ services:
       - "18111:80"
     depends_on:
       - backend
-      - rdp
+      - remote-gateway # 更新依赖
     networks:
       - nexus-terminal-network
 
@@ -14,44 +14,32 @@ services:
     image: heavrnl/nexus-terminal-backend:latest
     container_name: nexus-terminal-backend
     env_file:
-      - .env    
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3001
-      RDP_BACKEND_API_BASE: http://rdp:9090
+      REMOTE_GATEWAY_API_BASE: http://remote-gateway:9090 # 更新环境变量
     volumes:
       - ./data:/app/data
     networks:
       - nexus-terminal-network
 
-  rdp:
-    image: heavrnl/nexus-terminal-rdp:latest
-    container_name: nexus-terminal-rdp
+  remote-gateway:
+    build:
+      context: .
+      dockerfile: packages/remote-gateway/Dockerfile
+    container_name: nexus-terminal-remote-gateway
     environment:
       GUACD_HOST: guacd
       GUACD_PORT: 4822
-      API_PORT: 9090
-      GUAC_WS_PORT: 8081
-      FRONTEND_URL: http://frontend
+      REMOTE_GATEWAY_API_PORT: 9090
+      REMOTE_GATEWAY_WS_PORT: 8080 # 与 server.ts 中的默认值一致
+      FRONTEND_URL: http://frontend # 或者实际的前端部署地址
       MAIN_BACKEND_URL: http://backend:3001
       NODE_ENV: production
-    networks:
-      - nexus-terminal-network
-    depends_on:
-      - guacd
-      - backend
-
-  vnc:
-    image: heavrnl/nexus-terminal-vnc:latest
-    container_name: nexus-terminal-vnc
-    environment:
-      GUACD_HOST: guacd
-      GUACD_PORT: 4822
-      API_PORT: 9091
-      GUAC_WS_PORT: 8082
-      FRONTEND_URL: http://frontend
-      MAIN_BACKEND_URL: http://backend:3001
-      NODE_ENV: production
+    ports: # 可选：如果需要从主机直接访问 API 或 WS 端口
+      - "9090:9090"
+      - "8080:8080"
     networks:
       - nexus-terminal-network
     depends_on:

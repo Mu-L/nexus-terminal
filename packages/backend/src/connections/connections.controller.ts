@@ -321,7 +321,13 @@ export const getRdpSessionToken = async (req: Request, res: Response): Promise<v
         }
 
         // 4. 调用 GuacamoleService 获取 RDP 令牌
-        const guacamoleToken = await GuacamoleService.getRdpToken(connection, decryptedPassword);
+        // 注意：从 connection.extras 或其他地方获取 RDP 特定的 width, height, dpi
+        const { width, height, dpi } = req.query; // 或者从 connection.extras 获取
+        const rdpWidth = width ? parseInt(width as string, 10) : undefined;
+        const rdpHeight = height ? parseInt(height as string, 10) : undefined;
+        const rdpDpi = dpi ? dpi as string : undefined;
+
+        const guacamoleToken = await GuacamoleService.getRemoteDesktopToken('rdp', connection, decryptedPassword, rdpWidth, rdpHeight, rdpDpi);
         
         console.log(`[Controller:getRdpSessionToken] Received Guacamole token via GuacamoleService for RDP connection ${connectionId}`);
 
@@ -329,39 +335,35 @@ export const getRdpSessionToken = async (req: Request, res: Response): Promise<v
         res.status(200).json({ token: guacamoleToken });
 
     } catch (error: any) {
-        console.error(`Controller: 获取 RDP 会话令牌时发生错误 (ID: ${req.params.id}):`, error.message); // Log error message
+        console.error(`Controller: 获取 RDP 会话令牌时发生错误 (ID: ${req.params.id}):`, error.message);
 
         let statusCode = 500;
         let responseMessage = '获取 RDP 会话令牌时发生内部服务器错误。';
 
-        // 检查错误是否来自 GuacamoleService 或其内部的 axios 调用
-        if (error.message.includes('调用 RDP 后端服务失败') || error.message.includes('从 RDP 后端获取令牌失败')) {
+        if (error.message.includes('调用 RDP 后端服务失败') || error.message.includes('从 RDP 后端获取令牌失败') || error.message.includes('调用 Remote Gateway API 时出错 (RDP)')) {
             responseMessage = error.message;
-            // 尝试从错误消息中提取状态码，或者根据消息内容判断
-            if (error.message.includes('(状态: 4')) statusCode = 400; // 例如 400, 401, 404
-            else if (error.message.includes('(状态: 5')) statusCode = 502; // 例如 500, 502, 503, 504
-            else statusCode = 503; // Service Unavailable or other specific error
-        } else if (error.message.includes('RDP 连接需要使用密码认证') || error.message.includes('密码解密失败')) {
+            if (error.message.includes('(状态: 4')) statusCode = 400;
+            else if (error.message.includes('(状态: 5')) statusCode = 502;
+            else statusCode = 503;
+        } else if (error.message.includes('RDP 连接需要使用密码认证') || error.message.includes('密码解密失败') || error.message.includes('RDP 连接使用密码认证，但密码解密失败或未提供密码')) {
             responseMessage = error.message;
             statusCode = 400;
         } else if (error.message.includes('连接类型必须是 RDP')) {
             responseMessage = error.message;
             statusCode = 400;
         }
-        // 可以保留对 axios.isAxiosError 的检查，以防 GuacamoleService 抛出未包装的 axios 错误
-        // 但理想情况下，GuacamoleService 应该抛出更具体的错误。
         else if (axios.isAxiosError(error)) {
-            responseMessage = '调用 RDP 后端服务时发生网络或请求错误。';
+            responseMessage = '调用远程桌面网关服务时发生网络或请求错误。';
             if (error.response) {
-                console.error('[Controller:getRdpSessionToken] RDP backend error response (unhandled by GuacamoleService):', error.response.data);
+                console.error('[Controller:getRdpSessionToken] Remote Gateway error response:', error.response.data);
                 responseMessage += ` (状态: ${error.response.status})`;
                 statusCode = error.response.status >= 500 ? 502 : 400;
             } else if (error.request) {
-                 console.error('[Controller:getRdpSessionToken] No response from RDP backend (unhandled by GuacamoleService).');
+                 console.error('[Controller:getRdpSessionToken] No response from Remote Gateway.');
                  responseMessage += ' (无法连接或超时)';
                  statusCode = 504;
             }
-        } else if (error.message.includes('解密失败')) { // General decryption error from ConnectionService
+        } else if (error.message.includes('解密失败')) {
              responseMessage = '获取 RDP 会话令牌时发生内部错误（凭证处理失败）。';
         }
         res.status(statusCode).json({ message: responseMessage });
@@ -380,7 +382,6 @@ export const getVncSessionToken = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // 1. 获取连接信息和解密后的凭证
         const connectionData = await ConnectionService.getConnectionWithDecryptedCredentials(connectionId);
 
         if (!connectionData) {
@@ -390,13 +391,11 @@ export const getVncSessionToken = async (req: Request, res: Response): Promise<v
 
         const { connection, decryptedPassword } = connectionData;
 
-        // 2. 验证连接类型是否为 VNC
         if (connection.type !== 'VNC') {
             res.status(400).json({ message: '此连接类型不是 VNC。' });
             return;
         }
 
-        // 3. 更新 last_connected_at
         try {
             const currentTimeSeconds = Math.floor(Date.now() / 1000);
             await ConnectionRepository.updateLastConnected(connectionId, currentTimeSeconds);
@@ -405,58 +404,52 @@ export const getVncSessionToken = async (req: Request, res: Response): Promise<v
             console.error(`[Controller:getVncSessionToken] 更新 VNC 连接 ${connectionId} 的 last_connected_at 时出错:`, updateError);
         }
 
-        // 4. 验证 VNC 连接是否使用密码认证 (VNC 通常总是需要密码)
         if (connection.auth_method !== 'password' || !decryptedPassword) {
              console.warn(`[Controller:getVncSessionToken] VNC connection ${connectionId} does not use password auth or password decryption failed.`);
              res.status(400).json({ message: 'VNC 连接需要使用密码认证，或密码解密失败。' });
              return;
         }
 
-        // 5. 从查询参数中获取可选的 width 和 height
         const { width, height } = req.query;
         const initialWidth = width ? parseInt(width as string, 10) : undefined;
         const initialHeight = height ? parseInt(height as string, 10) : undefined;
 
-        // 6. 调用 GuacamoleService 获取 VNC 令牌，传递尺寸信息
-        const guacamoleToken = await GuacamoleService.getVncToken(connection, decryptedPassword, initialWidth, initialHeight);
+        const guacamoleToken = await GuacamoleService.getRemoteDesktopToken('vnc', connection, decryptedPassword, initialWidth, initialHeight);
 
         console.log(`[Controller:getVncSessionToken] Received Guacamole token via GuacamoleService for VNC connection ${connectionId} with size ${initialWidth}x${initialHeight}`);
         
-        // 6. 将 Guacamole 令牌返回给前端
         res.status(200).json({ token: guacamoleToken });
 
     } catch (error: any) {
-        console.error(`Controller: 获取 VNC 会话令牌时发生错误 (ID: ${req.params.id}):`, error.message); // Log error message
+        console.error(`Controller: 获取 VNC 会话令牌时发生错误 (ID: ${req.params.id}):`, error.message);
 
         let statusCode = 500;
         let responseMessage = '获取 VNC 会话令牌时发生内部服务器错误。';
 
-        // 检查错误是否来自 GuacamoleService 或其内部的 axios 调用
-        if (error.message.includes('调用 VNC 后端服务失败') || error.message.includes('从 VNC 后端获取令牌失败')) {
+        if (error.message.includes('调用 VNC 后端服务失败') || error.message.includes('从 VNC 后端获取令牌失败') || error.message.includes('调用 Remote Gateway API 时出错 (VNC)')) {
             responseMessage = error.message;
             if (error.message.includes('(状态: 4')) statusCode = 400;
             else if (error.message.includes('(状态: 5')) statusCode = 502;
             else statusCode = 503;
-        } else if (error.message.includes('VNC 连接需要使用密码认证') || error.message.includes('密码解密失败')) {
+        } else if (error.message.includes('VNC 连接需要使用密码认证') || error.message.includes('密码解密失败') || error.message.includes('VNC 连接使用密码认证，但密码解密失败或未提供密码')) {
             responseMessage = error.message;
             statusCode = 400;
         } else if (error.message.includes('连接类型必须是 VNC')) {
             responseMessage = error.message;
             statusCode = 400;
         }
-        // 可以保留对 axios.isAxiosError 的检查
         else if (axios.isAxiosError(error)) {
-            responseMessage = '调用 VNC 后端服务时发生网络或请求错误。';
+            responseMessage = '调用远程桌面网关服务时发生网络或请求错误。';
             if (error.response) {
-                console.error('[Controller:getVncSessionToken] VNC backend error response (unhandled by GuacamoleService):', error.response.data);
+                console.error('[Controller:getVncSessionToken] Remote Gateway error response:', error.response.data);
                 responseMessage += ` (状态: ${error.response.status})`;
                 statusCode = error.response.status >= 500 ? 502 : 400;
             } else if (error.request) {
-                 console.error('[Controller:getVncSessionToken] No response from VNC backend (unhandled by GuacamoleService).');
+                 console.error('[Controller:getVncSessionToken] No response from Remote Gateway.');
                  responseMessage += ' (无法连接或超时)';
                  statusCode = 504;
             }
-        } else if (error.message.includes('解密失败')) { // General decryption error from ConnectionService
+        } else if (error.message.includes('解密失败')) {
              responseMessage = '获取 VNC 会话令牌时发生内部错误（凭证处理失败）。';
         }
         res.status(statusCode).json({ message: responseMessage });

@@ -49,14 +49,17 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 let hasDragged = false;
 
-let vncWsBaseUrl: string;
-const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082';
+let remoteDesktopWsBaseUrl: string; // Renamed for clarity
+const LOCAL_BACKEND_URL_FOR_PROXY = 'ws://localhost:3001'; // Main backend's WebSocket for proxying
 
 if (window.location.hostname === 'localhost') {
-  vncWsBaseUrl = `ws://localhost:${VNC_WS_PORT_FROM_ENV}`;
+  // For local development, VNC will also go through the main backend's proxy
+  remoteDesktopWsBaseUrl = `${LOCAL_BACKEND_URL_FOR_PROXY}/ws/rdp-proxy`; // Use the same RDP proxy path
 } else {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  vncWsBaseUrl = `${wsProtocol}//${window.location.hostname}:${VNC_WS_PORT_FROM_ENV}`;
+  const wsHostAndPort = window.location.host;
+  // For deployed environments, assume the proxy is at /ws/rdp-proxy relative to the main backend
+  remoteDesktopWsBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws/rdp-proxy`;
 }
 
 const handleConnection = async () => {
@@ -76,12 +79,17 @@ const handleConnection = async () => {
 
   try {
     const connectionsStore = useConnectionsStore();
+    // Pass width and height to the token generation, backend will forward to gateway
     const token = await connectionsStore.getVncSessionToken(props.connection.id, desiredModalWidth.value, desiredModalHeight.value);
     if (!token) {
       throw new Error('VNC Token not found from store action');
     }
     statusMessage.value = t('remoteDesktopModal.status.connectingWs');
-    const tunnelUrl = `${vncWsBaseUrl}?token=${encodeURIComponent(token)}`;
+    // The backend proxy (/ws/rdp-proxy) expects token, width, height, dpi.
+    // For VNC, DPI is less critical but the proxy might expect it. Send a default or let backend handle.
+    // The backend's websocket.ts rdp-proxy handler now calculates DPI if not provided or uses a default.
+    // We need to ensure width and height are passed for the proxy to correctly forward.
+    const tunnelUrl = `${remoteDesktopWsBaseUrl}?token=${encodeURIComponent(token)}&width=${desiredModalWidth.value}&height=${desiredModalHeight.value}`;
   
 
     // @ts-ignore
