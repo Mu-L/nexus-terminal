@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 # Copy workspace package.json files to ensure npm ci works correctly in monorepo
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
-COPY packages/rdp/package.json ./packages/rdp/
+COPY packages/remote-gateway/package.json ./packages/remote-gateway/
 
 # Install dependencies (using install instead of ci for potential armv7 compatibility issues)
 RUN npm install
