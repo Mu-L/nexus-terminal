@@ -47,6 +47,8 @@ export const settingsController = {
           'timezone', // NEW: 添加时区键
           'rdpModalWidth', // NEW: 添加 RDP 模态框宽度键
           'rdpModalHeight', // NEW: 添加 RDP 模态框高度键
+          'vncModalWidth', // NEW: 添加 VNC 模态框宽度键
+          'vncModalHeight', // NEW: 添加 VNC 模态框高度键
           'ipBlacklistEnabled', // <-- 添加 IP 黑名单启用键
           'layoutLocked', // +++ 添加布局锁定键 +++
           'terminalScrollbackLimit', // NEW: 添加终端回滚行数键

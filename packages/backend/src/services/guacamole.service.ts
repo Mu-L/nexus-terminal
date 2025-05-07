@@ -76,7 +76,7 @@ export const getRdpToken = async (connection: ConnectionWithTags, decryptedPassw
  * @param decryptedPassword 解密后的密码 (VNC 通常需要密码)
  * @returns Guacamole 令牌
  */
-export const getVncToken = async (connection: ConnectionWithTags, decryptedPassword?: string): Promise<string> => {
+export const getVncToken = async (connection: ConnectionWithTags, decryptedPassword?: string, width?: number, height?: number): Promise<string> => {
     if (connection.type !== 'VNC') {
         throw new Error('连接类型必须是 VNC。');
     }
@@ -94,6 +94,13 @@ export const getVncToken = async (connection: ConnectionWithTags, decryptedPassw
         // 例如: username (如果 VNC 服务器需要), colorDepth, etc.
         // username: connection.username, // 如果 VNC 服务支持用户名
     });
+
+    if (width !== undefined) {
+        vncApiParams.append('width', String(width));
+    }
+    if (height !== undefined) {
+        vncApiParams.append('height', String(height));
+    }
 
     // 如果 VNC 服务也支持用户名，可以取消注释上面的 username 参数
     // 注意：标准的 VNC 协议主要通过密码进行认证，用户名不是标准部分，但某些实现可能支持。

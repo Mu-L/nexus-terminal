@@ -412,10 +412,15 @@ export const getVncSessionToken = async (req: Request, res: Response): Promise<v
              return;
         }
 
-        // 5. 调用 GuacamoleService 获取 VNC 令牌
-        const guacamoleToken = await GuacamoleService.getVncToken(connection, decryptedPassword);
+        // 5. 从查询参数中获取可选的 width 和 height
+        const { width, height } = req.query;
+        const initialWidth = width ? parseInt(width as string, 10) : undefined;
+        const initialHeight = height ? parseInt(height as string, 10) : undefined;
 
-        console.log(`[Controller:getVncSessionToken] Received Guacamole token via GuacamoleService for VNC connection ${connectionId}`);
+        // 6. 调用 GuacamoleService 获取 VNC 令牌，传递尺寸信息
+        const guacamoleToken = await GuacamoleService.getVncToken(connection, decryptedPassword, initialWidth, initialHeight);
+
+        console.log(`[Controller:getVncSessionToken] Received Guacamole token via GuacamoleService for VNC connection ${connectionId} with size ${initialWidth}x${initialHeight}`);
         
         // 6. 将 Guacamole 令牌返回给前端
         res.status(200).json({ token: guacamoleToken });

@@ -27,8 +27,16 @@ const connectionStatus = ref<'disconnected' | 'connecting' | 'connected' | 'erro
 const statusMessage = ref('');
 const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
-const desiredModalWidth = ref(1024);
-const desiredModalHeight = ref(768);
+// Initialize desiredModalWidth and desiredModalHeight from store or defaults
+const initialStoreWidth = settingsStore.settings.vncModalWidth
+   ? parseInt(settingsStore.settings.vncModalWidth, 10)
+   : 1024;
+const initialStoreHeight = settingsStore.settings.vncModalHeight
+   ? parseInt(settingsStore.settings.vncModalHeight, 10)
+   : 768;
+
+const desiredModalWidth = ref(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth));
+const desiredModalHeight = ref(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight));
 const isKeyboardDisabledForInput = ref(false);
 
 const MIN_MODAL_WIDTH = 800;
@@ -63,7 +71,7 @@ const handleConnection = async () => {
 
   try {
     const connectionsStore = useConnectionsStore();
-    const token = await connectionsStore.getVncSessionToken(props.connection.id);
+    const token = await connectionsStore.getVncSessionToken(props.connection.id, desiredModalWidth.value, desiredModalHeight.value);
     if (!token) {
       throw new Error('VNC Token not found from store action');
     }
@@ -104,6 +112,15 @@ const handleConnection = async () => {
             const displayEl = guacClient.value?.getDisplay()?.getElement();
             if (displayEl && typeof displayEl.focus === 'function') {
               displayEl.focus();
+            }
+            // Sync size on connect
+            if (vncDisplayRef.value && guacClient.value) {
+              const displayWidth = vncDisplayRef.value.offsetWidth;
+              const displayHeight = vncDisplayRef.value.offsetHeight;
+              if (displayWidth > 0 && displayHeight > 0) {
+                console.log(`[VncModal] Initial resize on connect: ${displayWidth}x${displayHeight}`);
+                guacClient.value.sendSize(displayWidth, displayHeight);
+              }
             }
           });
           setTimeout(() => {
@@ -302,41 +319,60 @@ const closeModal = () => {
 };
 
 watch(desiredModalWidth, (newWidth, oldWidth) => {
-  if (newWidth === oldWidth) return;
+  if (newWidth === oldWidth && typeof newWidth === 'number' && typeof oldWidth === 'number') {
+      // console.log(`[VncModal] 宽度监听触发，但值 (${newWidth}) 未改变。跳过。`);
+      return;
+  }
+  // console.log(`[VncModal] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`);
+  
   const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
+
+  if (validatedWidth !== Number(newWidth)) {
+    nextTick(() => {
+      desiredModalWidth.value = validatedWidth;
+    });
+  }
+
   if (saveWidthTimeout) clearTimeout(saveWidthTimeout);
   saveWidthTimeout = setTimeout(() => {
+    // console.log(`[VncModal] 防抖保存 - 保存宽度: ${validatedWidth}`);
     if (String(validatedWidth) !== settingsStore.settings.vncModalWidth) {
          settingsStore.updateSetting('vncModalWidth', String(validatedWidth));
+    } else {
+        // console.log(`[VncModal] 防抖保存 - 宽度 ${validatedWidth} 与存储值匹配。跳过冗余保存。`);
     }
   }, DEBOUNCE_DELAY);
 });
 
 watch(desiredModalHeight, (newHeight, oldHeight) => {
-   if (newHeight === oldHeight) return;
+   if (newHeight === oldHeight && typeof newHeight === 'number' && typeof oldHeight === 'number') {
+       // console.log(`[VncModal] 高度监听触发，但值 (${newHeight}) 未改变。跳过。`);
+       return;
+   }
+   // console.log(`[VncModal] 监听 desiredModalHeight 触发: ${oldHeight} -> ${newHeight}`);
+  
   const validatedHeight = Math.max(MIN_MODAL_HEIGHT, Number(newHeight) || MIN_MODAL_HEIGHT);
+
+  if (validatedHeight !== Number(newHeight)) {
+    nextTick(() => {
+      desiredModalHeight.value = validatedHeight;
+    });
+  }
+
   if (saveHeightTimeout) clearTimeout(saveHeightTimeout);
   saveHeightTimeout = setTimeout(() => {
+    // console.log(`[VncModal] 防抖保存 - 保存高度: ${validatedHeight}`);
     if (String(validatedHeight) !== settingsStore.settings.vncModalHeight) {
         settingsStore.updateSetting('vncModalHeight', String(validatedHeight));
+    } else {
+        // console.log(`[VncModal] 防抖保存 - 高度 ${validatedHeight} 与存储值匹配。跳过冗余保存。`);
     }
   }, DEBOUNCE_DELAY);
 });
 
-watchEffect(() => {
-  const storeWidth = settingsStore.settings.vncModalWidth;
-  const storeHeight = settingsStore.settings.vncModalHeight;
-  console.log(`[VncModal] From store - Width: ${storeWidth}, Height: ${storeHeight}`);
-
-  const initialWidth = storeWidth ? parseInt(storeWidth, 10) : desiredModalWidth.value;
-  const initialHeight = storeHeight ? parseInt(storeHeight, 10) : desiredModalHeight.value;
-
-  const finalWidth = Math.max(MIN_MODAL_WIDTH, isNaN(initialWidth) ? MIN_MODAL_WIDTH : initialWidth);
-  const finalHeight = Math.max(MIN_MODAL_HEIGHT, isNaN(initialHeight) ? MIN_MODAL_HEIGHT : initialHeight);
-  console.log(`[VncModal] Applied - Width: ${finalWidth}, Height: ${finalHeight}`);
-  desiredModalWidth.value = finalWidth;
-  desiredModalHeight.value = finalHeight;
- });
+// The watchEffect that was here (lines 359-372) is removed as its functionality
+// is now covered by the direct initialization of desiredModalWidth/Height from the store
+// and the updated watch listeners.
 
 onMounted(() => {
   if (props.connection) {
@@ -372,6 +408,25 @@ const computedModalStyle = computed(() => {
     width: `${actualWidth}px`,
     height: `${actualHeight}px`,
   };
+});
+watchEffect(() => {
+  // 依赖 computedModalStyle，当其变化时此 effect 会重新运行
+  const currentStyle = computedModalStyle.value;
+
+  if (guacClient.value && connectionStatus.value === 'connected' && vncDisplayRef.value) {
+    // 使用 nextTick 确保 DOM 更新完毕，vncDisplayRef 的尺寸已根据 currentStyle 刷新
+    nextTick(() => {
+      if (vncDisplayRef.value && guacClient.value) { // 再次检查，因为 nextTick 是异步的
+        const displayWidth = vncDisplayRef.value.offsetWidth;
+        const displayHeight = vncDisplayRef.value.offsetHeight;
+
+        if (displayWidth > 0 && displayHeight > 0) {
+          console.log(`[VncModal] Resizing VNC display to: ${displayWidth}x${displayHeight} due to style change.`);
+          guacClient.value.sendSize(displayWidth, displayHeight);
+        }
+      }
+    });
+  }
 });
 
 </script>

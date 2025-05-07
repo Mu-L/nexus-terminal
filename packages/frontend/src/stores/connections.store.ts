@@ -286,12 +286,24 @@ export const useConnectionsStore = defineStore('connections', {
         },
 
         // +++ 新增：获取 VNC 会话令牌 +++
-        async getVncSessionToken(connectionId: number): Promise<string | null> {
+        async getVncSessionToken(connectionId: number, width?: number, height?: number): Promise<string | null> {
             // this.isLoading = true; // 考虑是否需要独立的加载状态，或者由调用方处理
             // this.error = null;
             try {
-                // 调用后端 API GET /connections/:id/vnc-session
-                const response = await apiClient.post<{ token: string }>(`/connections/${connectionId}/vnc-session`);
+                let apiUrl = `/connections/${connectionId}/vnc-session`;
+                const params = new URLSearchParams();
+                if (width !== undefined) {
+                    params.append('width', String(width));
+                }
+                if (height !== undefined) {
+                    params.append('height', String(height));
+                }
+                const queryString = params.toString();
+                if (queryString) {
+                    apiUrl += `?${queryString}`;
+                }
+                // 调用后端 API POST /connections/:id/vnc-session (现在带有可选的 width/height 查询参数)
+                const response = await apiClient.post<{ token: string }>(apiUrl);
                 return response.data.token;
             } catch (err: any) {
                 console.error(`获取 VNC 会话令牌失败 (连接 ID: ${connectionId}):`, err);
