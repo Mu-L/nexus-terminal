@@ -35,12 +35,12 @@ const initialStoreHeight = settingsStore.settings.vncModalHeight
    ? parseInt(settingsStore.settings.vncModalHeight, 10)
    : 768;
 
+const MIN_MODAL_WIDTH = 800;
+const MIN_MODAL_HEIGHT = 600;
+
 const desiredModalWidth = ref(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth));
 const desiredModalHeight = ref(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight));
 const isKeyboardDisabledForInput = ref(false);
-
-const MIN_MODAL_WIDTH = 800;
-const MIN_MODAL_HEIGHT = 600;
 
 let vncWsBaseUrl: string;
 const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082';
