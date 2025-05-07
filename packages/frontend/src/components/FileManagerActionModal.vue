@@ -232,7 +232,7 @@ onUnmounted(() => {
         <button
           @click="closeModal"
           type="button"
-          class="px-4 py-2 text-sm font-medium text-text-primary bg-button hover:bg-button-hover border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-background-dark transition-colors"
+          class="px-4 py-2 text-sm font-medium text-white bg-button hover:bg-button-hover border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-background-dark transition-colors"
         >
           {{ t('fileManager.modals.buttons.cancel', 'Cancel') }}
         </button>
