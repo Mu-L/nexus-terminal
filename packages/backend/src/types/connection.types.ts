@@ -3,7 +3,7 @@
 export interface ConnectionBase {
     id: number;
     name: string | null;
-    type: 'SSH' | 'RDP';
+    type: 'SSH' | 'RDP' | 'VNC';
     host: string;
     port: number;
     username: string;
@@ -22,7 +22,7 @@ export interface ConnectionWithTags extends ConnectionBase {
 
 export interface CreateConnectionInput {
     name?: string;
-    type: 'SSH' | 'RDP';
+    type: 'SSH' | 'RDP' | 'VNC';
     host: string;
     port?: number;
     username: string;
@@ -39,7 +39,7 @@ notes?: string | null; // 新增备注字段
 
 export interface UpdateConnectionInput {
     name?: string;
-    type?: 'SSH' | 'RDP';
+    type?: 'SSH' | 'RDP' | 'VNC';
     host?: string;
     port?: number;
     username?: string;
@@ -57,7 +57,7 @@ notes?: string | null; // 新增备注字段
 export interface FullConnectionData {
     id: number;
     name: string | null;
-    type: 'SSH' | 'RDP';
+    type: 'SSH' | 'RDP' | 'VNC';
     host: string;
     port: number;
     username: string;

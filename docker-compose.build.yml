@@ -10,6 +10,7 @@ services:
     depends_on:
       - backend
       - rdp
+      - vnc
     networks:
       - nexus-terminal-network
 
@@ -27,6 +28,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       RDP_BACKEND_API_BASE: http://rdp:9090
+      VNC_BACKEND_API_BASE: http://vnc:9091
     volumes:
       - ./data:/app/data
     networks:
@@ -45,6 +47,30 @@ services:
       GUAC_WS_PORT: 8081
       FRONTEND_URL: http://frontend
       MAIN_BACKEND_URL: http://backend:3001
+      NODE_ENV: production
+    networks:
+      - nexus-terminal-network
+    depends_on:
+      - guacd
+      - backend
+
+  vnc:
+    build:
+      context: .
+      dockerfile: packages/vnc/Dockerfile
+    image: nexus-vnc # 保持与 docker-compose.yml 中的 image 名称一致
+    container_name: nexus-vnc
+    ports:
+      - "9091:9091"
+      - "8082:8082"
+    environment:
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+      VNC_PORT: 9091
+      VNC_WS_PORT: 8082
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
+      MAIN_BACKEND_URL: ${MAIN_BACKEND_URL}
       NODE_ENV: production
     networks:
       - nexus-terminal-network

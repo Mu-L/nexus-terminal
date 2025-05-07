@@ -30,7 +30,7 @@ const { isLoading: isSshKeyLoading, error: sshKeyStoreError } = storeToRefs(sshK
 
 // 表单数据模型
 const initialFormData = {
-  type: 'SSH' as 'SSH' | 'RDP', // Use uppercase to match ConnectionInfo
+  type: 'SSH' as 'SSH' | 'RDP' | 'VNC', // Use uppercase to match ConnectionInfo
   name: '',
   host: '',
   port: 22,
@@ -42,7 +42,8 @@ const initialFormData = {
   selected_ssh_key_id: null as number | null, // +++ Add field for selected key ID +++
   proxy_id: null as number | null,
   tag_ids: [] as number[], // 新增 tag_ids 字段
-notes: '', // 新增备注字段
+  notes: '', // 新增备注字段
+  vncPassword: '', // VNC specific password
   // Add RDP specific fields later if needed, e.g., domain
 };
 const formData = reactive({ ...initialFormData });
@@ -79,7 +80,7 @@ watch(() => props.connectionToEdit, (newVal) => {
     formError.value = null; // 清除错误
     if (newVal) {
         // 编辑模式：填充表单，但不填充敏感信息
-        formData.type = newVal.type; // Correctly set the type for editing
+        formData.type = newVal.type as 'SSH' | 'RDP' | 'VNC'; // Correctly set the type for editing
         formData.name = newVal.name;
         formData.host = newVal.host;
         formData.port = newVal.port;
@@ -90,23 +91,34 @@ formData.notes = newVal.notes ?? ''; // 填充备注
        formData.tag_ids = newVal.tag_ids ? [...newVal.tag_ids] : []; // 填充 tag_ids (深拷贝)
 
        // +++ 填充 selected_ssh_key_id (如果认证方式是 key) +++
-       if (newVal.auth_method === 'key') {
+       if (newVal.type === 'SSH' && newVal.auth_method === 'key') {
            formData.selected_ssh_key_id = newVal.ssh_key_id ?? null;
        } else {
-           formData.selected_ssh_key_id = null; // 清空，以防之前是 key
+           formData.selected_ssh_key_id = null; // 清空
        }
 
-       // 清空敏感字段 (密码和直接输入的密钥)
-       formData.password = '';
-       formData.private_key = ''; // 即使是 key 认证，编辑时也不显示旧的直接输入密钥
-       formData.passphrase = ''; // 同上
+       // 清空敏感字段
+       formData.password = ''; // For SSH/RDP
+       formData.private_key = '';
+       formData.passphrase = '';
+       // formData.vncPassword is already handled by initialFormData or cleared if not VNC
+       if (newVal.type !== 'VNC') {
+            formData.vncPassword = '';
+       } else {
+           // If editing a VNC connection, we don't get vncPassword from backend directly.
+           // User needs to re-enter if they want to change it.
+           // For display, it's kept empty.
+           formData.vncPassword = '';
+       }
+
 
    } else {
        // 添加模式：重置表单
        Object.assign(formData, initialFormData);
        formData.tag_ids = []; // 确保 tag_ids 也被重置为空数组
        formData.selected_ssh_key_id = null; // 确保添加模式下也重置
-formData.notes = ''; // 重置备注
+       formData.notes = ''; // 重置备注
+       formData.vncPassword = ''; // 重置VNC密码
     }
 }, { immediate: true });
 
@@ -120,15 +132,17 @@ onMounted(() => {
 // 监听连接类型变化，动态调整默认端口
 watch(() => formData.type, (newType) => {
     // Use uppercase for comparison
-    if (newType === 'RDP' && formData.port === 22) {
-        formData.port = 3389; // RDP 默认端口
-    } else if (newType === 'SSH' && formData.port === 3389) {
-        formData.port = 22; // SSH 默认端口
-    }
-    // 重置或调整认证方式等逻辑可以在这里添加
     if (newType === 'RDP') {
-        // RDP 通常只用密码，可以强制或隐藏 auth_method
-        // formData.auth_method = 'password'; // Example: Force password for RDP
+        if (formData.port === 22 || formData.port === 5900 || formData.port === 5901) formData.port = 3389; // RDP 默认端口
+        formData.auth_method = 'password'; // RDP uses password
+        formData.selected_ssh_key_id = null; // Clear SSH key selection
+    } else if (newType === 'SSH') {
+        if (formData.port === 3389 || formData.port === 5900 || formData.port === 5901) formData.port = 22; // SSH 默认端口
+        // auth_method will be handled by its own select
+    } else if (newType === 'VNC') {
+        if (formData.port === 22 || formData.port === 3389) formData.port = 5900; // VNC 默认端口 (e.g., 5900 or 5901)
+        formData.auth_method = 'password'; // VNC uses password, hide auth_method selector
+        formData.selected_ssh_key_id = null; // Clear SSH key selection
     }
 });
 
@@ -190,11 +204,18 @@ const handleSubmit = async () => {
       // RDP Validation
       // 1. 添加模式下，密码是必填的
       if (!isEditMode.value && !formData.password) {
-          formError.value = t('connections.form.errorPasswordRequired'); // 可以复用密码必填的翻译
+          formError.value = t('connections.form.errorPasswordRequired');
           return;
       }
-      // 2. 编辑模式下，密码可以不填（表示不修改），除非是从非 RDP 类型切换过来（这个逻辑比较复杂，暂时简化为密码非必填）
-      //    如果需要更严格的验证（例如从 SSH 编辑为 RDP 时强制要求输入密码），可以在这里添加
+      // 2. 编辑模式下，密码可以不填（表示不修改）
+  } else if (formData.type === 'VNC') {
+      // VNC Validation
+      // 1. 添加模式下，VNC密码是必填的
+      if (!isEditMode.value && !formData.vncPassword) {
+          formError.value = t('connections.form.errorVncPasswordRequired', 'VNC 密码是必填项。'); // Add new translation key
+          return;
+      }
+      // 2. 编辑模式下，VNC密码可以不填（表示不修改）
   }
   // --- 验证逻辑结束 ---
 
@@ -256,6 +277,21 @@ notes: formData.notes, // 添加备注
       delete dataToSend.auth_method;
       delete dataToSend.private_key;
       delete dataToSend.passphrase;
+      delete dataToSend.vncPassword; // Ensure VNC password field for form doesn't go if RDP
+  } else if (formData.type === 'VNC') {
+     // VNC data population
+     if (formData.vncPassword) {
+         dataToSend.password = formData.vncPassword; // Backend expects VNC password in 'password' field
+     } else if (isEditMode.value && formData.vncPassword === '') {
+         // Editing VNC, empty password means don't change
+     }
+     // VNC does not use SSH specific fields
+     delete dataToSend.auth_method;
+     delete dataToSend.private_key;
+     delete dataToSend.passphrase;
+     delete dataToSend.ssh_key_id;
+     // formData.vncPassword is used for the form, but backend might expect it as 'password'
+     // So, we don't send 'vncPassword' itself to backend.
   }
 
 
@@ -424,6 +460,7 @@ const testButtonText = computed(() => {
                     style="background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'%3e%3cpath fill=\'none\' stroke=\'%236c757d\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M2 5l6 6 6-6\'/%3e%3c/svg%3e'); background-position: right 0.75rem center; background-size: 16px 12px;">
               <option value="SSH">{{ t('connections.form.typeSsh', 'SSH') }}</option>
               <option value="RDP">{{ t('connections.form.typeRdp', 'RDP') }}</option>
+              <option value="VNC">{{ t('connections.form.typeVnc', 'VNC') }}</option>
             </select>
           </div>
           <!-- Host and Port Row -->
@@ -498,13 +535,22 @@ const testButtonText = computed(() => {
                       class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
                -->
              </div>
+           </template>
+
+          <!-- VNC Specific Auth (Password only) -->
+          <template v-if="formData.type === 'VNC'">
+            <div>
+              <label for="conn-password-vnc" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.vncPassword', 'VNC 密码') }}</label>
+              <input type="password" id="conn-password-vnc" v-model="formData.vncPassword" :required="!isEditMode" autocomplete="new-password"
+                     class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
+            </div>
           </template>
-       </div>
+        </div>
 
         <!-- Advanced Options Section -->
         <div class="space-y-4 p-4 border border-border rounded-md bg-header/30">
            <h4 class="text-base font-semibold mb-3 pb-2 border-b border-border/50">{{ t('connections.form.sectionAdvanced', '高级选项') }}</h4>
-           <div v-if="formData.type !== 'RDP'"> <!-- Proxy Select - Hide for RDP -->
+           <div v-if="formData.type === 'SSH'"> <!-- Proxy Select - Show only for SSH -->
              <label for="conn-proxy" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.proxy') }} ({{ t('connections.form.optional') }})</label>
              <select id="conn-proxy" v-model="formData.proxy_id"
                      class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none bg-no-repeat bg-right pr-8"
@@ -551,7 +597,6 @@ const testButtonText = computed(() => {
       <!-- Form Actions -->
       <div class="flex justify-between items-center pt-5 mt-6 flex-shrink-0">
          <!-- Test Area (Only show for SSH) -->
-         <!-- Use uppercase for comparison -->
          <div v-if="formData.type === 'SSH'" class="flex flex-col items-start gap-1">
              <div class="flex items-center gap-2"> <!-- Button and Icon -->
                  <button type="button" @click="handleTestConnection" :disabled="isLoading || testStatus === 'testing'"
@@ -583,7 +628,7 @@ const testButtonText = computed(() => {
              </div>
          </div>
          <!-- Placeholder for alignment when test button is hidden -->
-         <div v-else class="flex-1"></div>
+         <div v-else class="flex-1"></div> <!-- This div ensures the main action buttons are pushed to the right when test area is hidden -->
          <div class="flex space-x-3"> <!-- Main Actions -->
              <button type="submit" @click="handleSubmit" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
                      class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">

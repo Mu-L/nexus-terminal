@@ -12,6 +12,7 @@ import {
     exportConnections,
     importConnections,
     getRdpSessionToken, // Import the new controller function
+    getVncSessionToken, // Import the VNC session token controller function
     cloneConnection, // +++ Import the clone controller function +++
     // updateConnectionTags, // No longer directly used by primary flow
     addTagToConnections // +++ Import the new controller function for adding tag to multiple connections +++
@@ -82,6 +83,9 @@ router.post('/test-unsaved', testUnsavedConnection);
 
 // POST /api/v1/connections/:id/rdp-session - Get RDP session token via backend
 router.post('/:id/rdp-session', getRdpSessionToken);
+
+// POST /api/v1/connections/:id/vnc-session - Get VNC session token
+router.post('/:id/vnc-session', getVncSessionToken);
 
 // +++ POST /api/v1/connections/:id/clone - 克隆连接 +++
 router.post('/:id/clone', cloneConnection);

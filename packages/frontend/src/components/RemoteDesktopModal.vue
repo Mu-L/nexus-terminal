@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed, watchEffect } from 'vue'; 
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings.store';
+import { useConnectionsStore } from '../stores/connections.store'; // +++ Import connections store +++
 // @ts-ignore - guacamole-common-js 缺少官方类型定义
 import Guacamole from 'guacamole-common-js';
 import apiClient from '../utils/apiClient';
@@ -36,69 +37,100 @@ const MIN_MODAL_HEIGHT = 768;
 
 // Dynamically construct WebSocket URL based on environment
 let backendBaseUrl: string;
-const LOCAL_BACKEND_URL = 'ws://localhost:3001'
+const LOCAL_BACKEND_URL = 'ws://localhost:3001'; // For RDP proxy via main backend
 
-// Determine WebSocket URL based on hostname
+// Determine WebSocket URL based on hostname for RDP
 if (window.location.hostname === 'localhost') {
   backendBaseUrl = LOCAL_BACKEND_URL;
-  console.log(`[RDP 模态框] 使用 localhost WebSocket 基础 URL: ${backendBaseUrl}`);
+  console.log(`[RemoteDesktopModal] Using localhost RDP WebSocket base URL: ${backendBaseUrl}`);
 } else {
-  // 备选方案: 根据当前 window.location 为生产环境或其他环境构建 URL
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHostAndPort = window.location.host;
-  backendBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws`;
-  console.log(`[RDP 模态框] 使用生产环境 WebSocket 基础 URL (来自 window.location): ${backendBaseUrl}`);
+  backendBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws`; // Assuming RDP proxy is at /ws path
+  console.log(`[RemoteDesktopModal] Using production RDP WebSocket base URL (from window.location): ${backendBaseUrl}`);
 }
 
-const connectRdp = async () => {
+// NEW: VNC WebSocket URL determination
+let vncWsBaseUrl: string;
+const VNC_WS_PORT_FROM_ENV = import.meta.env.VITE_VNC_WS_PORT || '8082'; // Get from env or default
+
+if (window.location.hostname === 'localhost') {
+  vncWsBaseUrl = `ws://localhost:${VNC_WS_PORT_FROM_ENV}`;
+  console.log(`[RemoteDesktopModal] Using localhost VNC WebSocket base URL: ${vncWsBaseUrl}`);
+} else {
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // Assuming VNC proxy runs on the same host but different port (or path if configured)
+  vncWsBaseUrl = `${wsProtocol}//${window.location.hostname}:${VNC_WS_PORT_FROM_ENV}`;
+  console.log(`[RemoteDesktopModal] Using production VNC WebSocket base URL: ${vncWsBaseUrl}`);
+}
+
+const handleConnection = async () => {
   if (!props.connection || !rdpDisplayRef.value) {
     statusMessage.value = t('remoteDesktopModal.errors.missingInfo');
     connectionStatus.value = 'error';
     return;
   }
 
+  // Clear previous display and disconnect
   while (rdpDisplayRef.value.firstChild) {
     rdpDisplayRef.value.removeChild(rdpDisplayRef.value.firstChild);
   }
-  disconnectRdp();
+  disconnectGuacamole(); // Renamed from disconnectRdp
 
   connectionStatus.value = 'connecting';
   statusMessage.value = t('remoteDesktopModal.status.fetchingToken');
 
   try {
-    const apiUrl = `connections/${props.connection.id}/rdp-session`;
+    let token: string | null = null;
+    let tunnelUrl: string = '';
+    const connectionsStore = useConnectionsStore();
 
-    const response = await apiClient.post<{ token: string }>(apiUrl);
+    if (props.connection.type === 'RDP') {
+      const apiUrl = `connections/${props.connection.id}/rdp-session`;
+      const response = await apiClient.post<{ token: string }>(apiUrl);
+      token = response.data?.token;
+      if (!token) {
+        throw new Error('RDP Token not found in API response');
+      }
+      statusMessage.value = t('remoteDesktopModal.status.connectingWs');
 
-    const token = response.data?.token;
-    if (!token) {
-         throw new Error('Token not found in API response');
-    }
-    statusMessage.value = t('remoteDesktopModal.status.connectingWs');
+      await nextTick();
+      let widthToSend = 800;
+      let heightToSend = 600;
+      const dpiToSend = 96;
 
-    // DOM 更新后获取 RDP 容器尺寸
-    await nextTick();
-
-    let widthToSend = 800; // 默认/备用宽度
-    let heightToSend = 600; // 默认/备用高度
-    const dpiToSend = 96;
-
-    if (rdpContainerRef.value) {
-        // 使用 clientWidth/clientHeight，因为它们代表可用于内容的内部尺寸
+      if (rdpContainerRef.value) {
         widthToSend = rdpContainerRef.value.clientWidth;
-        heightToSend = rdpContainerRef.value.clientHeight - 1; // 根据反馈减去 1
-        // 确保最小尺寸，必要时根据后端要求进行调整
+        heightToSend = rdpContainerRef.value.clientHeight - 1;
         widthToSend = Math.max(100, widthToSend);
         heightToSend = Math.max(100, heightToSend);
-        console.log(`计算出的 RDP 尺寸: ${widthToSend}x${heightToSend}`);
+      }
+      tunnelUrl = `${backendBaseUrl}/rdp-proxy?token=${encodeURIComponent(token)}&width=${widthToSend}&height=${heightToSend}&dpi=${dpiToSend}`;
+      console.log(`[RemoteDesktopModal] Connecting to RDP tunnel: ${tunnelUrl}`);
+
+    } else if (props.connection.type === 'VNC') {
+      token = await connectionsStore.getVncSessionToken(props.connection.id);
+      if (!token) {
+        throw new Error('VNC Token not found from store action');
+      }
+      statusMessage.value = t('remoteDesktopModal.status.connectingWs'); // Generic message
+      tunnelUrl = `${vncWsBaseUrl}?token=${encodeURIComponent(token)}`;
+      // Optional: Add width/height if VNC proxy needs them, though Guacamole usually handles this post-connection.
+      // await nextTick();
+      // let widthToSend = 800;
+      // let heightToSend = 600;
+      // if (rdpContainerRef.value) {
+      //   widthToSend = rdpContainerRef.value.clientWidth;
+      //   heightToSend = rdpContainerRef.value.clientHeight - 1;
+      //   widthToSend = Math.max(100, widthToSend);
+      //   heightToSend = Math.max(100, heightToSend);
+      //   tunnelUrl += `&width=${widthToSend}&height=${heightToSend}`;
+      // }
+      console.log(`[RemoteDesktopModal] Connecting to VNC tunnel: ${tunnelUrl}`);
     } else {
-         console.warn("RDP 容器引用不可用，无法获取尺寸。使用默认值。");
-         // 考虑设置错误状态或通知用户
+      throw new Error(`Unsupported connection type: ${props.connection.type}`);
     }
 
-    // 使用确定的基础 URL 构建后端代理端点的 URL
-    const tunnelUrl = `${backendBaseUrl}/rdp-proxy?token=${encodeURIComponent(token)}&width=${widthToSend}&height=${heightToSend}&dpi=${dpiToSend}`;
-   console.log(`[RDP 模态框] 连接到隧道: ${tunnelUrl}`); // 记录最终 URL
     // @ts-ignore
     const tunnel = new Guacamole.WebSocketTunnel(tunnelUrl);
 
@@ -107,82 +139,77 @@ const connectRdp = async () => {
       const errorCode = status.code || 'N/A';
       statusMessage.value = `${t('remoteDesktopModal.errors.tunnelError')} (${errorCode}): ${errorMessage}`;
       connectionStatus.value = 'error';
-      disconnectRdp();
+      disconnectGuacamole();
     };
 
     // @ts-ignore
     guacClient.value = new Guacamole.Client(tunnel);
-// 添加此行以启用 keep-alive (每 3 秒发送 NOP)
-    guacClient.value.keepAliveFrequency = 3000; // 毫秒
+    guacClient.value.keepAliveFrequency = 3000;
 
     rdpDisplayRef.value.appendChild(guacClient.value.getDisplay().getElement());
 
     guacClient.value.onstatechange = (state: number) => {
+      let currentStatus = '';
+      let i18nKeyPart = 'unknownState';
+
       switch (state) {
-        case 0:
-          statusMessage.value = t('remoteDesktopModal.status.idle');
-          connectionStatus.value = 'disconnected';
+        case 0: // IDLE
+          i18nKeyPart = 'idle';
+          currentStatus = 'disconnected';
           break;
-        case 1:
-          statusMessage.value = t('remoteDesktopModal.status.connectingRdp');
-          connectionStatus.value = 'connecting';
+        case 1: // CONNECTING
+          i18nKeyPart = props.connection?.type === 'VNC' ? 'connectingVnc' : 'connectingRdp';
+          currentStatus = 'connecting';
           break;
-        case 2:
-          statusMessage.value = t('remoteDesktopModal.status.waiting');
-          connectionStatus.value = 'connecting';
+        case 2: // WAITING
+          i18nKeyPart = 'waiting';
+          currentStatus = 'connecting';
           break;
-        case 3:
-          statusMessage.value = t('remoteDesktopModal.status.connected');
-          connectionStatus.value = 'connected';
+        case 3: // CONNECTED
+          i18nKeyPart = 'connected';
+          currentStatus = 'connected';
           setupInputListeners();
-          // 连接成功后，尝试将焦点设置到 RDP 显示区域
           nextTick(() => {
             const displayEl = guacClient.value?.getDisplay()?.getElement();
             if (displayEl && typeof displayEl.focus === 'function') {
               displayEl.focus();
-              console.log('[RDP Modal] Focused RDP display after connection.');
-            } else {
-              console.warn('[RDP Modal] Could not focus RDP display after connection.');
             }
           });
-
-          setTimeout(() => {
+          setTimeout(() => { // z-index fix for canvas
             nextTick(() => {
               if (rdpDisplayRef.value && guacClient.value) {
                 const canvases = rdpDisplayRef.value.querySelectorAll('canvas');
-              canvases.forEach((canvas) => {
-                canvas.style.zIndex = '999';
-              });
+                canvases.forEach((canvas) => { canvas.style.zIndex = '999'; });
               }
             });
           }, 100);
           break;
-        case 4:
-          statusMessage.value = t('remoteDesktopModal.status.disconnecting');
-          connectionStatus.value = 'disconnected';
+        case 4: // DISCONNECTING
+          i18nKeyPart = 'disconnecting';
+          currentStatus = 'disconnected'; // Or 'disconnecting'
           break;
-        case 5:
-          statusMessage.value = t('remoteDesktopModal.status.disconnected');
-          connectionStatus.value = 'disconnected';
+        case 5: // DISCONNECTED
+          i18nKeyPart = 'disconnected';
+          currentStatus = 'disconnected';
           break;
-        default:
-          statusMessage.value = `${t('remoteDesktopModal.status.unknownState')}: ${state}`;
       }
+      statusMessage.value = t(`remoteDesktopModal.status.${i18nKeyPart}`, { state });
+      if (currentStatus) connectionStatus.value = currentStatus as 'disconnected' | 'connecting' | 'connected' | 'error';
     };
 
     guacClient.value.onerror = (status: any) => {
       const errorMessage = status.message || 'Unknown client error';
       statusMessage.value = `${t('remoteDesktopModal.errors.clientError')}: ${errorMessage}`;
       connectionStatus.value = 'error';
-      disconnectRdp();
+      disconnectGuacamole();
     };
 
-    guacClient.value.connect(''); // 保留 '' 的更改
+    guacClient.value.connect('');
 
   } catch (error: any) {
     statusMessage.value = `${t('remoteDesktopModal.errors.connectionFailed')}: ${error.response?.data?.message || error.message || String(error)}`;
     connectionStatus.value = 'error';
-    disconnectRdp();
+    disconnectGuacamole();
   }
 };
 
@@ -315,7 +342,7 @@ const enableRdpKeyboard = () => {
   });
 };
 
-const disconnectRdp = () => {
+const disconnectGuacamole = () => {
   removeInputListeners();
   isKeyboardDisabledForInput.value = false; // 确保状态重置
   if (guacClient.value) {
@@ -335,7 +362,7 @@ const disconnectRdp = () => {
 
 
 const closeModal = () => {
-  disconnectRdp();
+  disconnectGuacamole();
   emit('close');
 };
 
@@ -411,7 +438,7 @@ onMounted(() => {
 
   if (props.connection) {
     nextTick(async () => {
-        await connectRdp(); // 使用初始尺寸连接
+        await handleConnection(); // 使用初始尺寸连接
         // 不再需要设置 observer
     });
   } else {
@@ -421,17 +448,17 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  disconnectRdp(); // 这里已经调用了 removeInputListeners
+  disconnectGuacamole(); // 这里已经调用了 removeInputListeners
 });
 
 watch(() => props.connection, (newConnection, oldConnection) => {
   if (newConnection && newConnection.id !== oldConnection?.id) {
      nextTick(async () => {
-        await connectRdp(); // 使用初始尺寸连接
+        await handleConnection(); // 使用初始尺寸连接
         // 不再需要设置 observer
      });
   } else if (!newConnection) {
-      disconnectRdp();
+      disconnectGuacamole();
       statusMessage.value = t('remoteDesktopModal.errors.noConnection');
       connectionStatus.value = 'error';
   }
@@ -491,7 +518,7 @@ const computedModalStyle = computed(() => {
               <i v-else class="fas fa-exclamation-triangle fa-2x mb-3 text-red-400"></i>
               <p class="text-sm">{{ statusMessage }}</p>
                <button v-if="connectionStatus === 'error'"
-                       @click="() => connectRdp()"
+                       @click="() => handleConnection()"
                        class="mt-4 px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary-dark">
                  {{ t('common.retry') }}
                </button>
@@ -523,12 +550,12 @@ const computedModalStyle = computed(() => {
             />
              <!-- 添加重新连接按钮 -->
              <button
-                @click="connectRdp"
-                :disabled="connectionStatus === 'connecting'"
-                class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
-                :title="t('remoteDesktopModal.reconnectTooltip')"
+               @click="handleConnection"
+               :disabled="connectionStatus === 'connecting'"
+               class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+               :title="t('remoteDesktopModal.reconnectTooltip')"
              >
-                {{ t('common.reconnect') }}
+               {{ t('common.reconnect') }}
              </button>
          </div>
        </div>

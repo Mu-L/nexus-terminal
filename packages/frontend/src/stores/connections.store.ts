@@ -5,7 +5,7 @@ import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
 export interface ConnectionInfo {
     id: number;
     name: string;
-    type: 'SSH' | 'RDP'; // Use uppercase to match backend data
+    type: 'SSH' | 'RDP' | 'VNC'; // Use uppercase to match backend data
     host: string;
     port: number;
     username: string;
@@ -17,6 +17,7 @@ export interface ConnectionInfo {
     updated_at: number;
     last_connected_at: number | null;
 notes?: string | null; // 新增备注字段
+    vncPassword?: string; // VNC specific password
 }
 
 // 定义 Store State 的接口
@@ -87,14 +88,15 @@ export const useConnectionsStore = defineStore('connections', {
         // 更新参数类型以接受新的认证字段
         async addConnection(newConnectionData: {
             name: string;
-            type: 'SSH' | 'RDP'; // Use uppercase
+            type: 'SSH' | 'RDP' | 'VNC'; // Use uppercase
             host: string;
             port: number;
             username: string;
-            auth_method: 'password' | 'key';
-            password?: string;
-            private_key?: string;
-            passphrase?: string;
+            auth_method: 'password' | 'key'; // SSH specific
+            password?: string; // SSH password or general password
+            private_key?: string; // SSH specific
+            passphrase?: string; // SSH specific
+            vncPassword?: string; // VNC specific password
             proxy_id?: number | null;
             tag_ids?: number[]; // 新增：允许传入 tag_ids
         }) {
@@ -122,8 +124,8 @@ export const useConnectionsStore = defineStore('connections', {
 
         // 更新连接 Action
         // 更新参数类型以包含 proxy_id 和 tag_ids
-        // Update parameter type to include 'type'
-        async updateConnection(connectionId: number, updatedData: Partial<Omit<ConnectionInfo, 'id' | 'created_at' | 'updated_at' | 'last_connected_at'> & { type?: 'SSH' | 'RDP'; password?: string; private_key?: string; passphrase?: string; proxy_id?: number | null; tag_ids?: number[] }>) {
+        // Update parameter type to include 'type' and VNC fields
+        async updateConnection(connectionId: number, updatedData: Partial<Omit<ConnectionInfo, 'id' | 'created_at' | 'updated_at' | 'last_connected_at'> & { type?: 'SSH' | 'RDP' | 'VNC'; password?: string; private_key?: string; passphrase?: string; vncPassword?: string; proxy_id?: number | null; tag_ids?: number[] }>) {
             this.isLoading = true;
             this.error = null;
             try {
@@ -280,6 +282,27 @@ export const useConnectionsStore = defineStore('connections', {
                 return false;
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        // +++ 新增：获取 VNC 会话令牌 +++
+        async getVncSessionToken(connectionId: number): Promise<string | null> {
+            // this.isLoading = true; // 考虑是否需要独立的加载状态，或者由调用方处理
+            // this.error = null;
+            try {
+                // 调用后端 API GET /connections/:id/vnc-session
+                const response = await apiClient.get<{ token: string }>(`/connections/${connectionId}/vnc-session`);
+                return response.data.token;
+            } catch (err: any) {
+                console.error(`获取 VNC 会话令牌失败 (连接 ID: ${connectionId}):`, err);
+                // this.error = err.response?.data?.message || err.message || '获取 VNC 会话令牌时发生未知错误。';
+                if (err.response?.status === 401) {
+                    console.warn('未授权，需要登录才能获取 VNC 会话令牌。');
+                }
+                // 对于这种一次性获取数据的操作，错误通常由调用方处理并显示给用户
+                throw err; // 重新抛出错误，让调用方处理
+            } finally {
+                // this.isLoading = false;
             }
         },
     },
