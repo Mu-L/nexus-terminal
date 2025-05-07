@@ -138,6 +138,32 @@ const handleConnection = async () => {
   }
 };
 
+const trySyncClipboardOnDisplayFocus = async () => {
+  if (!guacClient.value) {
+    return;
+  }
+  try {
+    const currentClipboardText = await navigator.clipboard.readText();
+    if (currentClipboardText && guacClient.value) {
+      // @ts-ignore
+      const stream = guacClient.value.createClipboardStream('text/plain');
+      // @ts-ignore
+      const writer = new Guacamole.StringWriter(stream);
+      writer.sendText(currentClipboardText);
+      writer.sendEnd();
+      console.log('[VncModal] Sent clipboard to VNC on display focus:', currentClipboardText.substring(0, 50) + (currentClipboardText.length > 50 ? '...' : ''));
+    }
+  } catch (err) {
+    // This error is expected if the document/tab is not focused when the VNC display element gets focus.
+    // Or if clipboard permissions are not granted.
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      // console.log('[VncModal] Clipboard read on display focus skipped: Document not focused or permission denied.');
+    } else {
+      console.warn('[VncModal] Could not read clipboard on display focus, or other error:', err);
+    }
+  }
+};
+
 const setupInputListeners = () => {
     if (!guacClient.value || !vncDisplayRef.value) return;
     try {
@@ -195,6 +221,11 @@ const setupInputListeners = () => {
              }
         };
 
+        // Listen for host copy events to send to VNC
+        // document.addEventListener('copy', handleHostCopy); // Removed this
+        // displayEl.addEventListener('mouseenter', trySyncClipboardOnMouseEnter); // Changed to focus event
+        displayEl.addEventListener('focus', trySyncClipboardOnDisplayFocus);
+
     } catch (inputError) {
         console.error("Error setting up VNC input listeners:", inputError);
         statusMessage.value = t('remoteDesktopModal.errors.inputError');
@@ -202,16 +233,24 @@ const setupInputListeners = () => {
 };
 
 const removeInputListeners = () => {
+    // Remove host copy event listener
+    // document.removeEventListener('copy', handleHostCopy); // Removed this
     if (guacClient.value) {
-        try {
-            const displayEl = guacClient.value.getDisplay()?.getElement();
-            if (displayEl) {
-                displayEl.style.cursor = 'default';
+        const displayEl = guacClient.value.getDisplay()?.getElement();
+        if (displayEl) {
+            // displayEl.removeEventListener('mouseenter', trySyncClipboardOnMouseEnter); // Changed to focus event
+            displayEl.removeEventListener('focus', trySyncClipboardOnDisplayFocus);
+            try {
+              if (displayEl) {
+                  displayEl.style.cursor = 'default';
+              }
+            } catch (e) {
+                console.warn("Could not reset cursor on VNC display element:", e);
             }
-        } catch (e) {
-             console.warn("Could not reset cursor on VNC display element:", e);
         }
     }
+    // The rest of the cleanup for keyboard and mouse can remain outside the guacClient.value check
+    // as they are independent refs.
     if (keyboard.value) {
         keyboard.value.onkeydown = null;
         keyboard.value.onkeyup = null;
