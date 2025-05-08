@@ -100,23 +100,22 @@ onMounted(() => {
 
 // --- Passkey Login Handler ---
 const handlePasskeyLogin = async () => {
-  // TODO: Implement Passkey login logic
-  // 1. Get username (assume it's available in credentials.username for now)
-  if (!credentials.username) {
-    // TODO: Handle missing username, maybe show an error
-    alert(t('login.error.usernameRequiredForPasskey'));
-    return;
-  }
   try {
     isLoading.value = true;
     error.value = null; // Clear previous errors
+
+    // Prepare body for authentication options request
+    // If username is provided, include it. Otherwise, send an empty object
+    // to allow the backend to attempt discoverable credential authentication.
+    const authOptionsBody = credentials.username ? { username: credentials.username } : {};
 
     // Step 1: Get authentication options from the server
     const optionsResponse = await fetch('/api/v1/auth/passkey/authentication-options', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: credentials.username }),
+      body: JSON.stringify(authOptionsBody),
     });
+
     if (!optionsResponse.ok) {
       const errData = await optionsResponse.json();
       throw new Error(errData.message || t('login.error.passkeyAuthOptionsFailed'));
@@ -127,7 +126,11 @@ const handlePasskeyLogin = async () => {
     const authenticationResult = await startAuthentication(authOptions);
 
     // Step 3: Send authentication result to the server
-    await authStore.loginWithPasskey(credentials.username, authenticationResult);
+    // Pass username if it was used to get options, otherwise pass null or rely on backend to extract from assertion
+    // For simplicity, we'll pass the username if available, or an empty string if not.
+    // The store action `loginWithPasskey` expects a string.
+    // The backend should ideally identify the user from the assertion if an empty username is provided.
+    await authStore.loginWithPasskey(credentials.username || '', authenticationResult);
 
   } catch (err: any) {
     console.error('Passkey login error:', err);
@@ -242,8 +245,9 @@ const handlePasskeyLogin = async () => {
           <!-- Passkey Login Button -->
           <div class="mt-4 text-center">
            <button type="button" @click="handlePasskeyLogin" :disabled="isLoading"
-                   class="w-full py-3 px-4 bg-secondary text-white border-none rounded-lg text-base font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-70">
-             {{ isLoading ? t('login.loggingIn') : t('login.loginWithPasskey') }}
+                   class="w-full py-3 px-4 bg-secondary text-black border-none rounded-lg text-base font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center">
+              <i class="fas fa-key mr-2"></i>
+              <span>{{ isLoading ? t('login.loggingIn') : t('login.loginWithPasskey') }}</span>
            </button>
          </div>
         </form>
