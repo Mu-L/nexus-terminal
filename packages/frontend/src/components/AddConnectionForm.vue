@@ -11,7 +11,7 @@ import TagInput from './TagInput.vue';
 import SshKeySelector from './SshKeySelector.vue'; // +++ Import SSH Key Selector +++
 
 // 定义组件发出的事件
-const emit = defineEmits(['close', 'connection-added', 'connection-updated']);
+const emit = defineEmits(['close', 'connection-added', 'connection-updated', 'connection-deleted']);
 
 // 定义 Props
 const props = defineProps<{
@@ -312,6 +312,29 @@ notes: formData.notes, // 添加备注
       } else {
           formError.value = t('connections.form.errorAdd', { error: connectionsStore.error || '未知错误' });
       }
+  }
+};
+
+// 处理删除连接
+const handleDeleteConnection = async () => {
+  if (!isEditMode.value || !props.connectionToEdit) return;
+
+  // 添加一个确认对话框
+  // 使用模板字符串和 t 函数的默认值功能
+  const connectionName = props.connectionToEdit.name || `ID: ${props.connectionToEdit.id}`;
+  if (!confirm(t('connections.prompts.confirmDelete', { name: connectionName }))) {
+      return;
+  }
+
+  formError.value = null;
+  connectionsStore.error = null; // 清除之前的错误
+
+  const success = await connectionsStore.deleteConnection(props.connectionToEdit.id);
+  if (success) {
+    emit('connection-deleted'); // 发出删除成功事件
+    emit('close'); // 删除成功后关闭表单
+  } else {
+    formError.value = t('connections.form.errorDelete', { error: connectionsStore.error || t('errors.unknown', '未知错误') });
   }
 };
 
@@ -655,6 +678,10 @@ const testButtonText = computed(() => {
          <!-- Placeholder for alignment when test button is hidden -->
          <div v-else class="flex-1"></div> <!-- This div ensures the main action buttons are pushed to the right when test area is hidden -->
          <div class="flex space-x-3"> <!-- Main Actions -->
+             <button v-if="isEditMode" type="button" @click="handleDeleteConnection" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
+                     class="px-4 py-2 bg-transparent text-red-600 border border-red-500 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
+               {{ t('connections.actions.delete') }}
+             </button>
              <button type="submit" @click="handleSubmit" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
                      class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
                {{ submitButtonText }}
