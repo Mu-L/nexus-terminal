@@ -202,11 +202,13 @@ export class PasskeyService {
         throw new Error('Failed to decode credential_id.');
     }
 
-    let authenticatorPublicKey: Buffer;
+    let authenticatorPublicKey: Uint8Array; // Changed type from Buffer to Uint8Array
     try {
-        authenticatorPublicKey = Buffer.from(passkey.public_key, 'base64');
+        const pkBuffer = Buffer.from(passkey.public_key, 'base64');
+        // Ensure it's a plain Uint8Array instance
+        authenticatorPublicKey = new Uint8Array(pkBuffer.buffer, pkBuffer.byteOffset, pkBuffer.byteLength);
     } catch (e: any) {
-        console.error('[PasskeyService] Error decoding public_key to Buffer:', passkey.public_key, e.message);
+        console.error('[PasskeyService] Error decoding public_key to Uint8Array:', passkey.public_key, e.message);
         throw new Error('Failed to decode public_key.');
     }
     
@@ -230,7 +232,7 @@ export class PasskeyService {
 
     console.log('[PasskeyService] Authenticator object to be used for verification:');
     console.log(`  - credentialID (type: ${typeof authenticatorObject.credentialID}, instanceof Uint8Array: ${authenticatorObject.credentialID instanceof Uint8Array}, length: ${authenticatorObject.credentialID?.length}):`, authenticatorObject.credentialID);
-    console.log(`  - credentialPublicKey (type: ${typeof authenticatorObject.credentialPublicKey}, instanceof Buffer: ${authenticatorObject.credentialPublicKey instanceof Buffer}, length: ${authenticatorObject.credentialPublicKey?.length}):`, authenticatorObject.credentialPublicKey);
+    console.log(`  - credentialPublicKey (type: ${typeof authenticatorObject.credentialPublicKey}, instanceof Uint8Array: ${authenticatorObject.credentialPublicKey instanceof Uint8Array}, instanceof Buffer: ${authenticatorObject.credentialPublicKey instanceof Buffer}, length: ${authenticatorObject.credentialPublicKey?.length}):`, authenticatorObject.credentialPublicKey);
     console.log(`  - counter (type: ${typeof authenticatorObject.counter}):`, authenticatorObject.counter);
     console.log(`  - transports (type: ${typeof authenticatorObject.transports}):`, authenticatorObject.transports);
     console.log(`  - credentialBackedUp (type: ${typeof authenticatorObject.credentialBackedUp}):`, authenticatorObject.credentialBackedUp);
