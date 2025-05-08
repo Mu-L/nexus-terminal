@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import AddConnectionForm from '../components/AddConnectionForm.vue'; // +++ 引入表单组件 +++
 import { useConnectionsStore } from '../stores/connections.store';
 import { useAuditLogStore } from '../stores/audit.store';
 import { useSessionStore } from '../stores/session.store';
@@ -44,7 +45,11 @@ const getInitialSelectedTagId = (): number | null => {
 };
 const selectedTagId = ref<number | null>(getInitialSelectedTagId());
 const searchQuery = ref(''); // +++ 新增搜索查询状态 +++
- 
+
+// +++ 控制添加/编辑表单的显示状态 +++
+const showAddEditConnectionForm = ref(false);
+const connectionToEdit = ref<ConnectionInfo | null>(null);
+
 const maxRecentLogs = 5;
  
 const sortOptions: { value: SortField; labelKey: string }[] = [
@@ -249,8 +254,33 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
     .filter((name): name is string => !!name); // 过滤掉未找到的标签并确保类型为 string
 };
 
-// --- 移除 selectTagFilter 函数 ---
+// +++ 打开添加表单 +++
+const openAddConnectionForm = () => {
+  connectionToEdit.value = null;
+  showAddEditConnectionForm.value = true;
+};
 
+// +++ 打开编辑表单 +++
+const openEditConnectionForm = (conn: ConnectionInfo) => {
+  connectionToEdit.value = conn;
+  showAddEditConnectionForm.value = true;
+};
+
+// +++ 处理表单关闭事件 +++
+const handleFormClose = () => {
+  showAddEditConnectionForm.value = false;
+  connectionToEdit.value = null; // 清除编辑状态
+};
+
+// +++ 处理连接添加/更新成功事件 +++
+const handleConnectionModified = async () => {
+  showAddEditConnectionForm.value = false;
+  connectionToEdit.value = null;
+  await connectionsStore.fetchConnections(); // 重新加载连接列表
+};
+ 
+// --- 移除 selectTagFilter 函数 ---
+ 
 </script>
 
 <template>
@@ -264,7 +294,7 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
         <div class="px-4 py-3 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <h2 class="text-lg font-medium flex-shrink-0">{{ t('dashboard.connectionList', '连接列表') }} ({{ filteredAndSortedConnections.length }})</h2>
           <div class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <!-- Search Input -->
+            <!-- Search Input (Order adjusted for button placement) -->
             <input
               type="text"
               v-model="searchQuery"
@@ -310,6 +340,10 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
                 <i :class="['fas', isAscending ? 'fa-arrow-up-a-z' : 'fa-arrow-down-z-a', 'w-4 h-4']"></i>
               </button>
             </div>
+            <!-- Add Connection Button -->
+            <button @click="openAddConnectionForm" title="Add Connection" class="h-8 w-8 bg-button rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 order-first sm:order-last">
+              <i class="fas fa-plus" style="color: white;"></i>
+            </button>
           </div>
         </div>
         <div class="p-4">
@@ -339,9 +373,14 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
                   </span>
                 </div>
               </div>
-              <button @click="connectTo(conn)" class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium flex-shrink-0"> <!-- Applied standard button style -->
-                {{ t('connections.actions.connect') }}
-              </button>
+              <div class="flex space-x-2 flex-shrink-0">
+                <button @click="openEditConnectionForm(conn)" class="px-3 py-1.5 bg-transparent text-foreground border border-border rounded-md shadow-sm hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button @click="connectTo(conn)" class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium"> <!-- Applied standard button style -->
+                  {{ t('connections.actions.connect') }}
+                </button>
+              </div>
             </li>
           </ul>
           <!-- Adjust no connections message based on filtering and search -->
@@ -378,5 +417,13 @@ const getTagNames = (tagIds: number[] | undefined): string[] => {
       </div>
 
     </div>
+    <!-- Add/Edit Connection Form Modal -->
+    <AddConnectionForm
+      v-if="showAddEditConnectionForm"
+      :connectionToEdit="connectionToEdit"
+      @close="handleFormClose"
+      @connection-added="handleConnectionModified"
+      @connection-updated="handleConnectionModified"
+    />
   </div>
 </template>
