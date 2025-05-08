@@ -42,12 +42,12 @@ services:
   #     - guacd
   #     - backend
 
-  guacd:
-    image: guacamole/guacd:latest
-    container_name: nexus-terminal-guacd
-    networks:
-      - nexus-terminal-network
-    restart: unless-stopped
+  # guacd:
+  #   image: guacamole/guacd:latest
+  #   container_name: nexus-terminal-guacd
+  #   networks:
+  #     - nexus-terminal-network
+  #   restart: unless-stopped
 
 networks:
   nexus-terminal-network:
