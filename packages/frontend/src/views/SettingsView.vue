@@ -1263,7 +1263,7 @@ const savePasskeyName = async (credentialID: string) => {
   try {
     // Предполагается, что в authStore есть метод updatePasskeyName
     await authStore.updatePasskeyName(credentialID, editingPasskeyName.value.trim());
-    passkeyMessage.value = t('settings.passkey.success.nameUpdated', 'Passkey 名称已更新。');
+    passkeyMessage.value = t('settings.passkey.success.nameUpdated');
     passkeySuccess.value = true;
     await authStore.fetchPasskeys(); // Обновить список для отображения нового имени
     cancelEditPasskeyName(); // Сбросить состояние редактирования

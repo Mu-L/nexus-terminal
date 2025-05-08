@@ -552,7 +552,8 @@
       },
       "success": {
         "registered": "新的 Passkey 已成功注册！",
-        "deleted": "Passkey 已成功删除。"
+        "deleted": "Passkey 已成功删除。",
+        "nameUpdated": "Passkey 名称已更新。"
       }
     },
     "notifications": {

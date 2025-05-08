@@ -554,7 +554,8 @@
       },
       "success": {
         "registered": "New Passkey registered successfully!",
-        "deleted": "Passkey deleted successfully."
+        "deleted": "Passkey deleted successfully.",
+        "nameUpdated": "Passkey name updated."
       }
     },
     "notifications": {

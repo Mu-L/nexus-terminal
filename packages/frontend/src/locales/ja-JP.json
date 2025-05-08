@@ -844,7 +844,8 @@
             },
             "success": {
                 "registered": "新しい Passkey が正常に登録されました！",
-                "deleted": "Passkey が正常に削除されました。"
+                "deleted": "Passkey が正常に削除されました。",
+                "nameUpdated": "Passkey 名が更新されました。"
             }
         },
         "popupEditor": {
