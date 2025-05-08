@@ -94,7 +94,7 @@ const handleSubmit = async () => {
 
 // Fetch CAPTCHA config on component mount
 onMounted(() => {
-  console.log('[LoginView] Component mounted, calling fetchCaptchaConfig...'); // 添加日志
+  // console.log('[LoginView] Component mounted, calling fetchCaptchaConfig...'); // 添加日志
   authStore.fetchCaptchaConfig();
 });
 
