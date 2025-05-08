@@ -20,6 +20,8 @@ import StyleCustomizer from './components/StyleCustomizer.vue';
 import FocusSwitcherConfigurator from './components/FocusSwitcherConfigurator.vue';
 // +++ 导入 RDP 模态框组件 +++
 import RemoteDesktopModal from './components/RemoteDesktopModal.vue';
+// +++ 导入 VNC 模态框组件 +++
+import VncModal from './components/VncModal.vue';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
@@ -33,7 +35,7 @@ const { showPopupFileEditorBoolean } = storeToRefs(settingsStore);
 const { isStyleCustomizerVisible } = storeToRefs(appearanceStore);
 const { isLayoutVisible, isHeaderVisible } = storeToRefs(layoutStore); // 添加 isHeaderVisible
 const { isConfiguratorVisible: isFocusSwitcherVisible } = storeToRefs(focusSwitcherStore);
-const { isRdpModalOpen, rdpConnectionInfo } = storeToRefs(sessionStore); // +++ 获取 RDP 状态 +++
+const { isRdpModalOpen, rdpConnectionInfo, isVncModalOpen, vncConnectionInfo } = storeToRefs(sessionStore); // +++ 获取 RDP 和 VNC 状态 +++
 const breakpoints = useBreakpoints(breakpointsTailwind); // +++ Initialize Breakpoints +++
 const isMobile = breakpoints.smaller('md'); // +++ Define isMobile +++
 
@@ -317,6 +319,13 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
       v-if="isRdpModalOpen"
       :connection="rdpConnectionInfo"
       @close="sessionStore.closeRdpModal()"
+    />
+
+    <!-- +++ 条件渲染 VNC 模态框 +++ -->
+    <VncModal
+      v-if="isVncModalOpen"
+      :connection="vncConnectionInfo"
+      @close="sessionStore.closeVncModal()"
     />
 
   </div>

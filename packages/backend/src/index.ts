@@ -1,10 +1,40 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs'; // fs is needed for early env loading if data/.env is checked
+
+// --- 开始环境变量的早期加载 ---
+// 1. 加载根目录的 .env 文件 (定义部署模式等)
+// 注意: __dirname 在 dist/src 中，所以需要回退三级到项目根目录
+const projectRootEnvPath = path.resolve(__dirname, '../../../.env');
+const rootConfigResult = dotenv.config({ path: projectRootEnvPath });
+
+if (rootConfigResult.error && (rootConfigResult.error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    console.warn(`[ENV Init Early] Warning: Could not load root .env file from ${projectRootEnvPath}. Error: ${rootConfigResult.error.message}`);
+} else if (!rootConfigResult.error) {
+    console.log(`[ENV Init Early] Loaded environment variables from root .env file: ${projectRootEnvPath}`);
+} else {
+    console.log(`[ENV Init Early] Root .env file not found at ${projectRootEnvPath}, proceeding without it.`);
+}
+
+// 2. 加载 data/.env 文件 (定义密钥等)
+// 注意: 这个路径是相对于编译后的 dist/src/index.js
+const dataEnvPathGlobal = path.resolve(__dirname, '../data/.env'); // Renamed to avoid conflict if 'dataEnvPath' is used later
+const dataConfigResultGlobal = dotenv.config({ path: dataEnvPathGlobal }); // Renamed
+
+if (dataConfigResultGlobal.error && (dataConfigResultGlobal.error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    console.warn(`[ENV Init Early] Warning: Could not load data .env file from ${dataEnvPathGlobal}. Error: ${dataConfigResultGlobal.error.message}`);
+} else if (!dataConfigResultGlobal.error) {
+     console.log(`[ENV Init Early] Loaded environment variables from data .env file: ${dataEnvPathGlobal}`);
+}
+// --- 结束环境变量的早期加载 ---
+
 import express = require('express');
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import http from 'http';
-import fs from 'fs';
-import path from 'path';
+// import fs from 'fs'; // Moved up
+// import path from 'path'; // Moved up
 import crypto from 'crypto';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv'; // Moved up
 import session from 'express-session';
 import sessionFileStore from 'session-file-store';
 import { getDbInstance } from './database/connection';
@@ -54,38 +84,16 @@ process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
   
 
 const initializeEnvironment = async () => {
-    // 1. 加载根目录的 .env 文件 (定义部署模式等)
-    // 注意: __dirname 在 dist/src 中，所以需要回退三级到项目根目录
-    const projectRootEnvPath = path.resolve(__dirname, '../../../.env');
-    const rootConfigResult = dotenv.config({ path: projectRootEnvPath });
-    // Use type assertion for error code checking
-    if (rootConfigResult.error && (rootConfigResult.error as NodeJS.ErrnoException).code !== 'ENOENT') {
-         // 只在文件存在但无法加载时发出警告
-        console.warn(`[ENV Init] Warning: Could not load root .env file from ${projectRootEnvPath}. Error: ${rootConfigResult.error.message}`);
-    } else if (!rootConfigResult.error) {
-        console.log(`[ENV Init] Loaded environment variables from root .env file: ${projectRootEnvPath}`);
-    } else {
-        console.log(`[ENV Init] Root .env file not found at ${projectRootEnvPath}, proceeding without it (expected in non-local deployments where env vars are injected).`);
-    }
+    // Env files (root and data/.env) are now loaded at the very top of the file.
+    // This function will now focus on generating keys if they are missing
+    // and setting defaults for GUACD variables.
 
-    // 2. 加载 data/.env 文件 (定义密钥等)
-    // 注意: 这个路径是相对于编译后的 dist/src/index.js
-    const dataEnvPath = path.resolve(__dirname, '../data/.env');
+    // Use the globally defined path for data .env
+    const dataEnvPath = dataEnvPathGlobal; // Use the path defined at the top
     let keysGenerated = false;
     let keysToAppend = '';
 
-    // dotenv.config 默认不会覆盖已存在的 process.env 变量
-    // 这意味着如果根 .env 和 data/.env 定义了相同的变量，先加载的（根 .env）的值会优先
-    const dataConfigResult = dotenv.config({ path: dataEnvPath });
-     // Use type assertion for error code checking
-     if (dataConfigResult.error && (dataConfigResult.error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        // 只在文件存在但无法加载时发出警告，文件不存在是正常情况
-        console.warn(`[ENV Init] Warning: Could not load data .env file from ${dataEnvPath}. Error: ${dataConfigResult.error.message}`);
-    } else if (!dataConfigResult.error) {
-         console.log(`[ENV Init] Loaded environment variables from data .env file: ${dataEnvPath}`);
-    }
-
-    // 2. 检查 ENCRYPTION_KEY
+    // 检查 ENCRYPTION_KEY (process.env should be populated by early loading)
     if (!process.env.ENCRYPTION_KEY) {
         console.log('[ENV Init] ENCRYPTION_KEY 未设置，正在生成...');
         const newEncryptionKey = crypto.randomBytes(32).toString('hex');

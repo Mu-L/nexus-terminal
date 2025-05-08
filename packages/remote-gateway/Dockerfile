@@ -5,14 +5,15 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package.json and package-lock.json
-COPY packages/rdp/package.json packages/rdp/package-lock.json* ./
+COPY packages/remote-gateway/package.json packages/remote-gateway/package-lock.json* ./
 
 # Install ALL dependencies (including devDependencies like typescript)
 RUN npm install
 
 # Copy source code and tsconfig
-COPY packages/rdp/src ./src
-COPY packages/rdp/tsconfig.json ./tsconfig.json
+COPY packages/remote-gateway/src ./src
+COPY packages/remote-gateway/tsconfig.json ./tsconfig.json
+COPY packages/remote-gateway/guacamole-lite.d.ts ./guacamole-lite.d.ts
 
 # Build the TypeScript code
 RUN npm run build
@@ -28,7 +29,7 @@ WORKDIR /app
 # Copy built code and node_modules from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
-COPY packages/rdp/package.json ./package.json
+COPY packages/remote-gateway/package.json ./package.json
 
 # --- Add patch application steps ---
 # Copy the patches directory from the build context (relative to project root)
@@ -47,6 +48,7 @@ RUN npm uninstall patch-package
 # --- End patch application steps ---
 
 # Expose the API and WebSocket ports
+# These will be configurable via environment variables, but good to have defaults
 EXPOSE 9090
 EXPOSE 8081
 

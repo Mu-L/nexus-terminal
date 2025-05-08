@@ -141,6 +141,7 @@
       "password": "Password:",
       "privateKey": "Private Key:",
       "passphrase": "Passphrase:",
+      "vncPassword": "VNC Password",
       "optional": "Optional",
       "confirm": "Confirm Add",
       "adding": "Adding...",
@@ -150,6 +151,7 @@
       "errorPrivateKeyRequired": "Private key is required for key authentication.",
       "errorPasswordRequiredOnSwitch": "Password is required when switching to password authentication.",
       "errorPrivateKeyRequiredOnSwitch": "Private key is required when switching to key authentication.",
+      "errorVncPasswordRequired": "VNC password is required.",
       "errorPort": "Port must be between 1 and 65535.",
       "errorAdd": "Failed to add connection: {error}",
       "titleEdit": "Edit Connection",
@@ -165,6 +167,7 @@
 "connectionType": "Connection Type:",
       "typeSsh": "SSH",
       "typeRdp": "RDP",
+      "typeVnc": "VNC",
       "sectionBasic": "Basic Information",
       "sectionAuth": "Authentication",
       "sectionAdvanced": "Advanced Options",
@@ -812,7 +815,9 @@
     "reconnect": "Reconnect",
     "retry": "Retry",
     "sortAscending": "Ascending",
-    "sortDescending": "Descending"
+    "sortDescending": "Descending",
+    "restore": "Restore",
+    "minimize": "Minimize"
   },
   "layoutConfigurator": {
     "title": "Layout Configurator",
@@ -897,6 +902,7 @@
       "connectingWs": "Connecting WebSocket...",
       "idle": "Idle",
       "connectingRdp": "Connecting Remote Desktop...",
+      "connectingVnc": "Connecting VNC...",
       "waiting": "Waiting for server response...",
       "connected": "Connected",
       "disconnecting": "Disconnecting...",
@@ -915,6 +921,9 @@
       "tokenError": "Failed to retrieve token"
     },
     "reconnectTooltip": "Reconnect to the remote desktop"
+  },
+  "vncModal": {
+    "title": "VNC Session"
   },
   "commandInputBar": {
     "placeholder": "Enter command and press Enter to send...",

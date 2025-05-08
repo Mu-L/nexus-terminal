@@ -43,9 +43,9 @@ export const createConnection = async (input: CreateConnectionInput): Promise<Co
     console.log('[Service:createConnection] Received input:', JSON.stringify(input, null, 2)); // Log input
     // 1. 验证输入 (包含 type)
     // Convert type to uppercase for validation and consistency
-    const connectionType = input.type?.toUpperCase() as 'SSH' | 'RDP' | undefined; // Ensure type safety
-    if (!connectionType || !['SSH', 'RDP'].includes(connectionType)) {
-        throw new Error('必须提供有效的连接类型 (SSH 或 RDP)。');
+    const connectionType = input.type?.toUpperCase() as 'SSH' | 'RDP' | 'VNC' | undefined; // Ensure type safety
+    if (!connectionType || !['SSH', 'RDP', 'VNC'].includes(connectionType)) {
+        throw new Error('必须提供有效的连接类型 (SSH, RDP 或 VNC)。');
     }
     if (!input.host || !input.username) {
         throw new Error('缺少必要的连接信息 (host, username)。');
@@ -70,6 +70,18 @@ export const createConnection = async (input: CreateConnectionInput): Promise<Co
              throw new Error('RDP 连接需要提供 password。');
         }
         // For RDP, we'll ignore auth_method, private_key, passphrase from input if provided
+    } else if (connectionType === 'VNC') {
+        if (!input.password) {
+            throw new Error('VNC 连接需要提供 password。');
+        }
+        // For VNC, auth_method is implicitly 'password'.
+        // ssh_key_id, private_key, passphrase are not applicable.
+        if (input.auth_method && input.auth_method !== 'password') {
+            throw new Error('VNC 连接的认证方式必须是 password。');
+        }
+        if (input.ssh_key_id || input.private_key) {
+            throw new Error('VNC 连接不支持 SSH 密钥认证。');
+        }
     }
 
     // 2. 处理凭证和 ssh_key_id (根据 type)
@@ -108,16 +120,27 @@ export const createConnection = async (input: CreateConnectionInput): Promise<Co
                  throw new Error('SSH 密钥认证方式内部错误：未提供 private_key 或 ssh_key_id。');
             }
         }
-    } else { // RDP (connectionType is 'RDP')
+    } else if (connectionType === 'RDP') { // RDP
         encryptedPassword = encrypt(input.password!);
-        // authMethodForDb remains 'password' for RDP to satisfy DB constraint
-        // Ensure SSH specific fields are null for RDP
+        // authMethodForDb remains 'password' for RDP
         encryptedPrivateKey = null;
         encryptedPassphrase = null;
+        sshKeyIdToSave = null;
+    } else { // VNC
+        encryptedPassword = encrypt(input.password!);
+        authMethodForDb = 'password'; // VNC always uses password auth
+        encryptedPrivateKey = null;
+        encryptedPassphrase = null;
+        sshKeyIdToSave = null;
     }
 
     // 3. 准备仓库数据
-    const defaultPort = input.type === 'RDP' ? 3389 : 22;
+    let defaultPort = 22; // Default for SSH
+    if (connectionType === 'RDP') {
+        defaultPort = 3389;
+    } else if (connectionType === 'VNC') {
+        defaultPort = 5900; // Default VNC port
+    }
     // +++ Explicitly type connectionData using the local alias +++
     const connectionData: ConnectionDataForRepo = {
         name: input.name || '',
@@ -178,7 +201,7 @@ export const updateConnection = async (id: number, input: UpdateConnectionInput)
     const dataToUpdate: Partial<Omit<ConnectionRepository.FullConnectionData & { ssh_key_id?: number | null }, 'id' | 'created_at' | 'last_connected_at' | 'tag_ids'>> = {};
     let needsCredentialUpdate = false;
     // Determine the final type, converting input type to uppercase if provided
-    const targetType = input.type?.toUpperCase() as 'SSH' | 'RDP' | undefined || currentFullConnection.type;
+    const targetType = input.type?.toUpperCase() as 'SSH' | 'RDP' | 'VNC' | undefined || currentFullConnection.type;
 
     // 更新非凭证字段
     if (input.name !== undefined) dataToUpdate.name = input.name || '';
@@ -280,19 +303,31 @@ if (input.notes !== undefined) dataToUpdate.notes = input.notes; // Add notes up
                 dataToUpdate.encrypted_password = null;
             }
         }
-    } else { // targetType is 'RDP'
+    } else if (targetType === 'RDP') { // targetType is 'RDP'
         // RDP only uses password
         if (input.password !== undefined) { // Check if password was provided
-             // Encrypt if password is not empty, otherwise set to null (to clear)
              dataToUpdate.encrypted_password = input.password ? encrypt(input.password) : null;
              needsCredentialUpdate = true;
         }
         // Ensure SSH specific fields are nullified if switching to RDP or updating RDP
-        if (targetType !== currentFullConnection.type || needsCredentialUpdate) {
+        if (targetType !== currentFullConnection.type || needsCredentialUpdate || Object.keys(dataToUpdate).includes('type')) {
             dataToUpdate.auth_method = 'password'; // RDP uses password auth method in DB
             dataToUpdate.encrypted_private_key = null;
             dataToUpdate.encrypted_passphrase = null;
             dataToUpdate.ssh_key_id = null; // RDP cannot use ssh_key_id
+        }
+    } else { // targetType is 'VNC'
+        // VNC only uses password
+        if (input.password !== undefined) { // Check if password was provided
+            dataToUpdate.encrypted_password = input.password ? encrypt(input.password) : null;
+            needsCredentialUpdate = true;
+        }
+        // Ensure SSH specific fields are nullified if switching to VNC or updating VNC
+        if (targetType !== currentFullConnection.type || needsCredentialUpdate || Object.keys(dataToUpdate).includes('type')) {
+            dataToUpdate.auth_method = 'password'; // VNC uses password auth method in DB
+            dataToUpdate.encrypted_private_key = null;
+            dataToUpdate.encrypted_passphrase = null;
+            dataToUpdate.ssh_key_id = null; // VNC cannot use ssh_key_id
         }
     }
 

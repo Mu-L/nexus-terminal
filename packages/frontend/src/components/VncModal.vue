@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick, computed, watchEffect } from 'vue'; 
+import { ref, onMounted, onUnmounted, watch, nextTick, computed, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings.store';
-import { useConnectionsStore } from '../stores/connections.store'; // +++ Import connections store +++
+import { useConnectionsStore } from '../stores/connections.store';
 // @ts-ignore - guacamole-common-js 缺少官方类型定义
 import Guacamole from 'guacamole-common-js';
-import apiClient from '../utils/apiClient';
-import { ConnectionInfo } from '../stores/connections.store';
+import type { ConnectionInfo } from '../stores/connections.store';
 
 const { t } = useI18n();
-const settingsStore = useSettingsStore(); 
+const settingsStore = useSettingsStore();
 
 const props = defineProps<{
   connection: ConnectionInfo | null;
@@ -21,91 +20,82 @@ let saveWidthTimeout: ReturnType<typeof setTimeout> | null = null;
 let saveHeightTimeout: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_DELAY = 500; // ms
 
-const rdpDisplayRef = ref<HTMLDivElement | null>(null);
-const rdpContainerRef = ref<HTMLDivElement | null>(null);
+const vncDisplayRef = ref<HTMLDivElement | null>(null);
+const vncContainerRef = ref<HTMLDivElement | null>(null);
 const guacClient = ref<any | null>(null);
 const connectionStatus = ref<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
 const isResizing = ref(false);
 const resizeStartX = ref(0);
 const resizeStartY = ref(0);
-const initialModalWidthForResize = ref(0); // Renamed to avoid conflict if other 'initialModalWidth' exists
-const initialModalHeightForResize = ref(0); // Renamed
+const initialModalWidthForResize = ref(0);
+const initialModalHeightForResize = ref(0);
 const statusMessage = ref('');
 const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
-const desiredModalWidth = ref(1064);
-const desiredModalHeight = ref(858);
-const isKeyboardDisabledForInput = ref(false); // 标记键盘是否因输入框聚焦而禁用
+// Initialize desiredModalWidth and desiredModalHeight from store or defaults
+const initialStoreWidth = settingsStore.settings.vncModalWidth
+   ? parseInt(settingsStore.settings.vncModalWidth, 10)
+   : 1024;
+const initialStoreHeight = settingsStore.settings.vncModalHeight
+   ? parseInt(settingsStore.settings.vncModalHeight, 10)
+   : 768;
+
+const MIN_MODAL_WIDTH = 800;
+const MIN_MODAL_HEIGHT = 600;
+
+const desiredModalWidth = ref(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth));
+const desiredModalHeight = ref(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight));
+const isKeyboardDisabledForInput = ref(false);
 const isMinimized = ref(false);
 const restoreButtonRef = ref<HTMLButtonElement | null>(null);
 const isDraggingRestoreButton = ref(false);
-const restoreButtonPosition = ref({ x: 16, y: window.innerHeight / 2 - 25 }); // 16px from left, vertically centered
+const restoreButtonPosition = ref({ x: 16, y: window.innerHeight / 2 - 25 }); // 16px from left, vertically centered (25 is half of button height 50px)
 let dragOffsetX = 0;
 let dragOffsetY = 0;
-let hasDragged = false; // 新增 hasDragged 标志
+let hasDragged = false;
 
-const MIN_MODAL_WIDTH = 1024;
-const MIN_MODAL_HEIGHT = 768;
+let remoteDesktopWsBaseUrl: string; // Renamed for clarity
+const LOCAL_BACKEND_URL_FOR_PROXY = 'ws://localhost:3001'; // Main backend's WebSocket for proxying
 
-// Dynamically construct WebSocket URL based on environment
-let backendBaseUrl: string;
-const LOCAL_BACKEND_URL = 'ws://localhost:3001'; // For RDP proxy via main backend
-
-// Determine WebSocket URL based on hostname for RDP
 if (window.location.hostname === 'localhost') {
-  backendBaseUrl = LOCAL_BACKEND_URL;
+  // For local development, VNC will also go through the main backend's proxy
+  remoteDesktopWsBaseUrl = `${LOCAL_BACKEND_URL_FOR_PROXY}/ws/rdp-proxy`; // Use the same RDP proxy path
 } else {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHostAndPort = window.location.host;
-  backendBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws`; // Assuming RDP proxy is at /ws path
+  // For deployed environments, assume the proxy is at /ws/rdp-proxy relative to the main backend
+  remoteDesktopWsBaseUrl = `${wsProtocol}//${wsHostAndPort}/ws/rdp-proxy`;
 }
 
 const handleConnection = async () => {
-  if (!props.connection || !rdpDisplayRef.value) {
+  if (!props.connection || !vncDisplayRef.value) {
     statusMessage.value = t('remoteDesktopModal.errors.missingInfo');
     connectionStatus.value = 'error';
     return;
   }
 
-  // Clear previous display and disconnect
-  while (rdpDisplayRef.value.firstChild) {
-    rdpDisplayRef.value.removeChild(rdpDisplayRef.value.firstChild);
+  while (vncDisplayRef.value.firstChild) {
+    vncDisplayRef.value.removeChild(vncDisplayRef.value.firstChild);
   }
-  disconnectGuacamole(); // Renamed from disconnectRdp
+  disconnectGuacamole();
 
   connectionStatus.value = 'connecting';
   statusMessage.value = t('remoteDesktopModal.status.fetchingToken');
 
   try {
-    let token: string | null = null;
-    let tunnelUrl: string = '';
     const connectionsStore = useConnectionsStore();
-
-    if (props.connection.type === 'RDP') {
-      const apiUrl = `connections/${props.connection.id}/rdp-session`;
-      const response = await apiClient.post<{ token: string }>(apiUrl);
-      token = response.data?.token;
-      if (!token) {
-        throw new Error('RDP Token not found in API response');
-      }
-      statusMessage.value = t('remoteDesktopModal.status.connectingWs');
-
-      await nextTick();
-      let widthToSend = 800;
-      let heightToSend = 600;
-      const dpiToSend = 96;
-
-      if (rdpContainerRef.value) {
-        widthToSend = rdpContainerRef.value.clientWidth;
-        heightToSend = rdpContainerRef.value.clientHeight - 1;
-        widthToSend = Math.max(100, widthToSend);
-        heightToSend = Math.max(100, heightToSend);
-      }
-      tunnelUrl = `${backendBaseUrl}/rdp-proxy?token=${encodeURIComponent(token)}&width=${widthToSend}&height=${heightToSend}&dpi=${dpiToSend}`;
-
-    } else {
-      throw new Error(`Unsupported connection type: ${props.connection.type}`);
+    // Pass width and height to the token generation, backend will forward to gateway
+    const token = await connectionsStore.getVncSessionToken(props.connection.id, desiredModalWidth.value, desiredModalHeight.value);
+    if (!token) {
+      throw new Error('VNC Token not found from store action');
     }
+    statusMessage.value = t('remoteDesktopModal.status.connectingWs');
+    // The backend proxy (/ws/rdp-proxy) expects token, width, height, dpi.
+    // For VNC, DPI is less critical but the proxy might expect it. Send a default or let backend handle.
+    // The backend's websocket.ts rdp-proxy handler now calculates DPI if not provided or uses a default.
+    // We need to ensure width and height are passed for the proxy to correctly forward.
+    const tunnelUrl = `${remoteDesktopWsBaseUrl}?token=${encodeURIComponent(token)}&width=${desiredModalWidth.value}&height=${desiredModalHeight.value}`;
+  
 
     // @ts-ignore
     const tunnel = new Guacamole.WebSocketTunnel(tunnelUrl);
@@ -122,26 +112,17 @@ const handleConnection = async () => {
     guacClient.value = new Guacamole.Client(tunnel);
     guacClient.value.keepAliveFrequency = 3000;
 
-    rdpDisplayRef.value.appendChild(guacClient.value.getDisplay().getElement());
+    vncDisplayRef.value.appendChild(guacClient.value.getDisplay().getElement());
 
     guacClient.value.onstatechange = (state: number) => {
       let currentStatus = '';
       let i18nKeyPart = 'unknownState';
 
       switch (state) {
-        case 0: // IDLE
-          i18nKeyPart = 'idle';
-          currentStatus = 'disconnected';
-          break;
-        case 1: // CONNECTING
-          i18nKeyPart = 'connectingRdp';
-          currentStatus = 'connecting';
-          break;
-        case 2: // WAITING
-          i18nKeyPart = 'waiting';
-          currentStatus = 'connecting';
-          break;
-        case 3: // CONNECTED
+        case 0: i18nKeyPart = 'idle'; currentStatus = 'disconnected'; break;
+        case 1: i18nKeyPart = 'connectingVnc'; currentStatus = 'connecting'; break;
+        case 2: i18nKeyPart = 'waiting'; currentStatus = 'connecting'; break;
+        case 3:
           i18nKeyPart = 'connected';
           currentStatus = 'connected';
           setupInputListeners();
@@ -150,24 +131,27 @@ const handleConnection = async () => {
             if (displayEl && typeof displayEl.focus === 'function') {
               displayEl.focus();
             }
+            // Sync size on connect
+            if (vncDisplayRef.value && guacClient.value) {
+              const displayWidth = vncDisplayRef.value.offsetWidth;
+              const displayHeight = vncDisplayRef.value.offsetHeight;
+              if (displayWidth > 0 && displayHeight > 0) {
+                console.log(`[VncModal] Initial resize on connect: ${displayWidth}x${displayHeight}`);
+                guacClient.value.sendSize(displayWidth, displayHeight);
+              }
+            }
           });
-          setTimeout(() => { // z-index fix for canvas
+          setTimeout(() => {
             nextTick(() => {
-              if (rdpDisplayRef.value && guacClient.value) {
-                const canvases = rdpDisplayRef.value.querySelectorAll('canvas');
+              if (vncDisplayRef.value && guacClient.value) {
+                const canvases = vncDisplayRef.value.querySelectorAll('canvas');
                 canvases.forEach((canvas) => { canvas.style.zIndex = '999'; });
               }
             });
           }, 100);
           break;
-        case 4: // DISCONNECTING
-          i18nKeyPart = 'disconnecting';
-          currentStatus = 'disconnected'; // Or 'disconnecting'
-          break;
-        case 5: // DISCONNECTED
-          i18nKeyPart = 'disconnected';
-          currentStatus = 'disconnected';
-          break;
+        case 4: i18nKeyPart = 'disconnecting'; currentStatus = 'disconnected'; break;
+        case 5: i18nKeyPart = 'disconnected'; currentStatus = 'disconnected'; break;
       }
       statusMessage.value = t(`remoteDesktopModal.status.${i18nKeyPart}`, { state });
       if (currentStatus) connectionStatus.value = currentStatus as 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -202,75 +186,54 @@ const trySyncClipboardOnDisplayFocus = async () => {
       const writer = new Guacamole.StringWriter(stream);
       writer.sendText(currentClipboardText);
       writer.sendEnd();
-      console.log('[RemoteDesktopModal] Sent clipboard to RDP on display focus:', currentClipboardText.substring(0, 50) + (currentClipboardText.length > 50 ? '...' : ''));
+      console.log('[VncModal] Sent clipboard to VNC on display focus:', currentClipboardText.substring(0, 50) + (currentClipboardText.length > 50 ? '...' : ''));
     }
   } catch (err) {
+    // This error is expected if the document/tab is not focused when the VNC display element gets focus.
+    // Or if clipboard permissions are not granted.
     if (err instanceof DOMException && err.name === 'NotAllowedError') {
-      // console.log('[RemoteDesktopModal] Clipboard read on display focus skipped: Document not focused or permission denied.');
+      // console.log('[VncModal] Clipboard read on display focus skipped: Document not focused or permission denied.');
     } else {
-      console.warn('[RemoteDesktopModal] Could not read clipboard on display focus, or other error:', err);
+      console.warn('[VncModal] Could not read clipboard on display focus, or other error:', err);
     }
   }
 };
 
 const setupInputListeners = () => {
-    if (!guacClient.value || !rdpDisplayRef.value) return;
+    if (!guacClient.value || !vncDisplayRef.value) return;
     try {
         const displayEl = guacClient.value.getDisplay().getElement() as HTMLElement;
-        displayEl.tabIndex = 0; // 使 RDP 显示区域可聚焦
+        displayEl.tabIndex = 0;
 
-        // 添加点击事件监听器以处理失焦逻辑
-        const handleRdpDisplayClick = () => {
+        const handleVncDisplayClick = () => {
           const activeElement = document.activeElement as HTMLElement;
-          // 检查活动元素是否是宽度或高度输入框
           if (activeElement && (activeElement.id === 'modal-width' || activeElement.id === 'modal-height')) {
             activeElement.blur();
-            console.log('[RDP Modal] Blurred input field on RDP display click.');
           }
-          // Ensure the RDP display element gets focus when clicked
+          // Ensure the VNC display element gets focus when clicked
           if (displayEl && typeof displayEl.focus === 'function') {
             displayEl.focus();
           }
         };
-        displayEl.addEventListener('click', handleRdpDisplayClick);
+        displayEl.addEventListener('click', handleVncDisplayClick);
 
-
-        // 鼠标进入 RDP 区域时隐藏本地光标
-        const handleMouseEnter = () => {
-          if (displayEl) displayEl.style.cursor = 'none';
-        };
-        // 鼠标离开 RDP 区域时恢复本地光标
-        const handleMouseLeave = () => {
-          if (displayEl) displayEl.style.cursor = 'default';
-        };
+        const handleMouseEnter = () => { if (displayEl) displayEl.style.cursor = 'none'; };
+        const handleMouseLeave = () => { if (displayEl) displayEl.style.cursor = 'default'; };
         displayEl.addEventListener('mouseenter', handleMouseEnter);
         displayEl.addEventListener('mouseleave', handleMouseLeave);
 
-
-
         // @ts-ignore
         mouse.value = new Guacamole.Mouse(displayEl);
-
         const display = guacClient.value.getDisplay();
-        // 启用 Guacamole 的内置光标渲染
         display.showCursor(true);
 
-
-        // 提高 Guacamole 光标图层的 z-index
-        const cursorLayer = display.getCursorLayer(); // 获取光标图层
+        const cursorLayer = display.getCursorLayer();
         if (cursorLayer) {
-          const cursorElement = cursorLayer.getElement(); // 获取光标图层的 DOM 元素
+          const cursorElement = cursorLayer.getElement();
           if (cursorElement) {
-             cursorElement.style.zIndex = '1000'; // 设置 DOM 元素的 z-index
-             console.log('[RDP Modal] Set cursor layer element z-index to 1000.');
-          } else {
-             console.warn('[RDP Modal] Could not get cursor layer element to set z-index.');
+             cursorElement.style.zIndex = '1000';
           }
-        } else {
-          console.warn('[RDP Modal] Could not get cursor layer to set z-index.');
         }
-
-
 
         // @ts-ignore
         mouse.value.onmousedown = mouse.value.onmouseup = mouse.value.onmousemove = (mouseState: any) => {
@@ -280,46 +243,49 @@ const setupInputListeners = () => {
         };
 
         // @ts-ignore
-        keyboard.value = new Guacamole.Keyboard(displayEl); // 将监听器附加到 RDP 显示元素
+        keyboard.value = new Guacamole.Keyboard(displayEl);
 
         keyboard.value.onkeydown = (keysym: number) => {
-            // 仅当输入框未聚焦时发送按键事件
             if (guacClient.value && !isKeyboardDisabledForInput.value) {
                 guacClient.value.sendKeyEvent(1, keysym);
             }
         };
         keyboard.value.onkeyup = (keysym: number) => {
-             // 仅当输入框未聚焦时发送按键事件
              if (guacClient.value && !isKeyboardDisabledForInput.value) {
                 guacClient.value.sendKeyEvent(0, keysym);
              }
         };
-        
-        // Listen for display focus to sync clipboard
+
+        // Listen for host copy events to send to VNC
+        // document.addEventListener('copy', handleHostCopy); // Removed this
+        // displayEl.addEventListener('mouseenter', trySyncClipboardOnMouseEnter); // Changed to focus event
         displayEl.addEventListener('focus', trySyncClipboardOnDisplayFocus);
 
     } catch (inputError) {
-        console.error("Error setting up input listeners:", inputError); // 添加错误日志
+        console.error("Error setting up VNC input listeners:", inputError);
         statusMessage.value = t('remoteDesktopModal.errors.inputError');
     }
 };
 
 const removeInputListeners = () => {
-    // 恢复光标并尝试移除监听器
+    // Remove host copy event listener
+    // document.removeEventListener('copy', handleHostCopy); // Removed this
     if (guacClient.value) {
-        try {
-            const displayEl = guacClient.value.getDisplay()?.getElement();
-            if (displayEl) {
-                // 恢复默认光标样式
-                displayEl.style.cursor = 'default';
-                displayEl.removeEventListener('focus', trySyncClipboardOnDisplayFocus);
+        const displayEl = guacClient.value.getDisplay()?.getElement();
+        if (displayEl) {
+            // displayEl.removeEventListener('mouseenter', trySyncClipboardOnMouseEnter); // Changed to focus event
+            displayEl.removeEventListener('focus', trySyncClipboardOnDisplayFocus);
+            try {
+              if (displayEl) {
+                  displayEl.style.cursor = 'default';
+              }
+            } catch (e) {
+                console.warn("Could not reset cursor on VNC display element:", e);
             }
-        } catch (e) {
-             console.warn("Could not reset cursor or remove listeners on display element during listener removal:", e);
         }
     }
-
-    // 清理 Guacamole 的键盘和鼠标对象
+    // The rest of the cleanup for keyboard and mouse can remain outside the guacClient.value check
+    // as they are independent refs.
     if (keyboard.value) {
         keyboard.value.onkeydown = null;
         keyboard.value.onkeyup = null;
@@ -333,15 +299,12 @@ const removeInputListeners = () => {
     }
 };
 
-const disableRdpKeyboard = () => {
+const disableVncKeyboard = () => {
   isKeyboardDisabledForInput.value = true;
-  console.log('[RDP Modal] Keyboard disabled for input focus.');
 };
 
-const enableRdpKeyboard = () => {
+const enableVncKeyboard = () => {
   isKeyboardDisabledForInput.value = false;
-  console.log('[RDP Modal] Keyboard enabled after input blur.');
-  // 尝试将焦点移回 RDP 显示区域
   nextTick(() => {
     const displayEl = guacClient.value?.getDisplay()?.getElement();
     if (displayEl && typeof displayEl.focus === 'function') {
@@ -360,10 +323,11 @@ const restoreModal = () => {
 
 const onRestoreButtonMouseDown = (event: MouseEvent) => {
   if (!restoreButtonRef.value) return;
-  hasDragged = false; // 重置拖拽标志
+  hasDragged = false; // Reset drag flag
   isDraggingRestoreButton.value = true;
   dragOffsetX = event.clientX - restoreButtonRef.value.getBoundingClientRect().left;
   dragOffsetY = event.clientY - restoreButtonRef.value.getBoundingClientRect().top;
+  // Prevent text selection while dragging
   event.preventDefault();
   document.addEventListener('mousemove', onRestoreButtonMouseMove);
   document.addEventListener('mouseup', onRestoreButtonMouseUp);
@@ -371,12 +335,13 @@ const onRestoreButtonMouseDown = (event: MouseEvent) => {
 
 const onRestoreButtonMouseMove = (event: MouseEvent) => {
   if (!isDraggingRestoreButton.value) return;
-  hasDragged = true; // 如果鼠标移动则设置拖拽标志
+  hasDragged = true; // Set drag flag if mouse moves
   let newX = event.clientX - dragOffsetX;
   let newY = event.clientY - dragOffsetY;
 
-  const buttonWidth = 50;
-  const buttonHeight = 50;
+  // Constrain movement within viewport
+  const buttonWidth = 50; // As defined in style
+  const buttonHeight = 50; // As defined in style
   newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
   newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
 
@@ -387,28 +352,28 @@ const onRestoreButtonMouseUp = () => {
   isDraggingRestoreButton.value = false;
   document.removeEventListener('mousemove', onRestoreButtonMouseMove);
   document.removeEventListener('mouseup', onRestoreButtonMouseUp);
-  // click 事件会在 mouseup 后触发。如果我们拖拽了，我们不希望 click 事件恢复模态框。
-  // handleClickRestoreButton 会检查 hasDragged。
+  // Click event will fire after mouseup. If we dragged, we don't want click to restore.
+  // The handleClickRestoreButton will check hasDragged.
 };
 
 const handleClickRestoreButton = () => {
   if (!hasDragged) {
     restoreModal();
   }
-  // 为下一次交互重置
+  // Reset for next interaction
   hasDragged = false;
 };
 
 const disconnectGuacamole = () => {
   removeInputListeners();
-  isKeyboardDisabledForInput.value = false; // 确保状态重置
+  isKeyboardDisabledForInput.value = false;
   if (guacClient.value) {
     guacClient.value.disconnect();
     guacClient.value = null;
   }
-  if (rdpDisplayRef.value) {
-      while (rdpDisplayRef.value.firstChild) {
-          rdpDisplayRef.value.removeChild(rdpDisplayRef.value.firstChild);
+  if (vncDisplayRef.value) {
+      while (vncDisplayRef.value.firstChild) {
+          vncDisplayRef.value.removeChild(vncDisplayRef.value.firstChild);
       }
   }
   if (connectionStatus.value !== 'error') {
@@ -417,85 +382,68 @@ const disconnectGuacamole = () => {
   }
 };
 
-
 const closeModal = () => {
   disconnectGuacamole();
   emit('close');
 };
 
-
-// 监听本地 ref 并将验证后的尺寸保存到设置存储
 watch(desiredModalWidth, (newWidth, oldWidth) => {
-  // 只有当值真正改变时才处理
-  if (newWidth === oldWidth) {
-      console.log(`[RDP 模态框] 宽度监听触发，但值 (${newWidth}) 未改变。跳过保存。`);
+  if (newWidth === oldWidth && typeof newWidth === 'number' && typeof oldWidth === 'number') {
       return;
   }
-  console.log(`[RDP 模态框] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`); // 添加日志
-  // 保存前验证新宽度
+
+  
   const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
-  // 防抖保存 *验证后* 的宽度
+
+  if (validatedWidth !== Number(newWidth)) {
+    nextTick(() => {
+      desiredModalWidth.value = validatedWidth;
+    });
+  }
+
   if (saveWidthTimeout) clearTimeout(saveWidthTimeout);
   saveWidthTimeout = setTimeout(() => {
-    // 只保存验证后的宽度，不要在此处更改输入值
-    console.log(`[RDP 模态框] 防抖保存 - 保存宽度: ${validatedWidth} (输入值: ${newWidth})`);
-    // 再次检查，确保在延迟期间值没有变回原来的 store 值
-    if (String(validatedWidth) !== settingsStore.settings.rdpModalWidth) {
-         settingsStore.updateSetting('rdpModalWidth', String(validatedWidth));
+    if (String(validatedWidth) !== settingsStore.settings.vncModalWidth) {
+         settingsStore.updateSetting('vncModalWidth', String(validatedWidth));
     } else {
-         console.log(`[RDP 模态框] 防抖保存 - 宽度 ${validatedWidth} 与存储值匹配。跳过冗余保存。`);
+        // console.log(`[VncModal] 防抖保存 - 宽度 ${validatedWidth} 与存储值匹配。跳过冗余保存。`);
     }
   }, DEBOUNCE_DELAY);
 });
 
 watch(desiredModalHeight, (newHeight, oldHeight) => {
-   // 只有当值真正改变时才处理
-   if (newHeight === oldHeight) {
-       console.log(`[RDP 模态框] 高度监听触发，但值 (${newHeight}) 未改变。跳过保存。`);
+   if (newHeight === oldHeight && typeof newHeight === 'number' && typeof oldHeight === 'number') {
+       // console.log(`[VncModal] 高度监听触发，但值 (${newHeight}) 未改变。跳过。`);
        return;
    }
-   console.log(`[RDP 模态框] 监听 desiredModalHeight 触发: ${oldHeight} -> ${newHeight}`);
-  // 保存前验证新高度
+   // console.log(`[VncModal] 监听 desiredModalHeight 触发: ${oldHeight} -> ${newHeight}`);
+  
   const validatedHeight = Math.max(MIN_MODAL_HEIGHT, Number(newHeight) || MIN_MODAL_HEIGHT);
-  // 防抖保存 *验证后* 的高度
+
+  if (validatedHeight !== Number(newHeight)) {
+    nextTick(() => {
+      desiredModalHeight.value = validatedHeight;
+    });
+  }
+
   if (saveHeightTimeout) clearTimeout(saveHeightTimeout);
   saveHeightTimeout = setTimeout(() => {
-    // 只保存验证后的高度，不要在此处更改输入值
-    console.log(`[RDP 模态框] 防抖保存 - 保存高度: ${validatedHeight} (输入值: ${newHeight})`);
-    // 再次检查
-    if (String(validatedHeight) !== settingsStore.settings.rdpModalHeight) {
-        settingsStore.updateSetting('rdpModalHeight', String(validatedHeight));
+    // console.log(`[VncModal] 防抖保存 - 保存高度: ${validatedHeight}`);
+    if (String(validatedHeight) !== settingsStore.settings.vncModalHeight) {
+        settingsStore.updateSetting('vncModalHeight', String(validatedHeight));
     } else {
-        console.log(`[RDP 模态框] 防抖保存 - 高度 ${validatedHeight} 与存储值匹配。跳过冗余保存。`);
+        // console.log(`[VncModal] 防抖保存 - 高度 ${validatedHeight} 与存储值匹配。跳过冗余保存。`);
     }
   }, DEBOUNCE_DELAY);
 });
 
-// 组件挂载或设置更改时从设置存储加载初始尺寸
-watchEffect(() => {
-  const storeWidth = settingsStore.settings.rdpModalWidth;
-  const storeHeight = settingsStore.settings.rdpModalHeight;
-  console.log(`[RDP 模态框] 从存储加载尺寸 - 宽度: ${storeWidth}, 高度: ${storeHeight}`);
- 
-  // 如果存储中有默认值则使用，否则使用组件默认值
-  const initialWidth = storeWidth ? parseInt(storeWidth, 10) : desiredModalWidth.value; // 使用当前 ref 值作为备用默认值
-  const initialHeight = storeHeight ? parseInt(storeHeight, 10) : desiredModalHeight.value; // 使用当前 ref 值作为备用默认值
 
-  // 根据最小值进行验证
-  const finalWidth = Math.max(MIN_MODAL_WIDTH, isNaN(initialWidth) ? MIN_MODAL_WIDTH : initialWidth);
-  const finalHeight = Math.max(MIN_MODAL_HEIGHT, isNaN(initialHeight) ? MIN_MODAL_HEIGHT : initialHeight);
-  console.log(`[RDP 模态框] 应用验证后的尺寸 - 宽度: ${finalWidth}, 高度: ${finalHeight}`);
-  desiredModalWidth.value = finalWidth;
-  desiredModalHeight.value = finalHeight;
- });
- 
+
+
 onMounted(() => {
-  // 初始尺寸加载现在由 watchEffect 处理
-
   if (props.connection) {
     nextTick(async () => {
-        await handleConnection(); // 使用初始尺寸连接
-        // 不再需要设置 observer
+        await handleConnection();
     });
   } else {
       statusMessage.value = t('remoteDesktopModal.errors.noConnection');
@@ -504,7 +452,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  disconnectGuacamole(); // 这里已经调用了 removeInputListeners
+  disconnectGuacamole();
   document.removeEventListener('mousemove', onRestoreButtonMouseMove);
   document.removeEventListener('mouseup', onRestoreButtonMouseUp);
   // Clean up resize listeners if component is unmounted while resizing
@@ -517,8 +465,7 @@ onUnmounted(() => {
 watch(() => props.connection, (newConnection, oldConnection) => {
   if (newConnection && newConnection.id !== oldConnection?.id) {
      nextTick(async () => {
-        await handleConnection(); // 使用初始尺寸连接
-        // 不再需要设置 observer
+        await handleConnection();
      });
   } else if (!newConnection) {
       disconnectGuacamole();
@@ -527,10 +474,7 @@ watch(() => props.connection, (newConnection, oldConnection) => {
   }
 });
 
-// 直接使用所需的模态框尺寸作为样式
 const computedModalStyle = computed(() => {
-
-  // 在此处为实际模态框样式应用最小约束
   const actualWidth = Math.max(MIN_MODAL_WIDTH, desiredModalWidth.value);
   const actualHeight = Math.max(MIN_MODAL_HEIGHT, desiredModalHeight.value);
   return {
@@ -538,17 +482,19 @@ const computedModalStyle = computed(() => {
     height: `${actualHeight}px`,
   };
 });
-
-// Watch for modal size changes to update Guacamole client
 watchEffect(() => {
-  const currentStyle = computedModalStyle.value; // Dependency
-  if (guacClient.value && connectionStatus.value === 'connected' && rdpContainerRef.value) {
+  // 依赖 computedModalStyle，当其变化时此 effect 会重新运行
+  const currentStyle = computedModalStyle.value;
+
+  if (guacClient.value && connectionStatus.value === 'connected' && vncDisplayRef.value) {
+    // 使用 nextTick 确保 DOM 更新完毕，vncDisplayRef 的尺寸已根据 currentStyle 刷新
     nextTick(() => {
-      if (rdpContainerRef.value && guacClient.value) {
-        const displayWidth = rdpContainerRef.value.offsetWidth;
-        const displayHeight = rdpContainerRef.value.offsetHeight;
+      if (vncDisplayRef.value && guacClient.value) { // 再次检查，因为 nextTick 是异步的
+        const displayWidth = vncDisplayRef.value.offsetWidth;
+        const displayHeight = vncDisplayRef.value.offsetHeight;
+
         if (displayWidth > 0 && displayHeight > 0) {
-          // console.log(`[RDP Modal] Resizing Guacamole display to: ${displayWidth}x${displayHeight} due to style change.`);
+          console.log(`[VncModal] Resizing VNC display to: ${displayWidth}x${displayHeight} due to style change.`);
           guacClient.value.sendSize(displayWidth, displayHeight);
         }
       }
@@ -565,7 +511,7 @@ const initResize = (event: MouseEvent) => {
 
   document.addEventListener('mousemove', doResize);
   document.addEventListener('mouseup', stopResize);
-  event.preventDefault();
+  event.preventDefault(); // Prevent text selection or other default browser actions
 };
 
 const doResize = (event: MouseEvent) => {
@@ -577,6 +523,7 @@ const doResize = (event: MouseEvent) => {
   let newWidth = initialModalWidthForResize.value + deltaX;
   let newHeight = initialModalHeightForResize.value + deltaY;
 
+  // Apply minimum size constraints
   newWidth = Math.max(MIN_MODAL_WIDTH, newWidth);
   newHeight = Math.max(MIN_MODAL_HEIGHT, newHeight);
 
@@ -589,7 +536,7 @@ const stopResize = () => {
   isResizing.value = false;
   document.removeEventListener('mousemove', doResize);
   document.removeEventListener('mouseup', stopResize);
-  // Guacamole size update is handled by the watchEffect above
+  // The existing watchEffect for computedModalStyle will handle Guacamole resize
 };
 
 </script>
@@ -601,26 +548,26 @@ const stopResize = () => {
       isMinimized ? 'pointer-events-none' : '' // 允许恢复按钮接收事件
     ]"
   >
-    <button
-      ref="restoreButtonRef"
-      v-if="isMinimized"
-      @mousedown="onRestoreButtonMouseDown"
-      @click="handleClickRestoreButton"
-      :style="{ left: `${restoreButtonPosition.x}px`, top: `${restoreButtonPosition.y}px`, width: '50px', height: '50px' }"
-      class="fixed z-[100] flex items-center justify-center bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 pointer-events-auto cursor-grab active:cursor-grabbing"
-      :title="t('common.restore')"
-    >
-      <i class="fas fa-window-restore fa-lg"></i>
-    </button>
-    <div
-      v-show="!isMinimized"
-      :style="computedModalStyle"
-      class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border pointer-events-auto relative"
-    >
+     <button
+        ref="restoreButtonRef"
+        v-if="isMinimized"
+        @mousedown="onRestoreButtonMouseDown"
+        @click="handleClickRestoreButton"
+        :style="{ left: `${restoreButtonPosition.x}px`, top: `${restoreButtonPosition.y}px`, width: '50px', height: '50px' }"
+        class="fixed z-[100] flex items-center justify-center bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 pointer-events-auto cursor-grab active:cursor-grabbing"
+        :title="t('common.restore')"
+      >
+        <i class="fas fa-window-restore fa-lg"></i>
+      </button>
+     <div
+        v-show="!isMinimized"
+        :style="computedModalStyle"
+        class="bg-background text-foreground rounded-lg shadow-xl flex flex-col overflow-hidden border border-border pointer-events-auto relative"
+     >
       <div class="flex items-center justify-between p-3 border-b border-border flex-shrink-0">
         <h3 class="text-base font-semibold truncate">
-          <i class="fas fa-desktop mr-2 text-text-secondary"></i>
-          {{ t('remoteDesktopModal.title') }} - {{ props.connection?.name || props.connection?.host || t('remoteDesktopModal.titlePlaceholder') }}
+          <i class="fas fa-plug mr-2 text-text-secondary"></i>
+          {{ t('vncModal.title') }} - {{ props.connection?.name || props.connection?.host || t('remoteDesktopModal.titlePlaceholder') }}
         </h3>
         <div class="flex items-center space-x-1">
             <span class="text-xs px-2 py-0.5 rounded"
@@ -649,8 +596,8 @@ const stopResize = () => {
         </div>
       </div>
 
-      <div ref="rdpContainerRef" class="relative bg-black overflow-hidden flex-1">
-        <div ref="rdpDisplayRef" class="rdp-display-container w-full h-full">
+      <div ref="vncContainerRef" class="relative bg-black overflow-hidden flex-1">
+        <div ref="vncDisplayRef" class="vnc-display-container w-full h-full">
         </div>
          <div v-if="connectionStatus === 'connecting' || connectionStatus === 'error'"
               class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 text-white p-4 z-10">
@@ -676,8 +623,8 @@ const stopResize = () => {
               v-model.number="desiredModalWidth"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              @focus="disableRdpKeyboard"
-              @blur="enableRdpKeyboard"
+              @focus="disableVncKeyboard"
+              @blur="enableVncKeyboard"
             />
             <label for="modal-height" class="text-xs">{{ t('common.height') }}:</label>
             <input
@@ -686,10 +633,9 @@ const stopResize = () => {
               v-model.number="desiredModalHeight"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              @focus="disableRdpKeyboard"
-              @blur="enableRdpKeyboard"
+              @focus="disableVncKeyboard"
+              @blur="enableVncKeyboard"
             />
-             <!-- 添加重新连接按钮 -->
              <button
                @click="handleConnection"
                :disabled="connectionStatus === 'connecting'"
@@ -702,23 +648,23 @@ const stopResize = () => {
        </div>
        <!-- Resize Handle -->
        <div
-         class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-10 bg-transparent hover:bg-primary-dark hover:bg-opacity-30"
-         title="Resize"
-         @mousedown.stop="initResize"
+           class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-10 bg-transparent hover:bg-primary-dark hover:bg-opacity-30"
+           title="Resize"
+           @mousedown.stop="initResize"
        ></div>
    </div>
  </div>
 </template>
 <style scoped>
-.rdp-display-container {
+.vnc-display-container {
   overflow: hidden;
   position: relative;
 }
 
-.rdp-display-container :deep(div) {
+.vnc-display-container :deep(div) {
 }
 
-.rdp-display-container :deep(canvas) {
+.vnc-display-container :deep(canvas) {
   z-index: 999;
 }
 </style>

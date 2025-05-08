@@ -1,5 +1,5 @@
 {
-  "name": "@nexus-terminal/rdp",
+  "name": "@nexus-terminal/remote-gateway",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Unified Remote Desktop Gateway for Nexus Terminal",
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",

@@ -50,6 +50,8 @@ interface SettingsState {
   timezone?: string; // NEW: 时区设置 (e.g., 'Asia/Shanghai', 'UTC')
   rdpModalWidth?: string; // NEW: RDP 模态框宽度
   rdpModalHeight?: string; // NEW: RDP 模态框高度
+  vncModalWidth?: string; // NEW: VNC 模态框宽度
+  vncModalHeight?: string; // NEW: VNC 模态框高度
   ipBlacklistEnabled?: string;
   dashboardSortBy?: SortField;
   dashboardSortOrder?: SortOrder;
@@ -250,7 +252,14 @@ export const useSettingsStore = defineStore('settings', () => {
       if (settings.value.rdpModalHeight === undefined) {
           settings.value.rdpModalHeight = '858';
       }
-    
+      // NEW: VNC Modal Size defaults
+      if (settings.value.vncModalWidth === undefined) {
+          settings.value.vncModalWidth = '1024'; // 默认宽度
+      }
+      if (settings.value.vncModalHeight === undefined) {
+          settings.value.vncModalHeight = '768'; // 默认高度
+      }
+        
       if (settings.value.dashboardSortBy === undefined) {
           settings.value.dashboardSortBy = 'last_connected_at';
       }
@@ -364,6 +373,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'timezone', // NEW: 添加时区键
         'rdpModalWidth', // NEW: 添加 RDP 模态框宽度键
         'rdpModalHeight', // NEW: 添加 RDP 模态框高度键
+        'vncModalWidth', // NEW: 添加 VNC 模态框宽度键
+        'vncModalHeight', // NEW: 添加 VNC 模态框高度键
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
@@ -451,6 +462,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'timezone', // NEW: 添加时区键
         'rdpModalWidth', // NEW: 添加 RDP 模态框宽度键
         'rdpModalHeight', // NEW: 添加 RDP 模态框高度键
+        'vncModalWidth', // NEW: 添加 VNC 模态框宽度键
+        'vncModalHeight', // NEW: 添加 VNC 模态框高度键
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
