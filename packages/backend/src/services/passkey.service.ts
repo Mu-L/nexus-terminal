@@ -107,6 +107,12 @@ export class PasskeyService {
       requireUserVerification: true,
     };
 
+    // Add a check for the presence of credential ID before calling the library
+    if (!registrationResponseJSON || !registrationResponseJSON.id) {
+      console.error('Missing credential ID in registrationResponseJSON from client:', registrationResponseJSON);
+      throw new Error('Registration failed: Missing credential ID from client.');
+    }
+
     const verification = await verifyRegistrationResponse(verifyOpts);
 
     if (verification.verified && verification.registrationInfo) {
