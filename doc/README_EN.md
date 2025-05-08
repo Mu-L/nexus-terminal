@@ -19,7 +19,7 @@
 ## ✨ Features
 
 *   Manage SSH and SFTP connections with multiple tabs
-*   Support remote access to Windows desktops via RDP protocol
+*   Support remote access to desktops via RDP/VNC protocol
 *   Utilizes Monaco Editor for online file editing
 *   Integrated multi-factor login security mechanisms, including human verification (hCaptcha, Google reCAPTCHA) and two-factor authentication (2FA)
 *   Highly customizable interface themes and layout styles
@@ -177,7 +177,7 @@ Here are some implicit practical features.
 1.  **Dual File Managers**: You can add two file manager components in the layout (experimental feature, may be unstable).
 2.  **Multiple Text Editors**: The functionality to add multiple text editors in the same layout has not yet been implemented.
 3. For **ARMv7** users, please use the [docker-compose.yml](https://github.com/Heavrnl/nexus-terminal/blob/main/doc/arm/docker-compose.yml) provided here.
-Since Apache Guacamole does not provide an ARMv7-compatible image for `guacd`, the RDP feature has been disabled, and related images will not be pulled for now.
+Since Apache Guacamole does not provide an ARMv7-compatible image for `guacd`, the RDP/VNC feature has been disabled, and related images will not be pulled for now.
 4. Since I don't have an ARM machine on hand, I haven't conducted actual testing, so unexpected bugs may occur during runtime.
 5. For data backup, please back up the **data** folder in the directory yourself. This project does not provide any backup functionality.
 
