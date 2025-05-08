@@ -324,12 +324,7 @@ export const useAuthStore = defineStore('auth', {
 
         // NEW: 获取公共 CAPTCHA 配置 (修改为从 /settings/captcha 获取)
         async fetchCaptchaConfig() {
-            console.log('[AuthStore] fetchCaptchaConfig called. Current publicCaptchaConfig:', JSON.stringify(this.publicCaptchaConfig)); // 添加日志
-            // Avoid refetching if already loaded
-            if (this.publicCaptchaConfig !== null) {
-              console.log('[AuthStore] publicCaptchaConfig is not null, returning early.'); // 添加日志
-              return;
-            }
+            console.log('[AuthStore] fetchCaptchaConfig called. Forcing refetch.'); // 更新日志，表明强制刷新
 
             // Don't set isLoading for this, it should be quick background fetch
             try {
