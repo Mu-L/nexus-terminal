@@ -200,11 +200,13 @@ export class PasskeyService {
       expectedChallenge,
       expectedOrigin: RP_ORIGIN,
       expectedRPID: RP_ID,
-      authenticator: { 
+      authenticator: {
         credentialID: base64UrlToUint8Array(passkey.credential_id),
         credentialPublicKey: Buffer.from(passkey.public_key, 'base64'),
         counter: passkey.counter,
         transports: passkey.transports ? JSON.parse(passkey.transports) as AuthenticatorTransportFuture[] : undefined,
+        credentialBackedUp: !!passkey.backed_up,
+        credentialDeviceType: passkey.backed_up ? 'multiDevice' : 'singleDevice',
       },
       requireUserVerification: true,
     };
