@@ -236,23 +236,24 @@ export class PasskeyService {
         authenticatorTransports = undefined;
     }
 
-    const authenticatorObject = {
-      credentialID: authenticatorCredentialID,
-      credentialPublicKey: authenticatorPublicKey,
+    // This object structure should match what @simplewebauthn/server expects for its `credential` option parameter.
+    // Specifically, it expects `id`, `publicKey`, and `counter`.
+    const credentialObjectForLibrary = {
+      id: authenticatorCredentialID, // Renamed from credentialID
+      publicKey: authenticatorPublicKey, // Renamed from credentialPublicKey
       counter: passkey.counter,
       transports: authenticatorTransports,
       credentialBackedUp: !!passkey.backed_up,
-      // Ensure credentialDeviceType is one of the allowed string literals
       credentialDeviceType: (passkey.backed_up ? 'multiDevice' : 'singleDevice') as 'multiDevice' | 'singleDevice',
     };
 
-    console.log('[PasskeyService] Authenticator object to be used for verification:');
-    console.log(`  - credentialID (type: ${typeof authenticatorObject.credentialID}, instanceof Uint8Array: ${authenticatorObject.credentialID instanceof Uint8Array}, length: ${authenticatorObject.credentialID?.length}):`, authenticatorObject.credentialID);
-    console.log(`  - credentialPublicKey (type: ${typeof authenticatorObject.credentialPublicKey}, instanceof Uint8Array: ${authenticatorObject.credentialPublicKey instanceof Uint8Array}, instanceof Buffer: ${authenticatorObject.credentialPublicKey instanceof Buffer}, length: ${authenticatorObject.credentialPublicKey?.length}):`, authenticatorObject.credentialPublicKey);
-    console.log(`  - counter (type: ${typeof authenticatorObject.counter}):`, authenticatorObject.counter);
-    console.log(`  - transports (type: ${typeof authenticatorObject.transports}):`, authenticatorObject.transports);
-    console.log(`  - credentialBackedUp (type: ${typeof authenticatorObject.credentialBackedUp}):`, authenticatorObject.credentialBackedUp);
-    console.log(`  - credentialDeviceType (type: ${typeof authenticatorObject.credentialDeviceType}):`, authenticatorObject.credentialDeviceType);
+    console.log('[PasskeyService] Credential object to be used for verification (passed as `credential` to library):');
+    console.log(`  - id (type: ${typeof credentialObjectForLibrary.id}, instanceof Uint8Array: ${credentialObjectForLibrary.id instanceof Uint8Array}, length: ${credentialObjectForLibrary.id?.length}):`, credentialObjectForLibrary.id);
+    console.log(`  - publicKey (type: ${typeof credentialObjectForLibrary.publicKey}, instanceof Uint8Array: ${credentialObjectForLibrary.publicKey instanceof Uint8Array}, instanceof Buffer: ${credentialObjectForLibrary.publicKey instanceof Buffer}, length: ${credentialObjectForLibrary.publicKey?.length}):`, credentialObjectForLibrary.publicKey);
+    console.log(`  - counter (type: ${typeof credentialObjectForLibrary.counter}):`, credentialObjectForLibrary.counter);
+    console.log(`  - transports (type: ${typeof credentialObjectForLibrary.transports}):`, credentialObjectForLibrary.transports);
+    console.log(`  - credentialBackedUp (type: ${typeof credentialObjectForLibrary.credentialBackedUp}):`, credentialObjectForLibrary.credentialBackedUp);
+    console.log(`  - credentialDeviceType (type: ${typeof credentialObjectForLibrary.credentialDeviceType}):`, credentialObjectForLibrary.credentialDeviceType);
     
     // Reverting to 'any' for verifyOpts due to issues with the library's
     // type definitions for VerifyAuthenticationResponseOpts not recognizing 'authenticator' key.
@@ -262,7 +263,7 @@ export class PasskeyService {
       expectedChallenge,
       expectedOrigin: RP_ORIGIN,
       expectedRPID: RP_ID,
-      authenticator: authenticatorObject,
+      credential: credentialObjectForLibrary, // Renamed from authenticator to credential
       requireUserVerification: true,
     };
     console.log('[PasskeyService] verifyOpts to be passed to @simplewebauthn/server (using type any):', JSON.stringify(verifyOpts, (key, value) => {
