@@ -6,7 +6,7 @@ services:
       - "18111:80"
     depends_on:
       - backend
-      - rdp
+      - remote-gateway
     networks:
       - nexus-terminal-network
 
@@ -14,24 +14,24 @@ services:
     image: heavrnl/nexus-terminal-backend:latest
     container_name: nexus-terminal-backend
     env_file:
-      - .env    
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3001
-      RDP_BACKEND_API_BASE: http://rdp:9090
+      REMOTE_GATEWAY_API_BASE: http://remote-gateway:9090
     volumes:
       - ./data:/app/data
     networks:
       - nexus-terminal-network
 
-  rdp:
-    image: heavrnl/nexus-terminal-rdp
-    container_name: nexus-terminal-rdp
+  remote-gateway:
+    image: heavrnl/nexus-terminal-remote-gateway:latest
+    container_name: nexus-terminal-remote-gateway
     environment:
       GUACD_HOST: guacd
       GUACD_PORT: 4822
-      API_PORT: 9090
-      GUAC_WS_PORT: 8081
+      REMOTE_GATEWAY_API_PORT: 9090
+      REMOTE_GATEWAY_WS_PORT: 8080
       FRONTEND_URL: http://frontend
       MAIN_BACKEND_URL: http://backend:3001
       NODE_ENV: production
