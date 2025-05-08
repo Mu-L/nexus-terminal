@@ -80,8 +80,6 @@
 ```bash
 mkdir ./nexus-terminal && cd ./nexus-terminal
 ```
-优化后的句子更加简洁、清晰，并保持原意：
-
 ---
 
 下载仓库中的 [**docker-compose.yml**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/docker-compose.yml) 和 [**.env**](https://raw.githubusercontent.com/Heavrnl/nexus-terminal/refs/heads/main/.env) 文件到当前目录。
