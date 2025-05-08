@@ -7,11 +7,18 @@ import {
   verifyAndActivate2FA,
   disable2FA,
   getAuthStatus,
-  // Removed Passkey imports
   needsSetup,
   setupAdmin,
   logout,
-  getPublicCaptchaConfig
+  getPublicCaptchaConfig,
+  // Passkey handlers
+  generatePasskeyRegistrationOptionsHandler,
+  verifyPasskeyRegistrationHandler,
+  generatePasskeyAuthenticationOptionsHandler,
+  verifyPasskeyAuthenticationHandler,
+  // 新的 Passkey 管理处理器
+  listUserPasskeysHandler,
+  deleteUserPasskeyHandler
 } from './auth.controller';
 import { isAuthenticated } from './auth.middleware';
 import { ipBlacklistCheckMiddleware } from './ipBlacklistCheck.middleware';
@@ -52,7 +59,26 @@ router.delete('/2fa', isAuthenticated, disable2FA);
 // GET /api/v1/auth/status - 获取当前认证状态 (需要认证)
 router.get('/status', isAuthenticated, getAuthStatus);
 
-// --- Passkey routes removed ---
+// --- Passkey Routes ---
+// POST /api/v1/auth/passkey/registration-options - 生成 Passkey 注册选项 (需要认证)
+router.post('/passkey/registration-options', isAuthenticated, generatePasskeyRegistrationOptionsHandler);
+
+// POST /api/v1/auth/passkey/register - 验证并保存新的 Passkey (需要认证，因为通常在已登录会话中添加新凭据)
+router.post('/passkey/register', isAuthenticated, verifyPasskeyRegistrationHandler);
+
+// POST /api/v1/auth/passkey/authentication-options - 生成 Passkey 认证选项 (公开或半公开，取决于是否提供了用户名)
+router.post('/passkey/authentication-options', generatePasskeyAuthenticationOptionsHandler);
+
+// POST /api/v1/auth/passkey/authenticate - 验证 Passkey 并登录用户 (公开)
+router.post('/passkey/authenticate', ipBlacklistCheckMiddleware, verifyPasskeyAuthenticationHandler);
+
+// --- User's Passkey Management Routes (New) ---
+// GET /api/v1/auth/user/passkeys - 获取当前用户的所有 Passkey (需要认证)
+router.get('/user/passkeys', isAuthenticated, listUserPasskeysHandler);
+
+// DELETE /api/v1/auth/user/passkeys/:credentialID - 删除当前用户指定的 Passkey (需要认证)
+router.delete('/user/passkeys/:credentialID', isAuthenticated, deleteUserPasskeyHandler);
+
 
 // POST /api/v1/auth/logout - 用户登出接口 (公开访问)
 router.post('/logout', logout);

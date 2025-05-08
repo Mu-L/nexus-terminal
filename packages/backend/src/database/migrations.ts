@@ -228,6 +228,30 @@ const definedMigrations: Migration[] = [
         `
     },
     // --- 未来可以添加更多迁移 ---
+    {
+        id: 6,
+        name: 'Create passkeys table for WebAuthn credentials',
+        check: async (db: Database): Promise<boolean> => {
+            const passkeysTableAlreadyExists = await tableExists(db, 'passkeys');
+            return !passkeysTableAlreadyExists; // Only run if the table does NOT exist
+        },
+        sql: `
+            CREATE TABLE IF NOT EXISTS passkeys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                credential_id TEXT UNIQUE NOT NULL, -- Base64URL encoded
+                public_key TEXT NOT NULL, -- COSE public key, stored as Base64URL or HEX
+                counter INTEGER NOT NULL,
+                transports TEXT, -- JSON array of transports e.g. ["usb", "nfc", "ble", "internal"]
+                name TEXT NULL, -- User-friendly name for the passkey
+                backed_up BOOLEAN NOT NULL DEFAULT FALSE, -- Stored as 0 or 1
+                last_used_at INTEGER NULL,
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+        `
+    }
 ];
 
 /**

@@ -11,6 +11,18 @@ interface UserInfo {
     language?: 'en' | 'zh'; // 新增：用户偏好语言
 }
 
+// Passkey Information Interface
+interface PasskeyInfo {
+    credentialID: string;
+    publicKey: string; // Or a more specific type if available
+    counter: number;
+    transports?: AuthenticatorTransport[]; // e.g., "usb", "nfc", "ble", "internal"
+    creationDate: string; // ISO date string
+    lastUsedDate: string; // ISO date string
+    name?: string; // User-friendly name for the passkey
+    // Add other relevant fields from your backend response
+}
+
 // 新增：登录请求的载荷接口
 interface LoginPayload {
     username: string;
@@ -36,8 +48,6 @@ interface FullCaptchaSettings {
     recaptchaSecretKey?: string; // We won't use this in authStore
 }
 
-// Removed PasskeyInfo interface
-
 
 // Auth Store State 接口
 interface AuthState {
@@ -53,7 +63,8 @@ interface AuthState {
     };
     needsSetup: boolean; // 新增：是否需要初始设置
     publicCaptchaConfig: PublicCaptchaConfig | null; // NEW: Public CAPTCHA config
-    // Removed Passkey state properties
+    passkeys: PasskeyInfo[] | null; // NEW: Store for user's passkeys
+    passkeysLoading: boolean; // NEW: Loading state for passkeys
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -66,7 +77,8 @@ export const useAuthStore = defineStore('auth', {
         ipBlacklist: { entries: [], total: 0 }, // 初始化黑名单状态
         needsSetup: false, // 初始假设不需要设置
         publicCaptchaConfig: null, // NEW: Initialize CAPTCHA config as null
-        // Removed Passkey state initialization
+        passkeys: null, // Initialize passkeys as null
+        passkeysLoading: false, // Initialize passkeysLoading as false
     }),
     getters: {
         // 可以添加一些 getter，例如获取用户名
@@ -343,7 +355,115 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // --- Passkey Actions Removed ---
+        // --- Passkey Actions ---
+        async loginWithPasskey(username: string, assertionResponse: any) {
+            this.isLoading = true;
+            this.error = null;
+            this.loginRequires2FA = false; // Passkey login bypasses traditional 2FA
+            try {
+                const response = await apiClient.post<{ message: string; user: UserInfo }>('/auth/passkey/authenticate', {
+                    username,
+                    assertionResponse,
+                });
+
+                this.isAuthenticated = true;
+                this.user = response.data.user;
+                console.log('Passkey 登录成功:', this.user);
+                if (this.user?.language) {
+                    setLocale(this.user.language);
+                }
+                window.location.href = '/'; // 跳转到根路径并刷新
+                return { success: true };
+
+            } catch (err: any) {
+                console.error('Passkey 登录失败:', err);
+                this.isAuthenticated = false;
+                this.user = null;
+                this.error = err.response?.data?.message || err.message || 'Passkey 登录时发生未知错误。';
+                return { success: false, error: this.error };
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async getPasskeyRegistrationOptions(username: string) {
+            this.isLoading = true;
+            this.error = null;
+            try {
+                const response = await apiClient.post('/auth/passkey/registration-options', { username });
+                return response.data; // Returns FIDO2 creation options
+            } catch (err: any) {
+                console.error('获取 Passkey 注册选项失败:', err);
+                this.error = err.response?.data?.message || err.message || '获取 Passkey 注册选项失败。';
+                throw new Error(this.error ?? '获取 Passkey 注册选项失败。');
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async registerPasskey(username: string, registrationResponse: any) {
+            this.isLoading = true;
+            this.error = null;
+            try {
+                await apiClient.post('/auth/passkey/register', {
+                    username,
+                    registrationResponse,
+                });
+                console.log('Passkey 注册成功');
+                // Optionally, refresh user data or passkeys list if applicable
+                return { success: true };
+            } catch (err: any) {
+                console.error('Passkey 注册失败:', err);
+                this.error = err.response?.data?.message || err.message || 'Passkey 注册失败。';
+                throw new Error(this.error ?? 'Passkey 注册失败。');
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        // Action to fetch user's passkeys
+        async fetchPasskeys() {
+            if (!this.isAuthenticated) {
+                console.warn('User not authenticated. Cannot fetch passkeys.');
+                this.passkeys = null;
+                return;
+            }
+            this.passkeysLoading = true;
+            this.error = null; // Clear previous errors
+            try {
+                const response = await apiClient.get<PasskeyInfo[]>('/auth/user/passkeys');
+                this.passkeys = response.data;
+                console.log('Passkeys fetched successfully:', this.passkeys);
+            } catch (err: any) {
+                console.error('Failed to fetch passkeys:', err);
+                this.error = err.response?.data?.message || err.message || 'Failed to load passkeys.';
+                this.passkeys = null; // Clear passkeys on error
+            } finally {
+                this.passkeysLoading = false;
+            }
+        },
+
+        // Action to delete a passkey
+        async deletePasskey(credentialID: string) {
+            if (!this.isAuthenticated) {
+                throw new Error('User not authenticated. Cannot delete passkey.');
+            }
+            this.isLoading = true; // Use general isLoading or a specific one for this action
+            this.error = null;
+            try {
+                await apiClient.delete(`/auth/user/passkeys/${credentialID}`);
+                console.log(`Passkey ${credentialID} deleted successfully.`);
+                // Refresh the passkey list
+                await this.fetchPasskeys();
+                return { success: true };
+            } catch (err: any) {
+                console.error(`Failed to delete passkey ${credentialID}:`, err);
+                this.error = err.response?.data?.message || err.message || 'Failed to delete passkey.';
+                throw new Error(this.error ?? 'Failed to delete passkey.');
+            } finally {
+                this.isLoading = false;
+            }
+        },
     },
     persist: true, // Revert to simple persistence to fix TS error for now
 });

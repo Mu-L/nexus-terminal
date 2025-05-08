@@ -50,7 +50,49 @@
                 </form>
               </div>
               <hr class="border-border/50">
-              <!-- Passkey Section Removed -->
+              <!-- Passkey Management -->
+              <div class="settings-section-content">
+                <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.passkey.title') }}</h3>
+                <p class="text-sm text-text-secondary mb-4">{{ $t('settings.passkey.description') }}</p>
+                <button @click="handleRegisterNewPasskey" :disabled="passkeyLoading"
+                        class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out text-sm font-medium">
+                  {{ passkeyLoading ? $t('common.loading') : $t('settings.passkey.registerNewButton') }}
+                </button>
+                <p v-if="passkeyMessage" :class="['mt-3 text-sm', passkeySuccess ? 'text-success' : 'text-error']">{{ passkeyMessage }}</p>
+
+                <!-- Display list of registered passkeys -->
+                <div class="mt-6">
+                  <h4 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.passkey.registeredKeysTitle') }}</h4>
+                  <div v-if="authStore.passkeysLoading" class="p-4 text-center text-text-secondary italic">
+                    {{ $t('common.loading') }}
+                  </div>
+                  <div v-else-if="authStore.passkeys && authStore.passkeys.length > 0">
+                    <ul class="space-y-3">
+                      <li v-for="key in authStore.passkeys" :key="key.credentialID" class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border border-border rounded-md bg-header/20 hover:bg-header/40 transition-colors duration-150">
+                        <div class="flex-grow mb-2 sm:mb-0">
+                          <span class="block font-medium text-foreground text-sm">
+                            {{ key.name || $t('settings.passkey.unnamedKey') }}
+                            <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ key.credentialID.slice(-8) }})</span>
+                          </span>
+                          <div class="text-xs text-text-secondary mt-1 space-x-2">
+                            <span>{{ $t('settings.passkey.createdDate') }}: {{ formatDate(key.creationDate) }}</span>
+                            <span v-if="key.lastUsedDate">{{ $t('settings.passkey.lastUsedDate') }}: {{ formatDate(key.lastUsedDate) }}</span>
+                            <span v-if="key.transports && key.transports.length > 0" class="capitalize">({{ key.transports.join(', ') }})</span>
+                          </div>
+                        </div>
+                        <button @click="handleDeletePasskey(key.credentialID)"
+                                :disabled="passkeyDeleteLoadingStates[key.credentialID]"
+                                class="px-3 py-1.5 bg-error text-error-text rounded-md text-xs font-medium hover:bg-error/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out self-start sm:self-center">
+                          {{ passkeyDeleteLoadingStates[key.credentialID] ? $t('common.loading') : $t('common.delete') }}
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                  <p v-else class="text-sm text-text-secondary italic">{{ $t('settings.passkey.noKeysRegistered') }}</p>
+                  <p v-if="passkeyDeleteError" class="mt-3 text-sm text-error">{{ passkeyDeleteError }}</p>
+                </div>
+              </div>
+              <hr class="border-border/50">
               <!-- 2FA -->
               <div class="settings-section-content">
                  <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.twoFactor.title') }}</h3>
@@ -670,7 +712,7 @@ import { storeToRefs } from 'pinia';
 import { availableLocales } from '../i18n'; // 导入可用语言列表
 import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
 import { isAxiosError } from 'axios'; // 单独导入 isAxiosError
-// Removed Passkey import: import { startRegistration } from '@simplewebauthn/browser';
+import { startRegistration } from '@simplewebauthn/browser';
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -708,8 +750,8 @@ const {
     terminalScrollbackLimitNumber, // NEW: Import terminal scrollback limit getter
     fileManagerShowDeleteConfirmationBoolean, // NEW: Import file manager delete confirmation getter
 } = storeToRefs(settingsStore);
- 
- // Removed Passkey state import from authStore
+
+const { passkeys, passkeysLoading } = storeToRefs(authStore); // Import passkey state
 
 
 // --- Local state for forms ---
@@ -803,8 +845,13 @@ const captchaForm = reactive<UpdateCaptchaSettingsDto>({ // Use reactive for the
 const captchaLoading = ref(false);
 const captchaMessage = ref('');
 const captchaSuccess = ref(false);
-// Removed Passkey Deletion State
 
+// --- Passkey State ---
+const passkeyLoading = ref(false);
+const passkeyMessage = ref('');
+const passkeySuccess = ref(false);
+const passkeyDeleteLoadingStates = reactive<Record<string, boolean>>({});
+const passkeyDeleteError = ref<string | null>(null);
 
 // 提供一些常用的时区供选择
 const commonTimezones = ref([
@@ -1128,13 +1175,86 @@ const openStyleCustomizer = () => {
     appearanceStore.toggleStyleCustomizer(true);
 };
 
-// --- Passkey state & methods Removed ---
+// --- Passkey Methods ---
+const handleRegisterNewPasskey = async () => {
+  passkeyLoading.value = true;
+  passkeyMessage.value = '';
+  passkeySuccess.value = false;
+
+  const username = authStore.user?.username;
+  if (!username) {
+    passkeyMessage.value = t('settings.passkey.error.userNotLoggedIn');
+    passkeyLoading.value = false;
+    return;
+  }
+
+  try {
+    // 1. Get registration options from the server
+    const registrationOptions = await authStore.getPasskeyRegistrationOptions(username);
+
+    // 2. Start WebAuthn registration ceremony
+    const registrationResult = await startRegistration(registrationOptions);
+
+    // 3. Send registration result to the server
+    await authStore.registerPasskey(username, registrationResult);
+
+    passkeyMessage.value = t('settings.passkey.success.registered');
+    passkeySuccess.value = true;
+    await authStore.fetchPasskeys(); // Refresh passkey list
+  } catch (error: any) {
+    console.error('Passkey 注册失败:', error);
+    // Check if the error is from startRegistration (e.g., user cancellation)
+    if (error.name === 'InvalidStateError' || error.message.includes('cancelled')) {
+        passkeyMessage.value = t('settings.passkey.error.registrationCancelled');
+    } else {
+        passkeyMessage.value = error.response?.data?.message || error.message || t('settings.passkey.error.registrationFailed');
+    }
+    passkeySuccess.value = false;
+  } finally {
+    passkeyLoading.value = false;
+  }
+};
+
+const handleDeletePasskey = async (credentialID: string) => {
+  if (!confirm(t('settings.passkey.confirmDelete'))) return;
+
+  passkeyDeleteLoadingStates[credentialID] = true;
+  passkeyDeleteError.value = null;
+  passkeyMessage.value = ''; // Clear previous general passkey messages
+  try {
+    await authStore.deletePasskey(credentialID);
+    // The authStore.deletePasskey action should internally call fetchPasskeys to refresh the list.
+    // So, no need to call it explicitly here if the store handles it.
+    // If not, uncomment the line below:
+    // await authStore.fetchPasskeys();
+    passkeyMessage.value = t('settings.passkey.success.deleted');
+    passkeySuccess.value = true; // Use general success for feedback
+  } catch (error: any) {
+    console.error(`删除 Passkey ${credentialID} 失败:`, error);
+    passkeyDeleteError.value = error.message || t('settings.passkey.error.deleteFailedGeneral');
+    passkeySuccess.value = false;
+  } finally {
+    passkeyDeleteLoadingStates[credentialID] = false;
+  }
+};
 
 // --- Formatting function (kept in case other parts need it, can be removed if unused) ---
-const formatDate = (timestamp: number | undefined) => {
-    if (!timestamp) return t('statusMonitor.notAvailable');
+const formatDate = (dateInput: string | number | Date | undefined): string => {
+    if (!dateInput) return t('statusMonitor.notAvailable');
     try {
-        return new Date(timestamp * 1000).toLocaleString();
+        const date = new Date(dateInput);
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+            // Try parsing as seconds if it's a number (common for Unix timestamps)
+            if (typeof dateInput === 'number') {
+                const dateFromSeconds = new Date(dateInput * 1000);
+                if (!isNaN(dateFromSeconds.getTime())) {
+                    return dateFromSeconds.toLocaleString();
+                }
+            }
+            return t('statusMonitor.notAvailable');
+        }
+        return date.toLocaleString();
     } catch (e) {
         console.error("Error formatting date:", e);
         return t('statusMonitor.notAvailable');
@@ -1439,7 +1559,9 @@ onMounted(async () => {
   await fetchIpBlacklist(); // Fetch current blacklist entries
   await settingsStore.loadCaptchaSettings(); // <-- Load CAPTCHA settings
   await checkLatestVersion(); // <-- Check for latest version on mount
-  // Removed fetchPasskeys call: await authStore.fetchPasskeys();
+  if (authStore.isAuthenticated) {
+    await authStore.fetchPasskeys();
+  }
   // Initial settings (including language, whitelist, blacklist config) are loaded in main.ts via settingsStore.loadInitialSettings()
 });
 

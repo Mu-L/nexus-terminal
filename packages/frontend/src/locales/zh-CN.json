@@ -100,12 +100,15 @@
     "verifyButton": "验证",
     "rememberMe": "记住我",
     "captchaPrompt": "请完成下方的验证：",
+    "loginWithPasskey": "使用 Passkey 登录",
     "error": {
         "captchaLoadFailed": "加载 CAPTCHA 失败，请尝试刷新页面。",
-        "captchaRequired": "请完成 CAPTCHA 验证。"
+        "captchaRequired": "请完成 CAPTCHA 验证。",
+        "usernameRequiredForPasskey": "使用 Passkey 需要输入用户名。",
+        "passkeyAuthOptionsFailed": "从服务器获取 Passkey 认证选项失败。",
+        "passkeyAuthFailed": "Passkey 认证失败。请重试或使用密码登录。"
     },
-    "recaptchaV3Notice": "此网站受 reCAPTCHA 保护，并适用 Google 隐私政策和服务条款。",
-    "passkeyLoginButton": "使用 Passkey 登录"
+    "recaptchaV3Notice": "此网站受 reCAPTCHA 保护，并适用 Google 隐私政策和服务条款。"
   },
   "connections": {
     "addConnection": "添加新连接",
@@ -526,19 +529,30 @@
       }
     },
     "passkey": {
-      "title": "Passkey 设置",
+      "title": "Passkey 管理",
       "description": "使用 Passkey（生物识别或安全密钥）进行无密码认证，提升账户安全性和登录便捷性。",
       "nameLabel": "Passkey 名称",
       "namePlaceholder": "例如：我的笔记本电脑",
-      "registerButton": "注册新 Passkey",
+      "registerNewButton": "注册新 Passkey",
+      "registeredKeysTitle": "已注册的 Passkey",
+      "unnamedKey": "未命名 Passkey",
+      "createdDate": "创建于",
+      "lastUsedDate": "上次使用",
+      "noKeysRegistered": "尚未注册任何 Passkey。",
+      "confirmDelete": "确定要删除此 Passkey 吗？此操作无法撤销。",
       "error": {
         "nameRequired": "请输入 Passkey 名称。",
         "cancelled": "Passkey 注册已被用户取消。",
         "genericRegistration": "无法注册 Passkey: {message}",
-        "verificationFailed": "注册失败: {message}"
+        "verificationFailed": "注册失败: {message}",
+        "userNotLoggedIn": "用户未登录或用户名不可用。",
+        "registrationCancelled": "Passkey 注册已取消。",
+        "registrationFailed": "Passkey 注册失败。",
+        "deleteFailedGeneral": "删除 Passkey 失败。请重试。"
       },
       "success": {
-        "registered": "Passkey 注册成功！"
+        "registered": "新的 Passkey 已成功注册！",
+        "deleted": "Passkey 已成功删除。"
       }
     },
     "notifications": {
