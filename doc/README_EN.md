@@ -14,7 +14,7 @@
 
 ## 📖 Overview
 
-**Nexus Terminal** is a modern, feature-rich web-based SSH / RDP client dedicated to providing a highly customizable remote connection experience.
+**Nexus Terminal** is a modern, feature-rich web-based SSH / RDP / VNC client dedicated to providing a highly customizable remote connection experience.
 
 ## ✨ Features
 
