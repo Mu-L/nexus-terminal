@@ -454,14 +454,29 @@ const testButtonText = computed(() => {
           </div>
           <!-- Connection Type -->
           <div>
-            <label for="conn-type" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.connectionType', '连接类型') }}</label>
-            <select id="conn-type" v-model="formData.type"
-                    class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none bg-no-repeat bg-right pr-8"
-                    style="background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'%3e%3cpath fill=\'none\' stroke=\'%236c757d\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M2 5l6 6 6-6\'/%3e%3c/svg%3e'); background-position: right 0.75rem center; background-size: 16px 12px;">
-              <option value="SSH">{{ t('connections.form.typeSsh', 'SSH') }}</option>
-              <option value="RDP">{{ t('connections.form.typeRdp', 'RDP') }}</option>
-              <option value="VNC">{{ t('connections.form.typeVnc', 'VNC') }}</option>
-            </select>
+            <label class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.connectionType', '连接类型') }}</label>
+            <div class="flex rounded-md shadow-sm">
+              <button type="button"
+                      @click="formData.type = 'SSH'"
+                      :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none',
+                               formData.type === 'SSH' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
+                               'rounded-l-md']">
+                {{ t('connections.form.typeSsh', 'SSH') }}
+              </button>
+              <button type="button"
+                      @click="formData.type = 'RDP'"
+                      :class="['flex-1 px-3 py-2 border-t border-b border-r border-border text-sm font-medium focus:outline-none -ml-px',
+                               formData.type === 'RDP' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border']">
+                {{ t('connections.form.typeRdp', 'RDP') }}
+              </button>
+              <button type="button"
+                      @click="formData.type = 'VNC'"
+                      :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none -ml-px',
+                               formData.type === 'VNC' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
+                               'rounded-r-md']">
+                {{ t('connections.form.typeVnc', 'VNC') }}
+              </button>
+            </div>
           </div>
           <!-- Host and Port Row -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -491,13 +506,23 @@ const testButtonText = computed(() => {
           <!-- Use uppercase for comparison -->
           <template v-if="formData.type === 'SSH'">
             <div>
-              <label for="conn-auth-method" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.authMethod') }}</label>
-              <select id="conn-auth-method" v-model="formData.auth_method"
-                      class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none bg-no-repeat bg-right pr-8"
-                      style="background-image: url('data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'%3e%3cpath fill=\'none\' stroke=\'%236c757d\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M2 5l6 6 6-6\'/%3e%3c/svg%3e'); background-position: right 0.75rem center; background-size: 16px 12px;">
-                <option value="password">{{ t('connections.form.authMethodPassword') }}</option>
-                <option value="key">{{ t('connections.form.authMethodKey') }}</option>
-              </select>
+              <label class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.authMethod') }}</label>
+              <div class="flex rounded-md shadow-sm">
+                <button type="button"
+                        @click="formData.auth_method = 'password'"
+                        :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none',
+                                 formData.auth_method === 'password' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
+                                 'rounded-l-md']">
+                  {{ t('connections.form.authMethodPassword') }}
+                </button>
+                <button type="button"
+                        @click="formData.auth_method = 'key'"
+                        :class="['flex-1 px-3 py-2 border-t border-b border-r border-border text-sm font-medium focus:outline-none -ml-px',
+                                 formData.auth_method === 'key' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
+                                 'rounded-r-md']">
+                  {{ t('connections.form.authMethodKey') }}
+                </button>
+              </div>
             </div>
 
             <div v-if="formData.auth_method === 'password'">
