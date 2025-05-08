@@ -121,18 +121,21 @@ export class PasskeyService {
     if (verification.verified && verification.registrationInfo) {
       const regInfo = verification.registrationInfo; 
       
-      // Assuming regInfo has these properties based on standard WebAuthn structures.
-      // If these are incorrect for @simplewebauthn/server@13.1.1, this needs adjustment.
-      const credentialPublicKey = (regInfo as any).credentialPublicKey;
-      const credentialID = (regInfo as any).credentialID;
-      const counter = (regInfo as any).counter;
-      const transports = (regInfo as any).transports;
-      const credentialBackedUp = (regInfo as any).credentialBackedUp;
+      // Based on the logs, credentialPublicKey, credentialID, counter, and transports
+      // are nested within regInfo.credential.
+      // credentialBackedUp is at the top level of regInfo.
+      const credentialDetails = (regInfo as any).credential;
+      const credentialBackedUp = (regInfo as any).credentialBackedUp; // This seems to be at the top level
 
-      if (!credentialPublicKey || typeof credentialID !== 'string' || typeof counter !== 'number') {
-        console.error('Verification successful, but registrationInfo structure is unexpected:', regInfo);
-        throw new Error('Failed to process registration info due to unexpected structure.');
+      if (!credentialDetails || typeof credentialDetails.publicKey !== 'object' || typeof credentialDetails.id !== 'string' || typeof credentialDetails.counter !== 'number') {
+        console.error('Verification successful, but registrationInfo.credential structure is unexpected or missing:', regInfo);
+        throw new Error('Failed to process registration info due to unexpected credential structure.');
       }
+
+      const credentialPublicKey = credentialDetails.publicKey;
+      const credentialID = credentialDetails.id;
+      const counter = credentialDetails.counter;
+      const transports = credentialDetails.transports; // This might be undefined, handle appropriately
       
       const publicKeyBase64 = Buffer.from(credentialPublicKey).toString('base64');
 
