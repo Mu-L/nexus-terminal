@@ -1247,19 +1247,24 @@ const handleDeletePasskey = async (credentialID: string) => {
 const formatDate = (dateInput: string | number | Date | undefined): string => {
     if (!dateInput) return t('statusMonitor.notAvailable');
     try {
-        const date = new Date(dateInput);
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-            // Try parsing as seconds if it's a number (common for Unix timestamps)
-            if (typeof dateInput === 'number') {
-                const dateFromSeconds = new Date(dateInput * 1000);
-                if (!isNaN(dateFromSeconds.getTime())) {
-                    return dateFromSeconds.toLocaleString();
-                }
+        // If dateInput is a number, assume it's a Unix timestamp in seconds
+        if (typeof dateInput === 'number') {
+            const dateFromSeconds = new Date(dateInput * 1000);
+            if (!isNaN(dateFromSeconds.getTime())) {
+                return dateFromSeconds.toLocaleString();
             }
+            // If conversion from seconds still results in an invalid date, return N/A
             return t('statusMonitor.notAvailable');
         }
-        return date.toLocaleString();
+
+        // If dateInput is a string or Date object, try to parse it directly
+        const date = new Date(dateInput);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleString();
+        }
+
+        // If all parsing fails
+        return t('statusMonitor.notAvailable');
     } catch (e) {
         console.error("Error formatting date:", e);
         return t('statusMonitor.notAvailable');
