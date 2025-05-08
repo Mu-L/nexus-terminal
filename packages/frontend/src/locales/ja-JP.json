@@ -758,6 +758,10 @@
             "events": {
                 "2FA_DISABLED": "2段階認証無効",
                 "2FA_ENABLED": "2段階認証有効",
+                "PASSKEY_REGISTERED": "パスキー登録済み",
+                "PASSKEY_AUTH_SUCCESS": "パスキー認証成功",
+                "PASSKEY_AUTH_FAILURE": "パスキー認証失敗",
+                "PASSKEY_DELETED": "パスキー削除済み",
                 "ADMIN_SETUP_COMPLETE": "初期管理者設定完了",
                 "CONNECTIONS_EXPORTED": "接続がエクスポートされました",
                 "CONNECTION_CREATED": "接続作成",
@@ -765,6 +769,7 @@
                 "CONNECTION_UPDATED": "接続更新",
                 "DATABASE_MIGRATION": "データベース移行",
                 "IP_WHITELIST_UPDATED": "IP ホワイトリスト更新",
+                "IP_BLOCKED": "IPブロック済み",
                 "LOGIN_FAILURE": "ログイン失敗",
                 "LOGIN_SUCCESS": "ログイン成功",
                 "LOGOUT": "ログアウト",

@@ -206,6 +206,7 @@ export const verifyPasskeyAuthenticationHandler = async (req: Request, res: Resp
                 reason: 'Verification failed',
                 ip: clientIp
             });
+            notificationService.sendNotification('PASSKEY_AUTH_FAILURE', { credentialId: authenticationResponseJSON?.id || 'unknown', reason: 'Verification failed', ip: clientIp });
             res.status(401).json({ verified: false, message: 'Passkey 认证失败。' });
         }
     } catch (error: any) {
@@ -216,6 +217,7 @@ export const verifyPasskeyAuthenticationHandler = async (req: Request, res: Resp
             reason: error.message,
             ip: clientIp
         });
+        notificationService.sendNotification('PASSKEY_AUTH_FAILURE', { credentialId: authenticationResponseJSON?.id || 'unknown', reason: error.message, ip: clientIp });
         res.status(500).json({ verified: false, message: '验证 Passkey 认证失败。', error: error.message });
     }
 };
