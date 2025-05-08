@@ -267,6 +267,7 @@ export class PasskeyService {
 
   async listPasskeysByUserId(userId: number): Promise<Partial<Passkey>[]> {
     const passkeys = await this.passkeyRepo.getPasskeysByUserId(userId);
+    console.log(`[PasskeyService] Passkeys for user ${userId} before mapping to partial:`, JSON.stringify(passkeys, null, 2));
     // 只返回部分信息以避免泄露敏感数据
     return passkeys.map(pk => ({
       credential_id: pk.credential_id,
