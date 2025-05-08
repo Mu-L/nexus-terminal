@@ -30,18 +30,12 @@ const textEncoder = new TextEncoder();
 
 function base64UrlToUint8Array(base64urlString: string): Uint8Array {
   const base64 = base64urlString.replace(/-/g, '+').replace(/_/g, '/');
-  const padLength = (4 - (base64.length % 4)) % 4;
-  const paddedBase64 = base64 + '='.repeat(padLength);
+  // Buffer.from will handle padding correctly for base64
   try {
-    const binaryString = atob(paddedBase64);
-    const uint8Array = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      uint8Array[i] = binaryString.charCodeAt(i);
-    }
-    return uint8Array;
+    return Buffer.from(base64, 'base64');
   } catch (e) {
-    console.error("Failed to decode base64url string:", base64urlString, e);
-    throw new Error("Invalid base64url string");
+    console.error("Failed to decode base64url string to Buffer:", base64urlString, e);
+    throw new Error("Invalid base64url string for Buffer conversion");
   }
 }
 
@@ -183,35 +177,86 @@ export class PasskeyService {
     expectedChallenge: string
   ): Promise<VerifiedAuthenticationResponse & { passkey?: Passkey, userId?: number }> {
     
+    console.log('[PasskeyService] Verifying authentication. Client response:', JSON.stringify(authenticationResponseJSON, null, 2));
+    console.log('[PasskeyService] Expected challenge:', expectedChallenge);
+
     const credentialIdFromResponse = authenticationResponseJSON.id;
     if (!credentialIdFromResponse) {
+        console.error('[PasskeyService] Credential ID missing from authentication response.');
         throw new Error('Credential ID missing from authentication response.');
     }
+    console.log('[PasskeyService] Credential ID from response:', credentialIdFromResponse);
 
     const passkey = await this.passkeyRepo.getPasskeyByCredentialId(credentialIdFromResponse);
     if (!passkey) {
+      console.error('[PasskeyService] Passkey not found for credential ID:', credentialIdFromResponse);
       throw new Error('Authentication failed. Passkey not found.');
     }
+    console.log('[PasskeyService] Passkey from DB:', JSON.stringify(passkey, null, 2));
 
-    // TODO: Re-evaluate the structure of VerifyAuthenticationResponseOpts for @simplewebauthn/server@13.1.1
-    // The 'authenticator' field seems to be causing type errors.
-    const verifyOpts: any = { // Using 'any' temporarily to bypass the authenticator structure error
+    let authenticatorCredentialID: Uint8Array;
+    try {
+        authenticatorCredentialID = base64UrlToUint8Array(passkey.credential_id);
+    } catch (e: any) {
+        console.error('[PasskeyService] Error decoding credential_id to Uint8Array:', passkey.credential_id, e.message);
+        throw new Error('Failed to decode credential_id.');
+    }
+
+    let authenticatorPublicKey: Buffer;
+    try {
+        authenticatorPublicKey = Buffer.from(passkey.public_key, 'base64');
+    } catch (e: any) {
+        console.error('[PasskeyService] Error decoding public_key to Buffer:', passkey.public_key, e.message);
+        throw new Error('Failed to decode public_key.');
+    }
+    
+    let authenticatorTransports: AuthenticatorTransportFuture[] | undefined;
+    try {
+        authenticatorTransports = passkey.transports ? JSON.parse(passkey.transports) as AuthenticatorTransportFuture[] : undefined;
+    } catch (e: any) {
+        console.error('[PasskeyService] Error parsing transports JSON:', passkey.transports, e.message);
+        authenticatorTransports = undefined;
+    }
+
+    const authenticatorObject = {
+      credentialID: authenticatorCredentialID,
+      credentialPublicKey: authenticatorPublicKey,
+      counter: passkey.counter,
+      transports: authenticatorTransports,
+      credentialBackedUp: !!passkey.backed_up,
+      // Ensure credentialDeviceType is one of the allowed string literals
+      credentialDeviceType: (passkey.backed_up ? 'multiDevice' : 'singleDevice') as 'multiDevice' | 'singleDevice',
+    };
+
+    console.log('[PasskeyService] Authenticator object to be used for verification:');
+    console.log(`  - credentialID (type: ${typeof authenticatorObject.credentialID}, instanceof Uint8Array: ${authenticatorObject.credentialID instanceof Uint8Array}, length: ${authenticatorObject.credentialID?.length}):`, authenticatorObject.credentialID);
+    console.log(`  - credentialPublicKey (type: ${typeof authenticatorObject.credentialPublicKey}, instanceof Buffer: ${authenticatorObject.credentialPublicKey instanceof Buffer}, length: ${authenticatorObject.credentialPublicKey?.length}):`, authenticatorObject.credentialPublicKey);
+    console.log(`  - counter (type: ${typeof authenticatorObject.counter}):`, authenticatorObject.counter);
+    console.log(`  - transports (type: ${typeof authenticatorObject.transports}):`, authenticatorObject.transports);
+    console.log(`  - credentialBackedUp (type: ${typeof authenticatorObject.credentialBackedUp}):`, authenticatorObject.credentialBackedUp);
+    console.log(`  - credentialDeviceType (type: ${typeof authenticatorObject.credentialDeviceType}):`, authenticatorObject.credentialDeviceType);
+    
+    // Reverting to 'any' for verifyOpts due to issues with the library's
+    // type definitions for VerifyAuthenticationResponseOpts not recognizing 'authenticator' key.
+    // This aligns with the original code's approach and TODO comment.
+    const verifyOpts: any = {
       response: authenticationResponseJSON,
       expectedChallenge,
       expectedOrigin: RP_ORIGIN,
       expectedRPID: RP_ID,
-      authenticator: {
-        credentialID: base64UrlToUint8Array(passkey.credential_id),
-        credentialPublicKey: Buffer.from(passkey.public_key, 'base64'),
-        counter: passkey.counter,
-        transports: passkey.transports ? JSON.parse(passkey.transports) as AuthenticatorTransportFuture[] : undefined,
-        credentialBackedUp: !!passkey.backed_up,
-        credentialDeviceType: passkey.backed_up ? 'multiDevice' : 'singleDevice',
-      },
+      authenticator: authenticatorObject,
       requireUserVerification: true,
     };
+    console.log('[PasskeyService] verifyOpts to be passed to @simplewebauthn/server (using type any):', JSON.stringify(verifyOpts, (key, value) => {
+        if (value instanceof Uint8Array || value instanceof Buffer) {
+            // Represent Uint8Array/Buffer as a string indicating its type and length for cleaner logs
+            return `[${value instanceof Buffer ? 'Buffer' : 'Uint8Array'} len:${value.length}]`;
+        }
+        return value;
+    }, 2));
 
-    const verification = await verifyAuthenticationResponse(verifyOpts as VerifyAuthenticationResponseOpts);
+    // Call without 'as VerifyAuthenticationResponseOpts' since verifyOpts is 'any'
+    const verification = await verifyAuthenticationResponse(verifyOpts);
 
     if (verification.verified && verification.authenticationInfo) {
       const authInfo = verification.authenticationInfo;
