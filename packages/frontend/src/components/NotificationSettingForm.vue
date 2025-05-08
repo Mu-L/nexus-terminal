@@ -126,7 +126,7 @@
           <label for="telegram-token" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramToken') }}</label>
           <input type="password" id="telegram-token" v-model="telegramConfig.botToken" required autocomplete="new-password"
                  class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-          <small class="block mt-1 text-xs text-text-secondary">{{ $t('settings.notifications.form.telegramTokenHelp') }}</small>
+          
         </div>
         <div>
           <label for="telegram-chatid" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramChatId') }}</label>
@@ -137,7 +137,6 @@
           <label for="telegram-message" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramMessageTemplate') }}</label>
           <textarea id="telegram-message" v-model="telegramConfig.messageTemplate" rows="3" :placeholder="`${$t('settings.notifications.form.telegramMessagePlaceholder')} {event}, {timestamp}, {details}.`"
                     class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-sm"></textarea>
-          <small class="block mt-1 text-xs text-text-secondary">{{ $t('settings.notifications.form.templateHelp') }}</small>
         </div>
       </div>
 
@@ -268,16 +267,19 @@ const canTestUnsaved = computed(() => {
 
 // Define all possible events (aligned with AuditLogView's allActionTypes)
 const allNotificationEvents: NotificationEvent[] = [
-    'LOGIN_SUCCESS', 'LOGIN_FAILURE', 'LOGOUT', 'PASSWORD_CHANGED', // Added LOGOUT, PASSWORD_CHANGED
-    '2FA_ENABLED', '2FA_DISABLED', // Added 2FA,
+    'LOGIN_SUCCESS', 'LOGIN_FAILURE', 'LOGOUT', 'PASSWORD_CHANGED',
+    '2FA_ENABLED', '2FA_DISABLED',
+    // Passkey Events
+    // 'PASSKEY_AUTH_SUCCESS',
+    // 'PASSKEY_AUTH_FAILURE',
     'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_DELETED',
-    'PROXY_CREATED', 'PROXY_UPDATED', 'PROXY_DELETED', // Changed _ADDED
-    'TAG_CREATED', 'TAG_UPDATED', 'TAG_DELETED', // Changed _ADDED
-    'SETTINGS_UPDATED', 'IP_WHITELIST_UPDATED', // Added IP_WHITELIST_UPDATED
-    'NOTIFICATION_SETTING_CREATED', 'NOTIFICATION_SETTING_UPDATED', 'NOTIFICATION_SETTING_DELETED', // Added NOTIFICATION types
-    'SSH_CONNECT_SUCCESS', 'SSH_CONNECT_FAILURE', 'SSH_SHELL_FAILURE', // Added SSH types
-    'DATABASE_MIGRATION', 'ADMIN_SETUP_COMPLETE' 
-    // Removed IP_BLACKLISTED as it's not in the Audit Log list source
+    'PROXY_CREATED', 'PROXY_UPDATED', 'PROXY_DELETED',
+    'TAG_CREATED', 'TAG_UPDATED', 'TAG_DELETED',
+    'SETTINGS_UPDATED', 'IP_WHITELIST_UPDATED', 'IP_BLOCKED', // Added IP_BLOCKED as it's in backend types
+    'NOTIFICATION_SETTING_CREATED', 'NOTIFICATION_SETTING_UPDATED', 'NOTIFICATION_SETTING_DELETED',
+    'SSH_CONNECT_SUCCESS', 'SSH_CONNECT_FAILURE', 'SSH_SHELL_FAILURE',
+    'DATABASE_MIGRATION', 'ADMIN_SETUP_COMPLETE'
+    // Removed IP_BLACKLISTED as it's not in the Audit Log list source, but IP_BLOCKED is present in backend types
 ];
 
 // Reactive form data structure

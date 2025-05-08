@@ -100,12 +100,15 @@
     "verifyButton": "验证",
     "rememberMe": "记住我",
     "captchaPrompt": "请完成下方的验证：",
+    "loginWithPasskey": "使用 Passkey 登录",
     "error": {
         "captchaLoadFailed": "加载 CAPTCHA 失败，请尝试刷新页面。",
-        "captchaRequired": "请完成 CAPTCHA 验证。"
+        "captchaRequired": "请完成 CAPTCHA 验证。",
+        "usernameRequiredForPasskey": "使用 Passkey 需要输入用户名。",
+        "passkeyAuthOptionsFailed": "从服务器获取 Passkey 认证选项失败。",
+        "passkeyAuthFailed": "Passkey 认证失败。请重试或使用密码登录。"
     },
-    "recaptchaV3Notice": "此网站受 reCAPTCHA 保护，并适用 Google 隐私政策和服务条款。",
-    "passkeyLoginButton": "使用 Passkey 登录"
+    "recaptchaV3Notice": "此网站受 reCAPTCHA 保护，并适用 Google 隐私政策和服务条款。"
   },
   "connections": {
     "addConnection": "添加新连接",
@@ -526,19 +529,31 @@
       }
     },
     "passkey": {
-      "title": "Passkey 设置",
-      "description": "使用 Passkey（生物识别或安全密钥）进行无密码认证，提升账户安全性和登录便捷性。",
+      "title": "Passkey 管理",
+      "description": "使用 Passkey（生物识别或安全密钥）进行无密码认证",
       "nameLabel": "Passkey 名称",
       "namePlaceholder": "例如：我的笔记本电脑",
-      "registerButton": "注册新 Passkey",
+      "registerNewButton": "注册新 Passkey",
+      "registeredKeysTitle": "已注册的 Passkey",
+      "unnamedKey": "未命名 Passkey",
+      "createdDate": "创建于",
+      "lastUsedDate": "上次使用",
+      "noKeysRegistered": "尚未注册任何 Passkey。",
+      "confirmDelete": "确定要删除此 Passkey 吗？此操作无法撤销。",
       "error": {
         "nameRequired": "请输入 Passkey 名称。",
         "cancelled": "Passkey 注册已被用户取消。",
         "genericRegistration": "无法注册 Passkey: {message}",
-        "verificationFailed": "注册失败: {message}"
+        "verificationFailed": "注册失败: {message}",
+        "userNotLoggedIn": "用户未登录或用户名不可用。",
+        "registrationCancelled": "Passkey 注册已取消。",
+        "registrationFailed": "Passkey 注册失败。",
+        "deleteFailedGeneral": "删除 Passkey 失败。请重试。"
       },
       "success": {
-        "registered": "Passkey 注册成功！"
+        "registered": "新的 Passkey 已成功注册！",
+        "deleted": "Passkey 已成功删除。",
+        "nameUpdated": "Passkey 名称已更新。"
       }
     },
     "notifications": {
@@ -594,6 +609,10 @@
         "PASSWORD_CHANGED": "密码已修改",
         "2FA_ENABLED": "两步验证已启用",
         "2FA_DISABLED": "两步验证已禁用",
+        "PASSKEY_REGISTERED": "Passkey 已注册",
+        "PASSKEY_AUTH_SUCCESS": "Passkey 认证成功",
+        "PASSKEY_AUTH_FAILURE": "Passkey 认证失败",
+        "PASSKEY_DELETED": "Passkey 已删除",
         "CONNECTION_CREATED": "连接已创建",
         "CONNECTION_UPDATED": "连接已更新",
         "CONNECTION_DELETED": "连接已删除",
@@ -606,6 +625,7 @@
         "TAG_DELETED": "标签已删除",
         "SETTINGS_UPDATED": "设置已更新",
         "IP_WHITELIST_UPDATED": "IP 白名单已更新",
+        "IP_BLOCKED": "IP 已封禁",
         "NOTIFICATION_SETTING_CREATED": "通知设置已创建",
         "NOTIFICATION_SETTING_UPDATED": "通知设置已更新",
         "NOTIFICATION_SETTING_DELETED": "通知设置已删除",
@@ -886,7 +906,14 @@
         "ADMIN_SETUP_COMPLETE": "初始管理员设置完成",
         "REMOTE_DESKTOP_CONNECTING": "远程桌面连接中",
         "REMOTE_DESKTOP_CONNECTED": "远程桌面已连接",
-        "REMOTE_DESKTOP_DISCONNECTED": "远程桌面已断开"
+        "REMOTE_DESKTOP_DISCONNECTED": "远程桌面已断开",
+        "PASSKEY_REGISTERED": "Passkey 已注册",
+        "PASSKEY_AUTH_SUCCESS": "Passkey 认证成功",
+        "PASSKEY_AUTH_FAILURE": "Passkey 认证失败",
+        "PASSKEY_DELETED": "Passkey 已删除",
+        "PASSKEY_DELETE_UNAUTHORIZED": "Passkey 删除未授权",
+        "PASSKEY_NAME_UPDATED": "Passkey 名称已更新",
+        "PASSKEY_NAME_UPDATE_UNAUTHORIZED": "Passkey 名称更新未授权"
     }
   },
   "workspaceConnectionList": {

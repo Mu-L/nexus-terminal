@@ -3,7 +3,12 @@ export type NotificationChannelType = 'webhook' | 'email' | 'telegram';
 // Align NotificationEvent with AuditLogActionType as requested
 export type NotificationEvent =
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE' | 'LOGOUT' | 'PASSWORD_CHANGED'
-  | '2FA_ENABLED' | '2FA_DISABLED' // Removed Passkey events
+  | '2FA_ENABLED' | '2FA_DISABLED'
+  // Passkey Events
+  | 'PASSKEY_REGISTERED'
+  | 'PASSKEY_AUTH_SUCCESS' // Could also use LOGIN_SUCCESS with a 'method: passkey' detail
+  | 'PASSKEY_AUTH_FAILURE'
+  | 'PASSKEY_DELETED'
   | 'CONNECTION_CREATED' | 'CONNECTION_UPDATED' | 'CONNECTION_DELETED'
   | 'PROXY_CREATED' | 'PROXY_UPDATED' | 'PROXY_DELETED'
   | 'TAG_CREATED' | 'TAG_UPDATED' | 'TAG_DELETED'

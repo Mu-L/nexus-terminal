@@ -7,8 +7,15 @@ export type AuditLogActionType =
   | 'PASSWORD_CHANGED'
   | '2FA_ENABLED'
   | '2FA_DISABLED'
-  // Removed Passkey events
-
+  // Passkey Events
+  | 'PASSKEY_REGISTERED'
+  | 'PASSKEY_AUTH_SUCCESS'
+  | 'PASSKEY_AUTH_FAILURE'
+  | 'PASSKEY_DELETED'
+  | 'PASSKEY_DELETE_UNAUTHORIZED'
+  | 'PASSKEY_NAME_UPDATED'
+  | 'PASSKEY_NAME_UPDATE_UNAUTHORIZED'
+ 
   // Connections
   | 'CONNECTION_CREATED'
   | 'CONNECTION_UPDATED'

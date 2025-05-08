@@ -22,17 +22,18 @@ export type NotificationChannelType = 'webhook' | 'email' | 'telegram';
 export type NotificationEvent =
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE' | 'LOGOUT' | 'PASSWORD_CHANGED'
   | '2FA_ENABLED' | '2FA_DISABLED'
+  // Passkey Events
+  | 'PASSKEY_REGISTERED'
+  | 'PASSKEY_AUTH_SUCCESS'
+  | 'PASSKEY_AUTH_FAILURE'
+  | 'PASSKEY_DELETED'
   | 'CONNECTION_CREATED' | 'CONNECTION_UPDATED' | 'CONNECTION_DELETED'
   | 'PROXY_CREATED' | 'PROXY_UPDATED' | 'PROXY_DELETED'
   | 'TAG_CREATED' | 'TAG_UPDATED' | 'TAG_DELETED'
-  | 'SETTINGS_UPDATED' | 'IP_WHITELIST_UPDATED'
+  | 'SETTINGS_UPDATED' | 'IP_WHITELIST_UPDATED' | 'IP_BLOCKED'
   | 'NOTIFICATION_SETTING_CREATED' | 'NOTIFICATION_SETTING_UPDATED' | 'NOTIFICATION_SETTING_DELETED'
-  // SSH Actions
   | 'SSH_CONNECT_SUCCESS' | 'SSH_CONNECT_FAILURE' | 'SSH_SHELL_FAILURE'
-  // System/Error
   | 'DATABASE_MIGRATION' | 'ADMIN_SETUP_COMPLETE';
-  // Settings (Specific) - Keep aligned with AuditLogActionType
-  // Note: IP_BLACKLISTED was in NotificationEvent but not AuditLogActionType, removed for consistency based on user request
 
 export interface WebhookConfig {
   url: string;

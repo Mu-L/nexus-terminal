@@ -38,6 +38,13 @@
       "SSH_CONNECT_FAILURE": "SSH 接続失敗",
       "SSH_SHELL_FAILURE": "SSH Shell オープン失敗",
       "DATABASE_MIGRATION": "データベース移行",
-      "ADMIN_SETUP_COMPLETE": "初期管理者設定完了"
+      "ADMIN_SETUP_COMPLETE": "初期管理者設定完了",
+      "PASSKEY_REGISTERED": "パスキー登録済み",
+      "PASSKEY_AUTH_SUCCESS": "パスキー認証成功",
+      "PASSKEY_AUTH_FAILURE": "パスキー認証失敗",
+      "PASSKEY_DELETED": "パスキー削除済み",
+      "PASSKEY_DELETE_UNAUTHORIZED": "パスキー削除権限なし",
+      "PASSKEY_NAME_UPDATED": "パスキー名更新済み",
+      "PASSKEY_NAME_UPDATE_UNAUTHORIZED": "パスキー名更新権限なし"
     }
   }

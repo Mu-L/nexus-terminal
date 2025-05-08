@@ -2,7 +2,7 @@
 import { reactive, ref, onMounted } from 'vue'; // computed 不再直接使用，移除
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
-// Removed Passkey import: import { startAuthentication } from '@simplewebauthn/browser';
+import { startAuthentication } from '@simplewebauthn/browser';
 import { useAuthStore } from '../stores/auth.store';
 import VueHcaptcha from '@hcaptcha/vue3-hcaptcha';
 import VueRecaptcha from 'vue3-recaptcha2'; // 使用默认导入
@@ -10,7 +10,7 @@ import VueRecaptcha from 'vue3-recaptcha2'; // 使用默认导入
 const { t } = useI18n();
 const authStore = useAuthStore();
 // 获取 loginRequires2FA 状态
-const { isLoading, error, loginRequires2FA, publicCaptchaConfig } = storeToRefs(authStore); // Get publicCaptchaConfig
+const { isLoading, error, loginRequires2FA, publicCaptchaConfig, hasPasskeysAvailable } = storeToRefs(authStore); // Get publicCaptchaConfig and hasPasskeysAvailable
 
 // 表单数据
 const credentials = reactive({
@@ -92,13 +92,60 @@ const handleSubmit = async () => {
   } // <-- Correctly closing the try block here
 };
 
-// Fetch CAPTCHA config on component mount
-onMounted(() => {
-  console.log('[LoginView] Component mounted, calling fetchCaptchaConfig...'); // 添加日志
+ // Fetch CAPTCHA config and check passkey availability on component mount
+onMounted(async () => {
+  // console.log('[LoginView] Component mounted, calling fetchCaptchaConfig and checkHasPasskeysConfigured...');
   authStore.fetchCaptchaConfig();
+  // Check if passkeys are available for login (uses the new public endpoint)
+  // Optionally pass username if needed: await authStore.checkHasPasskeysConfigured(credentials.username);
+  await authStore.checkHasPasskeysConfigured();
 });
 
-// --- Passkey Login Handler Removed ---
+// --- Passkey Login Handler ---
+const handlePasskeyLogin = async () => {
+  try {
+    isLoading.value = true;
+    error.value = null; // Clear previous errors
+
+    // Prepare body for authentication options request
+    // If username is provided, include it. Otherwise, send an empty object
+    // to allow the backend to attempt discoverable credential authentication.
+    const authOptionsBody = credentials.username ? { username: credentials.username } : {};
+
+    // Step 1: Get authentication options from the server
+    const optionsResponse = await fetch('/api/v1/auth/passkey/authentication-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authOptionsBody),
+    });
+
+    if (!optionsResponse.ok) {
+      const errData = await optionsResponse.json();
+      throw new Error(errData.message || t('login.error.passkeyAuthOptionsFailed'));
+    }
+    const authOptions = await optionsResponse.json();
+
+    // Step 2: Use WebAuthn API to authenticate
+    const authenticationResult = await startAuthentication(authOptions);
+
+    // Step 3: Send authentication result to the server
+    // Pass username if it was used to get options, otherwise pass null or rely on backend to extract from assertion
+    // For simplicity, we'll pass the username if available, or an empty string if not.
+    // The store action `loginWithPasskey` expects a string.
+    // The backend should ideally identify the user from the assertion if an empty username is provided.
+    await authStore.loginWithPasskey(credentials.username || '', authenticationResult);
+
+  } catch (err: any) {
+    console.error('Passkey login error:', err);
+    error.value = err.message || t('login.error.passkeyAuthFailed');
+    // Potentially reset CAPTCHA if it was involved, though typically not for passkey flows directly
+    // if (publicCaptchaConfig.value?.enabled) {
+    //   resetCaptchaWidget();
+    // }
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 </script>
 <template>
@@ -198,8 +245,14 @@ onMounted(() => {
             {{ isLoading ? t('login.loggingIn') : (loginRequires2FA ? t('login.verifyButton') : t('login.loginButton')) }}
           </button>
  
-          <!-- Passkey Login Button Removed -->
-
+          <!-- Passkey Login Button -->
+          <div v-if="hasPasskeysAvailable" class="mt-4 text-center">
+           <button type="button" @click="handlePasskeyLogin" :disabled="isLoading"
+                   class="w-full py-3 px-4 bg-secondary text-black border-none rounded-lg text-base font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center">
+              <i class="fas fa-key mr-2"></i>
+              <span>{{ isLoading ? t('login.loggingIn') : t('login.loginWithPasskey') }}</span>
+           </button>
+         </div>
         </form>
       </div>
     </div>

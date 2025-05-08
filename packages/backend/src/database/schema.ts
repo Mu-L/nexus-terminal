@@ -28,7 +28,23 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 // );
 // `;
 
-// Removed Passkeys table definition (lines 31-44 from original)
+// Passkeys table definition
+export const createPasskeysTableSQL = `
+CREATE TABLE IF NOT EXISTS passkeys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    credential_id TEXT UNIQUE NOT NULL, -- Base64URL encoded
+    public_key TEXT NOT NULL, -- COSE public key, stored as Base64URL or HEX
+    counter INTEGER NOT NULL,
+    transports TEXT, -- JSON array of transports e.g. ["usb", "nfc", "ble", "internal"]
+    name TEXT NULL, -- User-friendly name for the passkey
+    backed_up BOOLEAN NOT NULL DEFAULT FALSE,
+    last_used_at INTEGER NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+`;
 
 export const createNotificationSettingsTableSQL = `
 CREATE TABLE IF NOT EXISTS notification_settings (

@@ -29,7 +29,14 @@
             "SSH_SHELL_FAILURE": "SSH Shell オープン失敗",
             "TAG_CREATED": "タグ作成",
             "TAG_DELETED": "タグ削除",
-            "TAG_UPDATED": "タグ更新"
+            "TAG_UPDATED": "タグ更新",
+            "PASSKEY_REGISTERED": "パスキー登録済み",
+            "PASSKEY_AUTH_SUCCESS": "パスキー認証成功",
+            "PASSKEY_AUTH_FAILURE": "パスキー認証失敗",
+            "PASSKEY_DELETED": "パスキー削除済み",
+            "PASSKEY_DELETE_UNAUTHORIZED": "パスキー削除権限なし",
+            "PASSKEY_NAME_UPDATED": "パスキー名更新済み",
+            "PASSKEY_NAME_UPDATE_UNAUTHORIZED": "パスキー名更新権限なし"
         },
         "noLogs": "監査ログが見つかりませんでした。",
         "paginationInfo": "{currentPage} ページ / 全 {totalPages} ページ ({totalLogs} 件のログ)",
@@ -458,11 +465,14 @@
         "captchaPrompt": "以下の認証を完了してください：",
         "error": {
             "captchaLoadFailed": "CAPTCHA の読み込みに失敗しました。ページをリロードしてください。",
-            "captchaRequired": "CAPTCHA を完了してください。"
+            "captchaRequired": "CAPTCHA を完了してください。",
+            "usernameRequiredForPasskey": "Passkey を使用するにはユーザー名が必要です。",
+            "passkeyAuthOptionsFailed": "サーバーから Passkey 認証オプションを取得できませんでした。",
+            "passkeyAuthFailed": "Passkey 認証に失敗しました。もう一度試すか、パスワードを使用してください。"
         },
         "loggingIn": "ログイン中...",
         "loginButton": "ログイン",
-        "passkeyLoginButton": "Passkeyでログイン",
+        "loginWithPasskey": "Passkeyでログイン",
         "password": "パスワード",
         "recaptchaV3Notice": "このサイトは reCAPTCHA によって保護されており、Google のプライバシーポリシーと利用規約が適用されます。",
         "rememberMe": "ログイン状態を保持",
@@ -748,6 +758,10 @@
             "events": {
                 "2FA_DISABLED": "2段階認証無効",
                 "2FA_ENABLED": "2段階認証有効",
+                "PASSKEY_REGISTERED": "パスキー登録済み",
+                "PASSKEY_AUTH_SUCCESS": "パスキー認証成功",
+                "PASSKEY_AUTH_FAILURE": "パスキー認証失敗",
+                "PASSKEY_DELETED": "パスキー削除済み",
                 "ADMIN_SETUP_COMPLETE": "初期管理者設定完了",
                 "CONNECTIONS_EXPORTED": "接続がエクスポートされました",
                 "CONNECTION_CREATED": "接続作成",
@@ -755,6 +769,7 @@
                 "CONNECTION_UPDATED": "接続更新",
                 "DATABASE_MIGRATION": "データベース移行",
                 "IP_WHITELIST_UPDATED": "IP ホワイトリスト更新",
+                "IP_BLOCKED": "IPブロック済み",
                 "LOGIN_FAILURE": "ログイン失敗",
                 "LOGIN_SUCCESS": "ログイン成功",
                 "LOGOUT": "ログアウト",
@@ -818,20 +833,32 @@
             }
         },
         "passkey": {
-            "description": "Passkey (生体認証またはセキュリティキー) を使用してパスワードなし認証を行い、アカウントのセキュリティとログインの利便性を向上させます。",
-            "error": {
-                "cancelled": "Passkey の登録がキャンセルされました。",
-                "genericRegistration": "Passkey を登録できません: {message}",
-                "nameRequired": "Passkey 名を入力してください。",
-                "verificationFailed": "登録に失敗しました: {message}"
-            },
+            "title": "Passkey 管理",
+            "description": "Passkey (生体認証またはセキュリティキー) を使用してパスワードなし認証を行い",
             "nameLabel": "Passkey 名",
             "namePlaceholder": "例: マイノートパソコン",
-            "registerButton": "新しい Passkey を登録",
-            "success": {
-                "registered": "Passkey の登録に成功しました！"
+            "registerNewButton": "新しい Passkey を登録",
+            "registeredKeysTitle": "登録済みの Passkey",
+            "unnamedKey": "名前のない Passkey",
+            "createdDate": "作成日",
+            "lastUsedDate": "最終使用日",
+            "noKeysRegistered": "Passkey はまだ登録されていません。",
+            "confirmDelete": "この Passkey を削除しますか？この操作は元に戻せません。",
+            "error": {
+                "nameRequired": "Passkey 名を入力してください。",
+                "cancelled": "Passkey の登録がキャンセルされました。",
+                "genericRegistration": "Passkey を登録できません: {message}",
+                "verificationFailed": "登録に失敗しました: {message}",
+                "userNotLoggedIn": "ユーザーがログインしていないか、ユーザー名が利用できません。",
+                "registrationCancelled": "Passkey の登録がキャンセルされました。",
+                "registrationFailed": "Passkey の登録に失敗しました。",
+                "deleteFailedGeneral": "Passkey の削除に失敗しました。もう一度お試しください。"
             },
-            "title": "Passkey 設定"
+            "success": {
+                "registered": "新しい Passkey が正常に登録されました！",
+                "deleted": "Passkey が正常に削除されました。",
+                "nameUpdated": "Passkey 名が更新されました。"
+            }
         },
         "popupEditor": {
             "enableLabel": "ファイルを開くときにポップアップエディターを表示する",
