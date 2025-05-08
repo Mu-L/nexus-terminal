@@ -126,7 +126,7 @@
           <label for="telegram-token" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramToken') }}</label>
           <input type="password" id="telegram-token" v-model="telegramConfig.botToken" required autocomplete="new-password"
                  class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-          <small class="block mt-1 text-xs text-text-secondary">{{ $t('settings.notifications.form.telegramTokenHelp') }}</small>
+          
         </div>
         <div>
           <label for="telegram-chatid" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramChatId') }}</label>
@@ -137,7 +137,6 @@
           <label for="telegram-message" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramMessageTemplate') }}</label>
           <textarea id="telegram-message" v-model="telegramConfig.messageTemplate" rows="3" :placeholder="`${$t('settings.notifications.form.telegramMessagePlaceholder')} {event}, {timestamp}, {details}.`"
                     class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-sm"></textarea>
-          <small class="block mt-1 text-xs text-text-secondary">{{ $t('settings.notifications.form.templateHelp') }}</small>
         </div>
       </div>
 
