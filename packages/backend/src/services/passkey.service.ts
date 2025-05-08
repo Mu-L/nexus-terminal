@@ -289,6 +289,18 @@ export class PasskeyService {
     const wasDeleted = await this.passkeyRepo.deletePasskey(credentialID);
     return wasDeleted;
   }
-}
 
+  async updatePasskeyName(userId: number, credentialID: string, newName: string): Promise<void> {
+    const passkey = await this.passkeyRepo.getPasskeyByCredentialId(credentialID);
+    if (!passkey) {
+      throw new Error('Passkey not found.');
+    }
+    if (passkey.user_id !== userId) {
+      // Security measure: User can only update their own passkey names
+      throw new Error('Unauthorized to update this passkey name.');
+    }
+    await this.passkeyRepo.updatePasskeyName(credentialID, newName);
+  }
+}
+ 
 export const passkeyService = new PasskeyService(passkeyRepository, userRepository);

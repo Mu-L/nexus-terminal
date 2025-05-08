@@ -18,7 +18,8 @@ import {
   verifyPasskeyAuthenticationHandler,
   // 新的 Passkey 管理处理器
   listUserPasskeysHandler,
-  deleteUserPasskeyHandler
+  deleteUserPasskeyHandler,
+  updateUserPasskeyNameHandler // 新增：更新 Passkey 名称的处理器
 } from './auth.controller';
 import { isAuthenticated } from './auth.middleware';
 import { ipBlacklistCheckMiddleware } from './ipBlacklistCheck.middleware';
@@ -79,7 +80,10 @@ router.get('/user/passkeys', isAuthenticated, listUserPasskeysHandler);
 // DELETE /api/v1/auth/user/passkeys/:credentialID - 删除当前用户指定的 Passkey (需要认证)
 router.delete('/user/passkeys/:credentialID', isAuthenticated, deleteUserPasskeyHandler);
 
-
+// PUT /api/v1/auth/user/passkeys/:credentialID/name - 更新当前用户指定的 Passkey 名称 (需要认证)
+router.put('/user/passkeys/:credentialID/name', isAuthenticated, updateUserPasskeyNameHandler);
+ 
+ 
 // POST /api/v1/auth/logout - 用户登出接口 (公开访问)
 router.post('/logout', logout);
 

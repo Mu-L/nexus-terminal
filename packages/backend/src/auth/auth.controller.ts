@@ -286,7 +286,54 @@ export const deleteUserPasskeyHandler = async (req: Request, res: Response): Pro
     }
 };
 
+/**
+ * 更新当前认证用户指定的 Passkey 名称 (PUT /api/v1/user/passkeys/:credentialID/name)
+ */
+export const updateUserPasskeyNameHandler = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.session.userId;
+    const username = req.session.username;
+    const { credentialID } = req.params;
+    const { name } = req.body;
 
+    if (!userId || !username) {
+        res.status(401).json({ message: '用户未认证。' });
+        return;
+    }
+
+    if (!credentialID) {
+        res.status(400).json({ message: '必须提供 Passkey 的 CredentialID。' });
+        return;
+    }
+
+    if (typeof name !== 'string' || name.trim() === '') {
+        res.status(400).json({ message: 'Passkey 名称不能为空。' });
+        return;
+    }
+
+    const trimmedName = name.trim();
+
+    try {
+        await passkeyService.updatePasskeyName(userId, credentialID, trimmedName);
+        console.log(`[AuthController] 用户 ${username} (ID: ${userId}) 成功更新了 Passkey (CredentialID: ${credentialID}) 的名称为 "${trimmedName}"。`);
+        auditLogService.logAction('PASSKEY_NAME_UPDATED', { userId, username, credentialId: credentialID, newName: trimmedName });
+        // Optionally send a notification if desired
+        // notificationService.sendNotification('PASSKEY_NAME_UPDATED', { userId, username, credentialId: credentialID, newName: trimmedName });
+        res.status(200).json({ message: 'Passkey 名称更新成功。' });
+
+    } catch (error: any) {
+        console.error(`[AuthController] 用户 ${username} (ID: ${userId}) 更新 Passkey (CredentialID: ${credentialID}) 名称时出错:`, error.message, error.stack);
+        if (error.message === 'Passkey not found.') {
+            res.status(404).json({ message: '指定的 Passkey 未找到。' });
+        } else if (error.message === 'Unauthorized to update this passkey name.') {
+            auditLogService.logAction('PASSKEY_NAME_UPDATE_UNAUTHORIZED', { userId, username, credentialIdAttempted: credentialID });
+            res.status(403).json({ message: '无权更新此 Passkey 名称。' });
+        } else {
+            res.status(500).json({ message: '更新 Passkey 名称失败。', error: error.message });
+        }
+    }
+};
+ 
+ 
 /**
  * 处理用户登录请求 (POST /api/v1/auth/login)
  */
