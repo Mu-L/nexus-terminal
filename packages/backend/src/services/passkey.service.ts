@@ -180,6 +180,22 @@ export class PasskeyService {
     console.log('[PasskeyService] Verifying authentication. Client response:', JSON.stringify(authenticationResponseJSON, null, 2));
     console.log('[PasskeyService] Expected challenge:', expectedChallenge);
 
+    // Decode and check authenticatorData length
+    if (authenticationResponseJSON.response && authenticationResponseJSON.response.authenticatorData) {
+      try {
+        const authenticatorDataBytes = base64UrlToUint8Array(authenticationResponseJSON.response.authenticatorData);
+        console.log(`[PasskeyService] Decoded authenticatorData length: ${authenticatorDataBytes.length} bytes.`);
+        if (authenticatorDataBytes.length < 37) {
+          console.warn(`[PasskeyService] WARNING: Decoded authenticatorData length (${authenticatorDataBytes.length} bytes) is less than the expected minimum of 37 bytes. This may lead to CBOR parsing errors and subsequent failures (e.g., 'cannot read counter').`);
+        }
+      } catch (e: any) {
+        console.error('[PasskeyService] Error decoding authenticatorData from client response:', e.message);
+        // Potentially re-throw or handle as a critical error, as this is unexpected.
+      }
+    } else {
+      console.warn('[PasskeyService] authenticatorData is missing in the client response.');
+    }
+
     const credentialIdFromResponse = authenticationResponseJSON.id;
     if (!credentialIdFromResponse) {
         console.error('[PasskeyService] Credential ID missing from authentication response.');
