@@ -431,9 +431,28 @@ export const useAuthStore = defineStore('auth', {
             this.passkeysLoading = true;
             this.error = null; // Clear previous errors
             try {
-                const response = await apiClient.get<PasskeyInfo[]>('/auth/user/passkeys');
-                this.passkeys = response.data;
-                console.log('Passkeys fetched successfully:', this.passkeys);
+                // Define an interface for the backend response structure
+                interface BackendPasskeyInfo {
+                    credential_id: string;
+                    public_key: string;
+                    counter: number;
+                    transports?: AuthenticatorTransport[];
+                    created_at: string; // Backend uses snake_case
+                    last_used_at: string; // Backend uses snake_case
+                    name?: string;
+                }
+                const response = await apiClient.get<BackendPasskeyInfo[]>('/auth/user/passkeys');
+                // Map backend response to frontend PasskeyInfo structure
+                this.passkeys = response.data.map(pk => ({
+                    credentialID: pk.credential_id,
+                    publicKey: pk.public_key,
+                    counter: pk.counter,
+                    transports: pk.transports,
+                    creationDate: pk.created_at, // Map created_at to creationDate
+                    lastUsedDate: pk.last_used_at, // Map last_used_at to lastUsedDate
+                    name: pk.name,
+                }));
+                console.log('Passkeys fetched and mapped successfully:', this.passkeys);
             } catch (err: any) {
                 console.error('Failed to fetch passkeys:', err);
                 this.error = err.response?.data?.message || err.message || 'Failed to load passkeys.';
