@@ -65,6 +65,7 @@ interface AuthState {
     publicCaptchaConfig: PublicCaptchaConfig | null; // NEW: Public CAPTCHA config
     passkeys: PasskeyInfo[] | null; // NEW: Store for user's passkeys
     passkeysLoading: boolean; // NEW: Loading state for passkeys
+    hasPasskeysAvailable: boolean; // NEW: Indicates if passkeys are available for login
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -79,6 +80,7 @@ export const useAuthStore = defineStore('auth', {
         publicCaptchaConfig: null, // NEW: Initialize CAPTCHA config as null
         passkeys: null, // Initialize passkeys as null
         passkeysLoading: false, // Initialize passkeysLoading as false
+        hasPasskeysAvailable: false, // Initialize as false
     }),
     getters: {
         // 可以添加一些 getter，例如获取用户名
@@ -503,6 +505,23 @@ export const useAuthStore = defineStore('auth', {
                 throw new Error(this.error ?? 'Failed to update passkey name.');
             } finally {
                 // if using specific loading state: this.passkeyNameUpdateLoading = false;
+            }
+        },
+
+        // Action to check if passkeys are configured (for login page)
+        async checkHasPasskeysConfigured(username?: string) {
+            // This action should not set isLoading to true, as it's a quick check
+            // and primarily used to determine UI elements on the login page.
+            try {
+                const params = username ? { username } : {};
+                const response = await apiClient.get<{ hasPasskeys: boolean }>('/auth/passkey/has-configured', { params });
+                this.hasPasskeysAvailable = response.data.hasPasskeys;
+                console.log(`[AuthStore] Passkeys available for ${username || 'any user'}: ${this.hasPasskeysAvailable}`);
+                return this.hasPasskeysAvailable;
+            } catch (error: any) {
+                console.error('Failed to check if passkeys are configured:', error.response?.data?.message || error.message);
+                this.hasPasskeysAvailable = false; // Default to false on error
+                return false;
             }
         },
     },

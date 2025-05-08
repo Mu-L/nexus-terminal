@@ -142,6 +142,13 @@ export class PasskeyRepository {
     const { changes } = await runDb(db, sql, [name, credentialId]);
     return changes > 0;
   }
+
+  async getFirstPasskey(): Promise<Passkey | null> {
+    const db = await getDbInstance();
+    const sql = 'SELECT * FROM passkeys LIMIT 1';
+    const result = await getDb<any>(db, sql);
+    return mapPasskeyResult(result);
+  }
 }
 
 export const passkeyRepository = new PasskeyRepository();

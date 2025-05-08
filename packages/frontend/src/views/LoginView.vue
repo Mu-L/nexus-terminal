@@ -10,7 +10,7 @@ import VueRecaptcha from 'vue3-recaptcha2'; // 使用默认导入
 const { t } = useI18n();
 const authStore = useAuthStore();
 // 获取 loginRequires2FA 状态
-const { isLoading, error, loginRequires2FA, publicCaptchaConfig, passkeys } = storeToRefs(authStore); // Get publicCaptchaConfig and passkeys
+const { isLoading, error, loginRequires2FA, publicCaptchaConfig, hasPasskeysAvailable } = storeToRefs(authStore); // Get publicCaptchaConfig and hasPasskeysAvailable
 
 // 表单数据
 const credentials = reactive({
@@ -92,10 +92,13 @@ const handleSubmit = async () => {
   } // <-- Correctly closing the try block here
 };
 
-// Fetch CAPTCHA config on component mount
-onMounted(() => {
-  // console.log('[LoginView] Component mounted, calling fetchCaptchaConfig...'); // 添加日志
+ // Fetch CAPTCHA config and check passkey availability on component mount
+onMounted(async () => {
+  // console.log('[LoginView] Component mounted, calling fetchCaptchaConfig and checkHasPasskeysConfigured...');
   authStore.fetchCaptchaConfig();
+  // Check if passkeys are available for login (uses the new public endpoint)
+  // Optionally pass username if needed: await authStore.checkHasPasskeysConfigured(credentials.username);
+  await authStore.checkHasPasskeysConfigured();
 });
 
 // --- Passkey Login Handler ---
@@ -243,7 +246,7 @@ const handlePasskeyLogin = async () => {
           </button>
  
           <!-- Passkey Login Button -->
-          <div v-if="passkeys && passkeys.length > 0" class="mt-4 text-center">
+          <div v-if="hasPasskeysAvailable" class="mt-4 text-center">
            <button type="button" @click="handlePasskeyLogin" :disabled="isLoading"
                    class="w-full py-3 px-4 bg-secondary text-black border-none rounded-lg text-base font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center">
               <i class="fas fa-key mr-2"></i>

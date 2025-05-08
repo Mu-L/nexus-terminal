@@ -76,7 +76,7 @@
                               <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ typeof key.credentialID === 'string' && key.credentialID ? key.credentialID.slice(-8) : 'N/A' }})</span>
                             </span>
                             <div v-else class="flex items-center flex-grow">
-                              <input type="text" v-model="editingPasskeyName" @keyup.enter="savePasskeyName(key.credentialID)" @keyup.esc="cancelEditPasskeyName" class="flex-grow max-w-sm px-2 py-1 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm" :placeholder="$t('settings.passkey.enterNamePlaceholder', '输入 Passkey 名称')" />
+                              <input type="text" v-model="editingPasskeyName" @keyup.enter="savePasskeyName(key.credentialID)" @keyup.esc="cancelEditPasskeyName" class="flex-grow w-48 px-2 py-1 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm" :placeholder="$t('settings.passkey.enterNamePlaceholder', '输入 Passkey 名称')" />
                               <button @click="savePasskeyName(key.credentialID)" :disabled="passkeyEditLoadingStates[key.credentialID]" class="ml-2 px-2 py-1 bg-success text-success-text rounded-md text-xs font-medium hover:bg-success/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
                                 {{ passkeyEditLoadingStates[key.credentialID] ? $t('common.saving') : $t('common.save') }}
                               </button>

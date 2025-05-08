@@ -301,6 +301,22 @@ export class PasskeyService {
     }
     await this.passkeyRepo.updatePasskeyName(credentialID, newName);
   }
+
+  async hasPasskeysConfigured(username?: string): Promise<boolean> {
+    if (username) {
+      const user = await this.userRepo.findUserByUsername(username);
+      if (!user) {
+        return false; // 如果提供了用户名但用户不存在，则认为没有配置 passkey
+      }
+      const passkeys = await this.passkeyRepo.getPasskeysByUserId(user.id);
+      return passkeys.length > 0;
+    } else {
+      // 如果没有提供用户名，检查整个系统中是否存在任何 passkey
+      // 这对于“可发现凭证”场景可能有用，或者简单地检查系统是否启用了 passkey 功能
+      const anyPasskey = await this.passkeyRepo.getFirstPasskey();
+      return !!anyPasskey;
+    }
+  }
 }
  
 export const passkeyService = new PasskeyService(passkeyRepository, userRepository);

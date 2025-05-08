@@ -921,3 +921,20 @@ export const getPublicCaptchaConfig = async (req: Request, res: Response): Promi
         });
     }
 };
+
+/**
+ * 检查系统中是否配置了任何 Passkey (GET /api/v1/auth/passkey/has-configured)
+ * 或者特定用户是否配置了 Passkey (GET /api/v1/auth/passkey/has-configured?username=xxx)
+ * 公开访问，用于登录页面判断是否显示 Passkey 登录按钮。
+ */
+export const checkHasPasskeys = async (req: Request, res: Response): Promise<void> => {
+    const username = req.query.username as string | undefined;
+    try {
+        const hasPasskeys = await passkeyService.hasPasskeysConfigured(username);
+        res.status(200).json({ hasPasskeys });
+    } catch (error: any) {
+        console.error(`[AuthController] 检查 Passkey 配置状态时出错 (username: ${username || 'any'}):`, error.message);
+        // 即使出错，也返回 false，避免登录流程中断
+        res.status(200).json({ hasPasskeys: false, error: '检查 Passkey 配置时出错。' });
+    }
+};
