@@ -31,6 +31,9 @@ function mapPasskeyResult(dbResult: any): Passkey | null {
     ...dbResult,
     backed_up: !!dbResult.backed_up, // Ensure boolean
     transports: dbResult.transports, // Already string or null
+    created_at: typeof dbResult.created_at === 'string' ? parseInt(dbResult.created_at, 10) : dbResult.created_at,
+    last_used_at: dbResult.last_used_at && typeof dbResult.last_used_at === 'string' ? parseInt(dbResult.last_used_at, 10) : dbResult.last_used_at,
+    updated_at: typeof dbResult.updated_at === 'string' ? parseInt(dbResult.updated_at, 10) : dbResult.updated_at,
   };
 }
 
@@ -39,6 +42,9 @@ function mapPasskeyResults(dbResults: any[]): Passkey[] {
     ...row,
     backed_up: !!row.backed_up,
     transports: row.transports,
+    created_at: typeof row.created_at === 'string' ? parseInt(row.created_at, 10) : row.created_at,
+    last_used_at: row.last_used_at && typeof row.last_used_at === 'string' ? parseInt(row.last_used_at, 10) : row.last_used_at,
+    updated_at: typeof row.updated_at === 'string' ? parseInt(row.updated_at, 10) : row.updated_at,
   }));
 }
 
