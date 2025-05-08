@@ -65,7 +65,6 @@ Create a new folder
 ```bash
 mkdir ./nexus-terminal && cd ./nexus-terminal
 ```
-好的，这是对应的英文版本说明：
 
 ---
 
