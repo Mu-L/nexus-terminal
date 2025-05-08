@@ -273,7 +273,7 @@ export class PasskeyService {
       created_at: pk.created_at,
       last_used_at: pk.last_used_at,
       transports: pk.transports ? JSON.parse(pk.transports) : undefined,
-      // 可以考虑添加一个用户可定义的名称字段
+      name: pk.name, // <-- 添加 name 字段
     }));
   }
 
