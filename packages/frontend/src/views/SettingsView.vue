@@ -72,7 +72,7 @@
                         <div class="flex-grow mb-2 sm:mb-0">
                           <span class="block font-medium text-foreground text-sm">
                             {{ key.name || $t('settings.passkey.unnamedKey') }}
-                            <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ key.credentialID.slice(-8) }})</span>
+                            <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ typeof key.credentialID === 'string' && key.credentialID ? key.credentialID.slice(-8) : 'N/A' }})</span>
                           </span>
                           <div class="text-xs text-text-secondary mt-1 space-x-2">
                             <span>{{ $t('settings.passkey.createdDate') }}: {{ formatDate(key.creationDate) }}</span>
@@ -1216,6 +1216,11 @@ const handleRegisterNewPasskey = async () => {
 };
 
 const handleDeletePasskey = async (credentialID: string) => {
+  if (!credentialID || typeof credentialID !== 'string') {
+    console.error('Attempted to delete a passkey with an invalid or undefined credentialID:', credentialID);
+    passkeyDeleteError.value = t('settings.passkey.error.deleteFailedInvalidId', '删除失败：无效的凭证 ID。'); // Add translation
+    return;
+  }
   if (!confirm(t('settings.passkey.confirmDelete'))) return;
 
   passkeyDeleteLoadingStates[credentialID] = true;
