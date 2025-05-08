@@ -133,7 +133,14 @@ export class PasskeyRepository {
     const db = await getDbInstance();
     const sql = 'DELETE FROM passkeys WHERE user_id = ?';
     const { changes } = await runDb(db, sql, [userId]);
-    return changes > 0; 
+    return changes > 0;
+  }
+
+  async updatePasskeyName(credentialId: string, name: string): Promise<boolean> {
+    const db = await getDbInstance();
+    const sql = "UPDATE passkeys SET name = ?, updated_at = strftime('%s', 'now') WHERE credential_id = ?";
+    const { changes } = await runDb(db, sql, [name, credentialId]);
+    return changes > 0;
   }
 }
 

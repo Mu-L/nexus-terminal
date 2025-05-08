@@ -70,10 +70,27 @@
                     <ul class="space-y-3">
                       <li v-for="key in authStore.passkeys" :key="key.credentialID" class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border border-border rounded-md bg-header/20 hover:bg-header/40 transition-colors duration-150">
                         <div class="flex-grow mb-2 sm:mb-0">
-                          <span class="block font-medium text-foreground text-sm">
-                            {{ key.name || $t('settings.passkey.unnamedKey') }}
-                            <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ typeof key.credentialID === 'string' && key.credentialID ? key.credentialID.slice(-8) : 'N/A' }})</span>
-                          </span>
+                          <div class="flex items-center">
+                            <span v-if="!editingPasskeyId || editingPasskeyId !== key.credentialID" class="block font-medium text-foreground text-sm">
+                              {{ key.name || $t('settings.passkey.unnamedKey') }}
+                              <span class="text-xs text-text-tertiary ml-1">(ID: ...{{ typeof key.credentialID === 'string' && key.credentialID ? key.credentialID.slice(-8) : 'N/A' }})</span>
+                            </span>
+                            <div v-else class="flex items-center flex-grow">
+                              <input type="text" v-model="editingPasskeyName" @keyup.enter="savePasskeyName(key.credentialID)" @keyup.esc="cancelEditPasskeyName" class="flex-grow px-2 py-1 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm" :placeholder="$t('settings.passkey.enterNamePlaceholder', '输入 Passkey 名称')" />
+                              <button @click="savePasskeyName(key.credentialID)" :disabled="passkeyEditLoadingStates[key.credentialID]" class="ml-2 px-2 py-1 bg-success text-success-text rounded-md text-xs font-medium hover:bg-success/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
+                                {{ passkeyEditLoadingStates[key.credentialID] ? $t('common.saving') : $t('common.save') }}
+                              </button>
+                              <button @click="cancelEditPasskeyName" :disabled="passkeyEditLoadingStates[key.credentialID]" class="ml-1 px-2 py-1 bg-transparent text-text-secondary border border-border rounded-md text-xs font-medium hover:bg-border hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
+                                {{ $t('common.cancel') }}
+                              </button>
+                            </div>
+                            <button v-if="!editingPasskeyId || editingPasskeyId !== key.credentialID" @click="startEditPasskeyName(key.credentialID, key.name || '')" class="ml-2 p-1 text-text-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out" :title="$t('settings.passkey.editNameTooltip', '编辑名称')">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-pencil-square">
+                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                              </svg>
+                            </button>
+                          </div>
                           <div class="text-xs text-text-secondary mt-1 space-x-2">
                             <span>{{ $t('settings.passkey.createdDate') }}: {{ formatDate(key.creationDate) }}</span>
                             <span v-if="key.lastUsedDate">{{ $t('settings.passkey.lastUsedDate') }}: {{ formatDate(key.lastUsedDate) }}</span>
@@ -81,7 +98,7 @@
                           </div>
                         </div>
                         <button @click="handleDeletePasskey(key.credentialID)"
-                                :disabled="passkeyDeleteLoadingStates[key.credentialID]"
+                                :disabled="passkeyDeleteLoadingStates[key.credentialID] || (editingPasskeyId === key.credentialID)"
                                 class="px-3 py-1.5 bg-error text-error-text rounded-md text-xs font-medium hover:bg-error/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out self-start sm:self-center">
                           {{ passkeyDeleteLoadingStates[key.credentialID] ? $t('common.loading') : $t('common.delete') }}
                         </button>
@@ -847,11 +864,18 @@ const captchaMessage = ref('');
 const captchaSuccess = ref(false);
 
 // --- Passkey State ---
-const passkeyLoading = ref(false);
-const passkeyMessage = ref('');
-const passkeySuccess = ref(false);
+const passkeyLoading = ref(false); // For registering new passkey
+const passkeyMessage = ref(''); // General messages for passkey operations (register, delete, edit name)
+const passkeySuccess = ref(false); // Success status for general passkey operations
 const passkeyDeleteLoadingStates = reactive<Record<string, boolean>>({});
-const passkeyDeleteError = ref<string | null>(null);
+const passkeyDeleteError = ref<string | null>(null); // Specific error for delete operation
+
+// State for editing passkey name
+const editingPasskeyId = ref<string | null>(null);
+const editingPasskeyName = ref('');
+const passkeyEditLoadingStates = reactive<Record<string, boolean>>({});
+// passkeyMessage and passkeySuccess can be reused for edit name feedback.
+// const passkeyEditError = ref<string | null>(null); // Or use a specific error ref if needed
 
 // 提供一些常用的时区供选择
 const commonTimezones = ref([
@@ -1215,25 +1239,62 @@ const handleRegisterNewPasskey = async () => {
   }
 };
 
+const startEditPasskeyName = (credentialID: string, currentName: string) => {
+  editingPasskeyId.value = credentialID;
+  editingPasskeyName.value = currentName;
+  passkeyMessage.value = ''; // Clear previous messages
+  passkeySuccess.value = false;
+};
+
+const cancelEditPasskeyName = () => {
+  editingPasskeyId.value = null;
+  editingPasskeyName.value = '';
+};
+
+const savePasskeyName = async (credentialID: string) => {
+  if (!editingPasskeyName.value.trim()) {
+    passkeyMessage.value = t('settings.passkey.error.nameRequired', 'Passkey 名称不能为空。');
+    passkeySuccess.value = false;
+    return;
+  }
+  passkeyEditLoadingStates[credentialID] = true;
+  passkeyMessage.value = '';
+  passkeySuccess.value = false;
+  try {
+    // Предполагается, что в authStore есть метод updatePasskeyName
+    await authStore.updatePasskeyName(credentialID, editingPasskeyName.value.trim());
+    passkeyMessage.value = t('settings.passkey.success.nameUpdated', 'Passkey 名称已更新。');
+    passkeySuccess.value = true;
+    await authStore.fetchPasskeys(); // Обновить список для отображения нового имени
+    cancelEditPasskeyName(); // Сбросить состояние редактирования
+  } catch (error: any) {
+    console.error(`更新 Passkey ${credentialID} 名称失败:`, error);
+    passkeyMessage.value = error.message || t('settings.passkey.error.nameUpdateFailed', '更新 Passkey 名称失败。');
+    passkeySuccess.value = false;
+  } finally {
+    passkeyEditLoadingStates[credentialID] = false;
+  }
+};
+ 
 const handleDeletePasskey = async (credentialID: string) => {
+  if (editingPasskeyId.value === credentialID) {
+    cancelEditPasskeyName(); // Cancel editing if the key being edited is deleted
+  }
   if (!credentialID || typeof credentialID !== 'string') {
     console.error('Attempted to delete a passkey with an invalid or undefined credentialID:', credentialID);
     passkeyDeleteError.value = t('settings.passkey.error.deleteFailedInvalidId', '删除失败：无效的凭证 ID。'); // Add translation
     return;
   }
   if (!confirm(t('settings.passkey.confirmDelete'))) return;
-
+ 
   passkeyDeleteLoadingStates[credentialID] = true;
   passkeyDeleteError.value = null;
   passkeyMessage.value = ''; // Clear previous general passkey messages
   try {
     await authStore.deletePasskey(credentialID);
-    // The authStore.deletePasskey action should internally call fetchPasskeys to refresh the list.
-    // So, no need to call it explicitly here if the store handles it.
-    // If not, uncomment the line below:
-    // await authStore.fetchPasskeys();
     passkeyMessage.value = t('settings.passkey.success.deleted');
     passkeySuccess.value = true; // Use general success for feedback
+    // authStore.fetchPasskeys() will be called by deletePasskey if successful
   } catch (error: any) {
     console.error(`删除 Passkey ${credentialID} 失败:`, error);
     passkeyDeleteError.value = error.message || t('settings.passkey.error.deleteFailedGeneral');

@@ -483,6 +483,28 @@ export const useAuthStore = defineStore('auth', {
                 this.isLoading = false;
             }
         },
+
+        // Action to update a passkey's name
+        async updatePasskeyName(credentialID: string, newName: string) {
+            if (!this.isAuthenticated) {
+                throw new Error('User not authenticated. Cannot update passkey name.');
+            }
+            // Consider using a specific loading state for this if needed, e.g., this.passkeyNameUpdateLoading = true;
+            this.error = null;
+            try {
+                await apiClient.put(`/auth/user/passkeys/${credentialID}/name`, { name: newName });
+                console.log(`Passkey ${credentialID} name updated to "${newName}".`);
+                // Refresh the passkey list to show the new name
+                await this.fetchPasskeys();
+                return { success: true };
+            } catch (err: any) {
+                console.error(`Failed to update passkey ${credentialID} name:`, err);
+                this.error = err.response?.data?.message || err.message || 'Failed to update passkey name.';
+                throw new Error(this.error ?? 'Failed to update passkey name.');
+            } finally {
+                // if using specific loading state: this.passkeyNameUpdateLoading = false;
+            }
+        },
     },
     persist: true, // Revert to simple persistence to fix TS error for now
 });
