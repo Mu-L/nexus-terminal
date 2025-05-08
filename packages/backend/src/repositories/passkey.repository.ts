@@ -97,6 +97,8 @@ export class PasskeyRepository {
     const db = await getDbInstance();
     const sql = 'SELECT * FROM passkeys WHERE user_id = ? ORDER BY created_at DESC';
     const results = await allDb<any>(db, sql, [userId]);
+    // Log the raw results from the database before mapping
+    console.log(`[PasskeyRepository] Raw passkeys for user ${userId}:`, JSON.stringify(results, null, 2));
     return mapPasskeyResults(results);
   }
 

@@ -139,12 +139,15 @@ export const generatePasskeyAuthenticationOptionsHandler = async (req: Request, 
  * 验证 Passkey 凭据并登录用户 (POST /api/v1/auth/passkey/authenticate)
  */
 export const verifyPasskeyAuthenticationHandler = async (req: Request, res: Response): Promise<void> => {
-    const authenticationResponse = req.body; // The whole body is the response from @simplewebauthn/browser
+    // Extract assertionResponse and rememberMe from the request body
+    const { assertionResponse, rememberMe } = req.body;
     const expectedChallenge = req.session.currentChallenge;
-    const { rememberMe } = req.body; // Optional rememberMe flag
 
-    if (!authenticationResponse) {
-        res.status(400).json({ message: '认证响应不能为空。' });
+    // Rename assertionResponse to authenticationResponseJSON for clarity within this scope
+    const authenticationResponseJSON = assertionResponse;
+
+    if (!authenticationResponseJSON) {
+        res.status(400).json({ message: '认证响应 (assertionResponse) 不能为空。' });
         return;
     }
     if (!expectedChallenge) {
@@ -153,8 +156,9 @@ export const verifyPasskeyAuthenticationHandler = async (req: Request, res: Resp
     }
 
     try {
+        // Pass the extracted authenticationResponseJSON to the service
         const verification = await passkeyService.verifyAuthentication(
-            authenticationResponse,
+            authenticationResponseJSON,
             expectedChallenge
         );
 
@@ -197,20 +201,20 @@ export const verifyPasskeyAuthenticationHandler = async (req: Request, res: Resp
         } else {
             console.warn(`[AuthController] Passkey 认证验证失败:`, verification);
             const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
-            auditLogService.logAction('PASSKEY_AUTH_FAILURE', { 
-                credentialId: authenticationResponse.id, 
-                reason: 'Verification failed', 
-                ip: clientIp 
+            auditLogService.logAction('PASSKEY_AUTH_FAILURE', {
+                credentialId: authenticationResponseJSON?.id || 'unknown', // Use the extracted object
+                reason: 'Verification failed',
+                ip: clientIp
             });
             res.status(401).json({ verified: false, message: 'Passkey 认证失败。' });
         }
     } catch (error: any) {
         console.error(`[AuthController] 验证 Passkey 认证时出错:`, error.message, error.stack);
         const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
-        auditLogService.logAction('PASSKEY_AUTH_FAILURE', { 
-            credentialId: authenticationResponse?.id || 'unknown', 
-            reason: error.message, 
-            ip: clientIp 
+        auditLogService.logAction('PASSKEY_AUTH_FAILURE', {
+            credentialId: authenticationResponseJSON?.id || 'unknown', // Use the extracted object
+            reason: error.message,
+            ip: clientIp
         });
         res.status(500).json({ verified: false, message: '验证 Passkey 认证失败。', error: error.message });
     }
