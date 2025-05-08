@@ -532,7 +532,7 @@
     },
     "passkey": {
       "title": "Passkey Management",
-      "description": "Use Passkeys (biometrics or security keys) for passwordless authentication to enhance security and convenience.",
+      "description": "Use Passkeys (biometrics or security keys) for passwordless authentication.",
       "nameLabel": "Passkey Name",
       "namePlaceholder": "e.g., My Laptop",
       "registerNewButton": "Register New Passkey",

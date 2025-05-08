@@ -530,7 +530,7 @@
     },
     "passkey": {
       "title": "Passkey 管理",
-      "description": "使用 Passkey（生物识别或安全密钥）进行无密码认证，提升账户安全性和登录便捷性。",
+      "description": "使用 Passkey（生物识别或安全密钥）进行无密码认证",
       "nameLabel": "Passkey 名称",
       "namePlaceholder": "例如：我的笔记本电脑",
       "registerNewButton": "注册新 Passkey",

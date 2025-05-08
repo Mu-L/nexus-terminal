@@ -822,7 +822,7 @@
         },
         "passkey": {
             "title": "Passkey 管理",
-            "description": "Passkey (生体認証またはセキュリティキー) を使用してパスワードなし認証を行い、アカウントのセキュリティとログインの利便性を向上させます。",
+            "description": "Passkey (生体認証またはセキュリティキー) を使用してパスワードなし認証を行い",
             "nameLabel": "Passkey 名",
             "namePlaceholder": "例: マイノートパソコン",
             "registerNewButton": "新しい Passkey を登録",
