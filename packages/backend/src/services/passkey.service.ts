@@ -99,19 +99,22 @@ export class PasskeyService {
         throw new Error('User not found for the provided handle.');
     }
 
+    // The actual WebAuthn response is nested within the received object
+    const actualRegistrationResponse = (registrationResponseJSON as any).registrationResponse;
+
+    // Add a check for the presence of credential ID before calling the library
+    if (!actualRegistrationResponse || !actualRegistrationResponse.id) {
+      console.error('Missing credential ID in actualRegistrationResponse from client:', registrationResponseJSON);
+      throw new Error('Registration failed: Missing or malformed credential ID from client.');
+    }
+
     const verifyOpts: VerifyRegistrationResponseOpts = {
-      response: registrationResponseJSON,
+      response: actualRegistrationResponse, // Use the nested object
       expectedChallenge,
       expectedOrigin: RP_ORIGIN,
       expectedRPID: RP_ID,
       requireUserVerification: true,
     };
-
-    // Add a check for the presence of credential ID before calling the library
-    if (!registrationResponseJSON || !registrationResponseJSON.id) {
-      console.error('Missing credential ID in registrationResponseJSON from client:', registrationResponseJSON);
-      throw new Error('Registration failed: Missing credential ID from client.');
-    }
 
     const verification = await verifyRegistrationResponse(verifyOpts);
 
