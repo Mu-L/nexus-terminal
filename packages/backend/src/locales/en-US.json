@@ -38,6 +38,13 @@
     "SSH_CONNECT_FAILURE": "SSH Connection Failed",
     "SSH_SHELL_FAILURE": "SSH Shell Open Failed",
     "DATABASE_MIGRATION": "Database Migration",
-    "ADMIN_SETUP_COMPLETE": "Initial Admin Setup Completed"
+    "ADMIN_SETUP_COMPLETE": "Initial Admin Setup Completed",
+    "PASSKEY_REGISTERED": "Passkey Registered",
+    "PASSKEY_AUTH_SUCCESS": "Passkey Authentication Successful",
+    "PASSKEY_AUTH_FAILURE": "Passkey Authentication Failed",
+    "PASSKEY_DELETED": "Passkey Deleted",
+    "PASSKEY_DELETE_UNAUTHORIZED": "Passkey Deletion Unauthorized",
+    "PASSKEY_NAME_UPDATED": "Passkey Name Updated",
+    "PASSKEY_NAME_UPDATE_UNAUTHORIZED": "Passkey Name Update Unauthorized"
   }
 }

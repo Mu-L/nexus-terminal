@@ -29,7 +29,14 @@
             "SSH_SHELL_FAILURE": "SSH Shell オープン失敗",
             "TAG_CREATED": "タグ作成",
             "TAG_DELETED": "タグ削除",
-            "TAG_UPDATED": "タグ更新"
+            "TAG_UPDATED": "タグ更新",
+            "PASSKEY_REGISTERED": "パスキー登録済み",
+            "PASSKEY_AUTH_SUCCESS": "パスキー認証成功",
+            "PASSKEY_AUTH_FAILURE": "パスキー認証失敗",
+            "PASSKEY_DELETED": "パスキー削除済み",
+            "PASSKEY_DELETE_UNAUTHORIZED": "パスキー削除権限なし",
+            "PASSKEY_NAME_UPDATED": "パスキー名更新済み",
+            "PASSKEY_NAME_UPDATE_UNAUTHORIZED": "パスキー名更新権限なし"
         },
         "noLogs": "監査ログが見つかりませんでした。",
         "paginationInfo": "{currentPage} ページ / 全 {totalPages} ページ ({totalLogs} 件のログ)",
