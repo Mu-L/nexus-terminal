@@ -169,6 +169,8 @@ Here are some implicit practical features.
 ### Others
 
 1. After adjusting the layout, be sure to enable **"Lock Layout"** in the layout manager to prevent page flickering caused by accidental dragging of split lines when the mouse moves across the interface. This ensures the best user experience.
+2. To enable Passkey login, set the `RP_ID` and `RP_ORIGIN` environment variables in the `.env` file.
+
 
 
 ## ⚠️ Notes
