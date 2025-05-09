@@ -8,7 +8,8 @@ import {
   SuspendedSessionInfo,
 } from '../types/ssh-suspend.types';
 import { temporaryLogStorageService, TemporaryLogStorageService } from './temporary-log-storage.service';
-import { clientStates } from '../websocket/state'; // +++ 导入 clientStates +++
+import { ClientState } from '../websocket/types';
+// clientStates 的直接访问已移除，因为takeOverMarkedSession现在从调用者接收所需信息
 
 /**
  * SshSuspendService 负责管理所有用户的挂起 SSH 会话的生命周期。
@@ -37,48 +38,59 @@ export class SshSuspendService extends EventEmitter {
   }
 
   /**
-   * 启动指定 SSH 会话的挂起模式。
-   * @param userId 用户ID。
-   * @param originalSessionId 原始会话ID。
-   * @param sshClient SSH 客户端实例。
-   * @param channel SSH 通道实例。
-   * @param connectionName 连接名称。
-   * @param connectionId 连接ID。
-   * @param customSuspendName 可选的自定义挂起名称。
-   * @returns Promise<string> 返回生成的 suspendSessionId。
+   * 当一个被标记为待挂起的会话的 WebSocket 连接断开时，由此方法接管 SSH 资源。
+   * @param details 包含接管所需的所有会话详细信息。
+   * @returns Promise<string | null> 返回新生成的 suspendSessionId，如果无法接管则返回 null。
    */
-  async startSuspend(
-    userId: number, // userId: string -> number
-    originalSessionId: string,
-    sshClient: Client,
-    channel: ClientChannel, // 更新为 ClientChannel
-    connectionName: string,
-    connectionId: string,
-    customSuspendName?: string,
-  ): Promise<string> {
+  async takeOverMarkedSession(details: {
+    userId: number;
+    originalSessionId: string;
+    sshClient: Client;
+    channel: ClientChannel;
+    connectionName: string;
+    connectionId: string;
+    logIdentifier: string;
+    customSuspendName?: string;
+  }): Promise<string | null> {
+    const {
+      userId,
+      originalSessionId,
+      sshClient,
+      channel,
+      connectionName,
+      connectionId,
+      logIdentifier,
+      customSuspendName,
+    } = details;
+
+    // 检查 SSH client 和 channel 是否仍然可用
+    // ClientChannel 有 readable 和 writable, Client 本身没有直接的此类属性
+    // 如果 channel 不可读写，通常意味着底层连接有问题。
+    if (!channel || !channel.readable || !channel.writable) {
+        console.warn(`[用户: ${userId}] 尝试接管会话 ${originalSessionId} 时，SSH channel 已不可用 (readable: ${channel?.readable}, writable: ${channel?.writable})。将标记为已断开。`);
+        // 确保如果 SSH 连接已经关闭，日志文件仍然保留，但不创建挂起条目。
+        // SshSuspendService 不会管理这个“已经断开”的会话，但日志保留供用户清理。
+        try { channel?.end(); } catch (e) { /* ignore */ }
+        try { sshClient?.end(); } catch (e) { /* ignore */ }
+        return null; // 无法接管
+    }
+
     const suspendSessionId = uuidv4();
     const userSessions = this.getUserSessions(userId);
 
-    // 在接管 channel 和 sshClient 前，移除它们上面可能存在的旧监听器
-    // 这确保了 SshSuspendService 独占事件处理，避免旧的处理器（如 ssh.handler.ts 中的）继续发送数据或处理关闭事件
     channel.removeAllListeners('data');
     channel.removeAllListeners('close');
     channel.removeAllListeners('error');
-    channel.removeAllListeners('end'); // ClientChannel 也有 'end' 事件
-    channel.removeAllListeners('exit'); // ClientChannel 也有 'exit' 事件
+    channel.removeAllListeners('end');
+    channel.removeAllListeners('exit');
 
-    // 对于 sshClient，移除监听器需要谨慎，特别是如果 sshClient 实例可能被多个 Shell共享（尽管在此应用中通常不这么做）
-    // 假设这里的 sshClient 的生命周期与此 channel 紧密相关，或者是此 channel 的唯一父级。
     sshClient.removeAllListeners('error');
     sshClient.removeAllListeners('end');
-    // sshClient.removeAllListeners('close'); // sshClient 本身没有 'close' 事件，通常是 'end' 或连接错误
-
-    const tempLogPath = `./data/temp_suspended_ssh_logs/${suspendSessionId}.log`; // 路径相对于项目根目录
 
     const sessionDetails: SuspendSessionDetails = {
       sshClient,
       channel,
-      tempLogPath,
+      tempLogPath: logIdentifier, // 使用传入的日志标识符 (基于 originalSessionId)
       connectionName,
       connectionId,
       suspendStartTime: new Date().toISOString(),
@@ -89,79 +101,65 @@ export class SshSuspendService extends EventEmitter {
     };
 
     userSessions.set(suspendSessionId, sessionDetails);
+    console.log(`[用户: ${userId}] SSH会话 ${originalSessionId} 已被 SshSuspendService 接管 (新挂起ID: ${suspendSessionId})。日志文件标识: ${logIdentifier}`);
 
-    // +++ 更新 ClientState 标记 +++
-    const originalClientState = clientStates.get(originalSessionId);
-    if (originalClientState) {
-      originalClientState.isSuspendedByService = true;
-      console.log(`[用户: ${userId}] ClientState for session ${originalSessionId} marked as suspended by service.`);
-    } else {
-      console.warn(`[用户: ${userId}] Could not find ClientState for original session ID ${originalSessionId} to mark as suspended.`);
-    }
-    // +++ 结束更新 ClientState 标记 +++
-
-    console.log(`[用户: ${userId}] SSH会话 ${originalSessionId} (连接: ${connectionName}) 已启动挂起，ID: ${suspendSessionId}`);
-
-    // 确保日志目录存在
     await this.logStorageService.ensureLogDirectoryExists();
-
-    // 开始监听通道数据并写入日志
+    
     channel.on('data', (data: Buffer) => {
       if (userSessions.get(suspendSessionId)?.backendSshStatus === 'hanging') {
-        this.logStorageService.writeToLog(suspendSessionId, data.toString('utf-8')).catch(err => {
-          console.error(`[用户: ${userId}, 会话: ${suspendSessionId}] 写入挂起日志失败:`, err);
+        this.logStorageService.writeToLog(logIdentifier, data.toString('utf-8')).catch(err => {
+          console.error(`[用户: ${userId}, 挂起ID: ${suspendSessionId}, 日志: ${logIdentifier}] 写入挂起日志失败:`, err);
         });
       }
     });
 
-    const handleUnexpectedClose = () => {
+    const handleSessionTermination = (reasonSuffix: string) => {
       const currentSession = userSessions.get(suspendSessionId);
       if (currentSession && currentSession.backendSshStatus === 'hanging') {
-        const reason = 'SSH connection closed or errored.';
-        console.warn(`[用户: ${userId}, 会话: ${suspendSessionId}] SSH 连接意外断开。原因: ${reason}`);
+        const reason = `SSH connection ${reasonSuffix}.`;
+        console.warn(`[用户: ${userId}, 挂起ID: ${suspendSessionId}, 日志: ${logIdentifier}] SSH 连接在挂起期间终止。原因: ${reason}`);
         currentSession.backendSshStatus = 'disconnected_by_backend';
         currentSession.disconnectionTimestamp = new Date().toISOString();
         
-        this.removeChannelListeners(channel, sshClient); // 使用辅助方法移除
+        this.removeChannelListeners(channel, sshClient);
 
-        // 发出事件通知 WebSocket 层
         this.emit('sessionAutoTerminated', {
-          userId: currentSession.userId, // 使用存储在 sessionDetails 中的 userId
+          userId: currentSession.userId,
           suspendSessionId,
           reason
         });
       }
     };
     
-    channel.on('close', handleUnexpectedClose);
+    channel.on('close', () => handleSessionTermination('closed'));
     channel.on('error', (err: Error) => {
-        console.error(`[用户: ${userId}, 会话: ${suspendSessionId}] 通道错误:`, err);
-        handleUnexpectedClose();
+      console.error(`[用户: ${userId}, 挂起ID: ${suspendSessionId}, 日志: ${logIdentifier}] 挂起会话的通道错误:`, err);
+      handleSessionTermination('errored');
     });
+    channel.on('end', () => handleSessionTermination('ended'));
+    channel.on('exit', (code: number | null, signalName: string | null) => handleSessionTermination(`exited with code ${code}, signal ${signalName}`));
+  
     sshClient.on('error', (err: Error) => {
-        console.error(`[用户: ${userId}, 会话: ${suspendSessionId}] SSH客户端错误:`, err);
-        handleUnexpectedClose();
+      console.error(`[用户: ${userId}, 挂起ID: ${suspendSessionId}, 日志: ${logIdentifier}] 挂起会话的SSH客户端错误:`, err);
+      handleSessionTermination('client errored');
     });
-    sshClient.on('end', () => { // 'end' 通常是正常关闭，但也需要处理
-        console.log(`[用户: ${userId}, 会话: ${suspendSessionId}] SSH客户端连接结束。`);
-        handleUnexpectedClose(); // 如果是意外的，则标记为 disconnected
+    sshClient.on('end', () => {
+      console.log(`[用户: ${userId}, 挂起ID: ${suspendSessionId}, 日志: ${logIdentifier}] 挂起会话的SSH客户端连接结束。`);
+      handleSessionTermination('client ended');
     });
-
 
     return suspendSessionId;
   }
   
-  /**
-   * 辅助方法：移除会话相关的事件监听器。
-   */
   private removeChannelListeners(channel: Channel, sshClient: Client): void {
     channel.removeAllListeners('data');
     channel.removeAllListeners('close');
     channel.removeAllListeners('error');
+    channel.removeAllListeners('end');
+    channel.removeAllListeners('exit');
     sshClient.removeAllListeners('error');
     sshClient.removeAllListeners('end');
   }
-
 
   /**
    * 列出指定用户的所有挂起会话（包括活跃和已断开的）。
@@ -196,26 +194,51 @@ export class SshSuspendService extends EventEmitter {
    * @returns Promise<{ sshClient: Client; channel: ClientChannel; logData: string; connectionName: string; originalConnectionId: string; } | null> 恢复成功则返回客户端、通道、日志数据、连接名和原始连接ID，否则返回null。
    */
   async resumeSession(userId: number, suspendSessionId: string): Promise<{ sshClient: Client; channel: ClientChannel; logData: string; connectionName: string; originalConnectionId: string; } | null> {
+    // console.log(`[SshSuspendService][用户: ${userId}] resumeSession 调用，suspendSessionId: ${suspendSessionId}`);
     const userSessions = this.getUserSessions(userId);
     const session = userSessions.get(suspendSessionId);
 
-    if (!session || session.backendSshStatus !== 'hanging') {
-      console.warn(`[用户: ${userId}] 尝试恢复的会话 ${suspendSessionId} 不存在或状态不正确 (${session?.backendSshStatus})。`);
+    if (!session) {
+      // console.warn(`[SshSuspendService][用户: ${userId}] resumeSession: 未找到挂起的会话 ${suspendSessionId}。`);
+      return null;
+    }
+    // console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 找到会话 ${suspendSessionId}，状态: ${session.backendSshStatus}`);
+
+    if (session.backendSshStatus !== 'hanging') {
+      // console.warn(`[SshSuspendService][用户: ${userId}] resumeSession: 会话 ${suspendSessionId} 状态不为 'hanging' (当前: ${session.backendSshStatus})，无法恢复。`);
       return null;
     }
 
     // 停止监听旧通道事件
     this.removeChannelListeners(session.channel, session.sshClient);
+    // console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 已移除会话 ${suspendSessionId} 的旧监听器。`);
 
-    const logData = await this.logStorageService.readLog(suspendSessionId);
+    let logData = '';
+    try {
+      // 使用 session.tempLogPath (即 logIdentifier, 基于 originalSessionId) 来读取日志
+      logData = await this.logStorageService.readLog(session.tempLogPath);
+      console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 已读取挂起会话 ${suspendSessionId} (日志: ${session.tempLogPath}) 的数据，长度: ${logData.length}`);
+    } catch (error) {
+      // console.error(`[SshSuspendService][用户: ${userId}] resumeSession: 读取挂起会话 ${suspendSessionId} (日志: ${session.tempLogPath}) 失败:`, error);
+      // 根据策略，读取日志失败可能也应该导致恢复失败
+      return null;
+    }
     
     // 在从 userSessions 删除会话之前，保存需要返回的会话详细信息
     const { sshClient, channel, connectionName, connectionId: originalConnectionId } = session;
 
     userSessions.delete(suspendSessionId);
-    await this.logStorageService.deleteLog(suspendSessionId);
+    // console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 已从内存中删除挂起会话 ${suspendSessionId} 的记录。`);
+    try {
+      // 删除以 session.tempLogPath (logIdentifier) 命名的日志文件
+      await this.logStorageService.deleteLog(session.tempLogPath);
+      // console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 已删除挂起会话 ${suspendSessionId} 的日志文件 (路径: ${session.tempLogPath})。`);
+    } catch (error) {
+      // console.warn(`[SshSuspendService][用户: ${userId}] resumeSession: 删除挂起会话 ${suspendSessionId} 的日志文件 (路径: ${session.tempLogPath}) 失败:`, error);
+      // 日志删除失败不应阻止恢复流程继续
+    }
 
-    console.log(`[用户: ${userId}] 挂起会话 ${suspendSessionId} 已成功恢复。`);
+    // console.log(`[SshSuspendService][用户: ${userId}] resumeSession: 挂起会话 ${suspendSessionId} 准备返回恢复数据。`);
     return {
       sshClient,
       channel,
@@ -239,9 +262,10 @@ export class SshSuspendService extends EventEmitter {
       console.warn(`[用户: ${userId}] 尝试终止的会话 ${suspendSessionId} 不存在或不是活跃状态 (${session?.backendSshStatus})。`);
       // 如果会话已断开，但记录还在，也应该能被“终止”（即移除）
       if(session && session.backendSshStatus === 'disconnected_by_backend'){
+        const logPathToDelete = session.tempLogPath; // 获取正确的日志路径
         userSessions.delete(suspendSessionId);
-        await this.logStorageService.deleteLog(suspendSessionId);
-        console.log(`[用户: ${userId}] 已断开的挂起会话条目 ${suspendSessionId} 已通过终止操作移除。`);
+        await this.logStorageService.deleteLog(logPathToDelete);
+        console.log(`[用户: ${userId}] 已断开的挂起会话条目 ${suspendSessionId} (日志: ${logPathToDelete}) 已通过终止操作移除。`);
         return true;
       }
       return false;
@@ -260,10 +284,11 @@ export class SshSuspendService extends EventEmitter {
       console.warn(`[用户: ${userId}, 会话: ${suspendSessionId}] 关闭sshClient时出错:`, e);
     }
     
+    const logPathToFinallyDelete = session.tempLogPath; // 获取正确的日志路径
     userSessions.delete(suspendSessionId);
-    await this.logStorageService.deleteLog(suspendSessionId);
+    await this.logStorageService.deleteLog(logPathToFinallyDelete);
 
-    console.log(`[用户: ${userId}] 活跃的挂起会话 ${suspendSessionId} 已成功终止并移除。`);
+    console.log(`[用户: ${userId}] 活跃的挂起会话 ${suspendSessionId} (日志: ${logPathToFinallyDelete}) 已成功终止并移除。`);
     return true;
   }
 
@@ -289,8 +314,13 @@ export class SshSuspendService extends EventEmitter {
     
     // 总是尝试删除日志文件，因为它可能对应一个已不在内存中的断开会话
     try {
-      await this.logStorageService.deleteLog(suspendSessionId);
-      console.log(`[用户: ${userId}] 已断开的挂起会话条目 ${suspendSessionId} 的日志已删除 (内存中状态: ${session ? session.backendSshStatus : '不在内存'})。`);
+      // suspendSessionId 在这里是用户从UI上选择的，可能在内存中，也可能不在 (只剩日志文件)
+      // 如果在内存中，session.tempLogPath 是正确的日志标识符
+      // 如果不在内存中，suspendSessionId 本身可能就是日志文件名 (如果之前设计是这样的话，但现在统一用 originalSessionId 作为日志名基础)
+      // 假设 remove 请求中的 suspendSessionId 就是我们存储的那个挂起ID
+      const logPathToRemove = session ? session.tempLogPath : suspendSessionId; // 如果 session 不在内存，尝试直接用 suspendSessionId 作为日志文件名部分
+      await this.logStorageService.deleteLog(logPathToRemove);
+      console.log(`[用户: ${userId}] 已断开的挂起会话条目 ${suspendSessionId} 的日志 (标识: ${logPathToRemove}) 已删除 (内存中状态: ${session ? session.backendSshStatus : '不在内存'})。`);
       return true;
     } catch (error) {
       console.error(`[用户: ${userId}] 删除会话 ${suspendSessionId} 的日志文件失败:`, error);

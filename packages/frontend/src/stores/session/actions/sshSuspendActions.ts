@@ -2,16 +2,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import { sessions, suspendedSshSessions, isLoadingSuspendedSessions, activeSessionId } from '../state';
 import type {
-  MessagePayload, // 新增导入
-  SshSuspendStartReqMessage,
-  // SshSuspendListReqMessage, // 不再需要，因为 fetch 将通过 HTTP
+  MessagePayload,
+  SshMarkForSuspendReqMessage, // +++ 修改：导入新的请求类型 +++
   SshSuspendResumeReqMessage,
   SshSuspendTerminateReqMessage,
   SshSuspendRemoveEntryReqMessage,
   SshSuspendEditNameReqMessage,
   // S2C Payloads
-  SshSuspendStartedRespPayload,
-  SshSuspendListResponsePayload, // 仍然需要处理来自 WS 的列表更新推送（如果后端支持）
+  SshMarkedForSuspendAckPayload, // +++ 新增：导入新的响应类型 +++
+  SshSuspendListResponsePayload,
   SshSuspendResumedNotifPayload,
   SshOutputCachedChunkPayload,
   SshSuspendTerminatedRespPayload,
@@ -20,7 +19,7 @@ import type {
   SshSuspendAutoTerminatedNotifPayload,
 } from '../../../types/websocket.types'; // 路径: packages/frontend/src/types/websocket.types.ts
 import type { WsManagerInstance, SessionState } from '../types'; // 路径: packages/frontend/src/stores/session/types.ts
-import { closeSession as closeSessionAction, activateSession as activateSessionAction, openNewSession } from './sessionActions'; // 使用 openNewSession
+import { closeSession as closeSessionAction, activateSession as activateSessionAction, openNewSession, closeSession } from './sessionActions'; // 使用 openNewSession 和 closeSession
 import { useConnectionsStore } from '../../connections.store'; // 用于获取连接信息
 import { useUiNotificationsStore } from '../../uiNotifications.store'; // 用于显示通知
 import type { SuspendedSshSession } from '../../../types/ssh-suspend.types'; // 路径: packages/frontend/src/types/ssh-suspend.types.ts
@@ -34,33 +33,33 @@ const t: ComposerTranslation = i18n.global.t; // 从全局 i18n 实例获取 t �
 // 优先使用当前激活的会话，或者任意一个已连接的 SSH 会话
 // 注意：此函数主要用于那些仍然需要 WebSocket 的操作 (如 resume, terminate)
 const getActiveWsManager = (): WsManagerInstance | null => {
-  console.log(`[getActiveWsManager] 尝试获取可用 WebSocket。当前 sessions 数量: ${sessions.value.size}`);
-  sessions.value.forEach((session, sessionId) => {
-    console.log(`[getActiveWsManager]   - 会话 ID: ${sessionId}, WS Manager 存在: ${!!session.wsManager}, WS 已连接: ${session.wsManager?.isConnected?.value}`);
-  });
+  // console.log(`[getActiveWsManager] 尝试获取可用 WebSocket。当前 sessions 数量: ${sessions.value.size}`);
+  // sessions.value.forEach((session, sessionId) => {
+  //   console.log(`[getActiveWsManager]   - 会话 ID: ${sessionId}, WS Manager 存在: ${!!session.wsManager}, WS 已连接: ${session.wsManager?.isConnected?.value}`);
+  // });
 
   const firstSessionKey = sessions.value.size > 0 ? sessions.value.keys().next().value : null;
-  console.log(`[getActiveWsManager] 尝试使用第一个会话 Key (如果存在): ${firstSessionKey}`);
+  // console.log(`[getActiveWsManager] 尝试使用第一个会话 Key (如果存在): ${firstSessionKey}`);
 
   if (firstSessionKey) {
     const session = sessions.value.get(firstSessionKey);
-    console.log(`[getActiveWsManager]   第一个会话 (ID: ${firstSessionKey}): WS Manager 存在: ${!!session?.wsManager}, WS 已连接: ${session?.wsManager?.isConnected?.value}`);
+    // console.log(`[getActiveWsManager]   第一个会话 (ID: ${firstSessionKey}): WS Manager 存在: ${!!session?.wsManager}, WS 已连接: ${session?.wsManager?.isConnected?.value}`);
     if (session && session.wsManager && session.wsManager.isConnected.value) {
-      console.log(`[getActiveWsManager] 使用第一个会话 (ID: ${firstSessionKey}) 的 WebSocket。`);
+      // console.log(`[getActiveWsManager] 使用第一个会话 (ID: ${firstSessionKey}) 的 WebSocket。`);
       return session.wsManager;
     }
   }
 
-  console.log('[getActiveWsManager] 第一个会话的 WebSocket 不可用或不存在，开始遍历所有会话...');
+  // console.log('[getActiveWsManager] 第一个会话的 WebSocket 不可用或不存在，开始遍历所有会话...');
   for (const [sessionId, session] of sessions.value) {
-    console.log(`[getActiveWsManager]   遍历中 - 检查会话 ID: ${sessionId}, WS Manager 存在: ${!!session.wsManager}, WS 已连接: ${session.wsManager?.isConnected?.value}`);
+    // console.log(`[getActiveWsManager]   遍历中 - 检查会话 ID: ${sessionId}, WS Manager 存在: ${!!session.wsManager}, WS 已连接: ${session.wsManager?.isConnected?.value}`);
     if (session.wsManager && session.wsManager.isConnected.value) {
-      console.log(`[getActiveWsManager]   遍历成功，使用会话 (ID: ${sessionId}) 的 WebSocket。`);
+      // console.log(`[getActiveWsManager]   遍历成功，使用会话 (ID: ${sessionId}) 的 WebSocket。`);
       return session.wsManager;
     }
   }
 
-  console.warn('[getActiveWsManager] 遍历结束，仍未找到可用的 WebSocket 连接来发送 SSH 挂起相关请求。');
+  // console.warn('[getActiveWsManager] 遍历结束，仍未找到可用的 WebSocket 连接来发送 SSH 挂起相关请求。');
   return null;
 };
 
@@ -73,18 +72,31 @@ export const requestStartSshSuspend = (sessionId: string): void => {
   const session = sessions.value.get(sessionId);
   if (session && session.wsManager) {
     if (!session.wsManager.isConnected.value) {
-      console.warn(`[${t('term.sshSuspend')}] WebSocket 未连接，无法启动挂起模式 (会话 ID: ${sessionId})。`);
-      // 可选：通知用户
+      console.warn(`[${t('term.sshSuspend')}] WebSocket 未连接，无法请求标记挂起 (会话 ID: ${sessionId})。`);
+      useUiNotificationsStore().addNotification({ type: 'error', message: t('sshSuspend.notifications.wsNotConnectedError') });
       return;
     }
-    const message: SshSuspendStartReqMessage = {
-      type: 'SSH_SUSPEND_START',
+
+    // 不再需要获取 initialBuffer
+
+    const message: SshMarkForSuspendReqMessage = { // +++ 修改：使用新的消息类型 +++
+      type: 'SSH_MARK_FOR_SUSPEND',
       payload: { sessionId },
     };
     session.wsManager.sendMessage(message);
-    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_SUSPEND_START_REQ (会话 ID: ${sessionId})`);
+    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_MARK_FOR_SUSPEND 请求 (会话 ID: ${sessionId})`);
+    // 前端在发送此请求后，会话应保持活动状态，直到用户关闭标签页或网络断开。
+    // 后端会在 WebSocket 关闭时处理实际的挂起。
+    // 用户界面上可以给一个提示，表明“此会话已标记，关闭后将尝试挂起”。
+    useUiNotificationsStore().addNotification({
+      type: 'info',
+      message: t('sshSuspend.notifications.markedForSuspendInfo', { id: sessionId.slice(0,8) }),
+      timeout: 5000, // +++ 修改：duration -> timeout +++
+    });
+
   } else {
-    console.warn(`[${t('term.sshSuspend')}] 未找到会话或 WebSocket 管理器 (会话 ID: ${sessionId})，无法启动挂起。`);
+    console.warn(`[${t('term.sshSuspend')}] 未找到会话或 WebSocket 管理器 (会话 ID: ${sessionId})，无法请求标记挂起。`);
+    useUiNotificationsStore().addNotification({ type: 'error', message: t('sshSuspend.notifications.sessionNotFoundError') });
   }
 };
 
@@ -118,18 +130,90 @@ export const fetchSuspendedSshSessions = async (): Promise<void> => {
  * 请求恢复指定的挂起 SSH 会话
  * @param suspendSessionId 要恢复的挂起会话的 ID
  */
-export const resumeSshSession = (suspendSessionId: string): void => {
-  const wsManager = getActiveWsManager();
-  if (wsManager) {
-    const newFrontendSessionId = uuidv4(); // 为恢复的会话生成新的前端 ID
+export const resumeSshSession = async (suspendSessionId: string): Promise<void> => {
+  const uiNotificationsStore = useUiNotificationsStore();
+  const connectionsStore = useConnectionsStore();
+  // const { t } = useI18n(); // t 已经在模块顶部定义
+
+  const sessionToResumeInfo = suspendedSshSessions.value.find(s => s.suspendSessionId === suspendSessionId);
+  if (!sessionToResumeInfo) {
+    console.error(`[${t('term.sshSuspend')}] 恢复操作失败：在挂起列表中未找到会话 ${suspendSessionId}`);
+    uiNotificationsStore.addNotification({
+      type: 'error',
+      message: t('sshSuspend.notifications.resumeErrorInfoNotFound', { id: suspendSessionId.slice(0, 8) }),
+    });
+    return;
+  }
+
+  const originalConnectionId = parseInt(sessionToResumeInfo.connectionId, 10);
+  if (isNaN(originalConnectionId)) {
+    console.error(`[${t('term.sshSuspend')}] 恢复操作失败：无效的原始连接 ID ${sessionToResumeInfo.connectionId}`);
+    uiNotificationsStore.addNotification({ type: 'error', message: t('sshSuspend.notifications.resumeErrorConnectionConfigNotFound', { id: sessionToResumeInfo.connectionId }) });
+    return;
+  }
+
+  const newFrontendSessionId = uuidv4(); // 为恢复的会话生成新的前端 ID
+
+  try {
+    console.log(`[${t('term.sshSuspend')}] 准备恢复会话 ${suspendSessionId}。将创建新前端会话 ${newFrontendSessionId} 并连接 WebSocket。`);
+    
+    // 1. 调用 openNewSession 创建前端会话状态、WebSocket 连接等
+    openNewSession(
+      originalConnectionId,
+      { connectionsStore, t }, // 传递依赖
+      newFrontendSessionId    // 将 newFrontendSessionId 作为 existingSessionId 传递
+    );
+
+    // 2. 获取新创建会话的 wsManager
+    const newSessionState = sessions.value.get(newFrontendSessionId);
+    if (!newSessionState || !newSessionState.wsManager) {
+      console.error(`[${t('term.sshSuspend')}] 调用 openNewSession 后未能获取会话 ${newFrontendSessionId} 或其 wsManager。`);
+      uiNotificationsStore.addNotification({ type: 'error', message: t('sshSuspend.notifications.resumeErrorGeneric', { error: '无法初始化新会话界面组件' }) });
+      return;
+    }
+    const wsManager = newSessionState.wsManager;
+
+    // 3. 等待 WebSocket 连接成功
+    const MAX_WAIT_ITERATIONS = 25; // 25 * 200ms = 5 seconds
+    let iterations = 0;
+    while (!wsManager.isConnected.value && iterations < MAX_WAIT_ITERATIONS) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      iterations++;
+    }
+
+    if (!wsManager.isConnected.value) {
+      console.error(`[${t('term.sshSuspend')}] 新创建的会话 ${newFrontendSessionId} 的 WebSocket 未能连接。无法发送恢复请求。`);
+      uiNotificationsStore.addNotification({ type: 'error', message: t('sshSuspend.notifications.resumeErrorGeneric', { error: '无法连接到服务器以恢复会话' }) });
+      if (sessions.value.has(newFrontendSessionId)) {
+        closeSession(newFrontendSessionId); // 清理未成功连接的会话
+      }
+      return;
+    }
+    
+    // 4. 发送恢复请求
+    console.log(`[${t('term.sshSuspend')}] 会话 ${newFrontendSessionId} 的 WebSocket 已连接，准备发送恢复请求。`);
     const message: SshSuspendResumeReqMessage = {
       type: 'SSH_SUSPEND_RESUME_REQUEST',
       payload: { suspendSessionId, newFrontendSessionId },
     };
+    // console.log(`[${t('term.sshSuspend')}] resumeSshSession: 准备通过 wsManager (会话 ${newFrontendSessionId}) 发送消息: ${JSON.stringify(message)}`);
     wsManager.sendMessage(message);
-    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_SUSPEND_RESUME_REQ (挂起 ID: ${suspendSessionId}, 新前端 ID: ${newFrontendSessionId})`);
-  } else {
-    console.warn(`[${t('term.sshSuspend')}] 恢复会话失败 (挂起 ID: ${suspendSessionId})：无可用 WebSocket 连接。`);
+    // console.log(`[${t('term.sshSuspend')}] resumeSshSession: 已调用 wsManager.sendMessage 发送 SSH_SUSPEND_RESUME_REQ (挂起 ID: ${suspendSessionId}, 新前端ID: ${newFrontendSessionId})`);
+
+    // 后续流程由 handleSshSuspendResumedNotif 处理
+    // 它会使用 newFrontendSessionId，并将 isResuming 标记设置到这个会话上。
+    // 成功后，它内部应该会调用 fetchSuspendedSshSessions() 来更新列表。
+
+  } catch (error) {
+    console.error(`[${t('term.sshSuspend')}] 恢复会话 ${suspendSessionId} 过程中发生顶层错误:`, error);
+    uiNotificationsStore.addNotification({
+      type: 'error',
+      message: t('sshSuspend.notifications.resumeErrorGeneric', { error: String(error) }),
+    });
+    // 如果 newFrontendSessionId 对应的会话已创建但恢复失败，也需要清理
+    if (sessions.value.has(newFrontendSessionId)) {
+      closeSession(newFrontendSessionId);
+    }
   }
 };
 
@@ -213,24 +297,37 @@ export const editSshSessionName = (suspendSessionId: string, customName: string)
 
 // --- S2C Message Handlers ---
 
-const handleSshSuspendStartedResp = (payload: SshSuspendStartedRespPayload): void => {
+// 旧的 handleSshSuspendStartedResp 不再需要，因为流程已改变
+// const handleSshSuspendStartedResp = (payload: SshSuspendStartedRespPayload): void => { ... };
+
+const handleSshMarkedForSuspendAck = (payload: SshMarkedForSuspendAckPayload): void => {
   const uiNotificationsStore = useUiNotificationsStore();
-  console.log(`[${t('term.sshSuspend')}] 接到 SSH_SUSPEND_STARTED_RESP:`, payload);
+  console.log(`[${t('term.sshSuspend')}] 接到 SSH_MARKED_FOR_SUSPEND_ACK:`, payload);
   if (payload.success) {
-    uiNotificationsStore.addNotification({
-      type: 'success',
-      message: t('sshSuspend.notifications.suspendStartedSuccess', { id: payload.suspendSessionId.slice(0, 8) }),
-    });
-    // 成功后关闭原会话标签页
-    closeSessionAction(payload.frontendSessionId);
-    // 刷新挂起列表 (可选，或者等待列表更新通知)
-    fetchSuspendedSshSessions();
+    // 标记成功，用户可以继续使用会话，关闭时会自动尝试挂起。
+    // requestStartSshSuspend 中已经给过一个提示了。
+    // 这里可以再给一个更持久的提示，或者更新UI状态（例如在标签页上加个小图标）
+    // uiNotificationsStore.addNotification({
+    //   type: 'success',
+    //   message: t('sshSuspend.notifications.markedForSuspendSuccess', { id: payload.sessionId.slice(0,8) }),
+    // });
+    // 注意：此时不关闭会话，也不刷新挂起列表。实际挂起发生在后端WebSocket断开时。
+    // 可以在 sessions.value 中对应会话的状态里加一个标记 isMarkedForSuspend = true
+    const session = sessions.value.get(payload.sessionId);
+    if (session) {
+      session.isMarkedForSuspend = true; // 假设 SessionState 有此字段
+    }
+
   } else {
     uiNotificationsStore.addNotification({
       type: 'error',
-      message: t('sshSuspend.notifications.suspendStartedError', { error: payload.error || t('term.unknownError') }),
+      message: t('sshSuspend.notifications.markForSuspendError', { error: payload.error || t('term.unknownError') }),
     });
-    console.error(`[${t('term.sshSuspend')}] 挂起失败 (前端会话 ID: ${payload.frontendSessionId}): ${payload.error}`);
+    console.error(`[${t('term.sshSuspend')}] 标记会话 ${payload.sessionId} 失败: ${payload.error}`);
+    const session = sessions.value.get(payload.sessionId);
+    if (session) {
+      session.isMarkedForSuspend = false; // 确保标记被清除
+    }
   }
 };
 
@@ -242,61 +339,53 @@ const handleSshSuspendListResponse = (payload: SshSuspendListResponsePayload): v
 
 const handleSshSuspendResumedNotif = async (payload: SshSuspendResumedNotifPayload): Promise<void> => {
   const uiNotificationsStore = useUiNotificationsStore();
-  const connectionsStore = useConnectionsStore();
   console.log(`[${t('term.sshSuspend')}] 接到 SSH_SUSPEND_RESUMED_NOTIF:`, payload);
 
   if (payload.success) {
     const suspendedSession = suspendedSshSessions.value.find(s => s.suspendSessionId === payload.suspendSessionId);
+    // suspendedSession 主要用于显示通知的友好名称。如果找不到，恢复流程仍可继续，但通知可能不那么具体。
     if (!suspendedSession) {
-      console.error(`[${t('term.sshSuspend')}] 找不到要恢复的挂起会话信息 (ID: ${payload.suspendSessionId})`);
-      uiNotificationsStore.addNotification({
-        type: 'error',
-        message: t('sshSuspend.notifications.resumeErrorInfoNotFound', { id: payload.suspendSessionId.slice(0, 8) }),
-      });
-      return;
-    }
-
-    // 从 connectionsStore 获取原始连接信息
-    // 注意：这里假设 suspendedSession.originalConnectionInfo 存储了足够的信息，或者至少有 originalConnectionId
-    const connectionToFindId = parseInt(suspendedSession.connectionId, 10);
-    const connectionInfo = connectionsStore.connections.find(conn => conn.id === connectionToFindId);
-    if (!connectionInfo) {
-        console.error(`[${t('term.sshSuspend')}] 恢复会话失败：找不到原始连接配置 (ID: ${suspendedSession.connectionId})`);
-        uiNotificationsStore.addNotification({
-          type: 'error',
-          message: t('sshSuspend.notifications.resumeErrorConnectionConfigNotFound', { id: suspendedSession.connectionId }),
-        });
-        return;
+      console.warn(`[${t('term.sshSuspend')}] 处理 SSH_SUSPEND_RESUMED_NOTIF 时：在挂起列表中未找到会话 ${payload.suspendSessionId} 的详细信息。通知消息可能不完整。`);
     }
 
     try {
-      // 使用 openNewSession 创建会话
-      openNewSession(
-        connectionInfo.id, // connectionId
-        { connectionsStore, t }, // dependencies
-        payload.newFrontendSessionId // existingSessionId
-      );
+      // 会话应该已由 resumeSshSession action 通过调用 openNewSession 创建。
+      // 它包含了所有必要的管理器和 WebSocket 连接。
+      const sessionToUpdate = sessions.value.get(payload.newFrontendSessionId) as SessionState | undefined;
 
-      // 获取新创建的会话
-      const newSession = sessions.value.get(payload.newFrontendSessionId) as SessionState | undefined;
-
-      if (newSession && newSession.wsManager) {
-        // 标记会话为正在恢复
-        newSession.isResuming = true;
-        // (可选) 如果需要存储原始挂起ID，可以在 SessionState 中添加 originalSuspendId 字段并在此设置
-        // newSession.originalSuspendId = payload.suspendSessionId;
-
-        console.log(`[${t('term.sshSuspend')}] 为恢复的会话 (新前端 ID: ${payload.newFrontendSessionId}) 创建/复用了新的会话实例。`);
-        // 激活新标签页
-        activateSessionAction(payload.newFrontendSessionId);
+      if (!sessionToUpdate) {
+        console.error(`[${t('term.sshSuspend')}] 处理 SSH_SUSPEND_RESUMED_NOTIF 失败：未找到 ID 为 ${payload.newFrontendSessionId} 的预创建会话。`);
         uiNotificationsStore.addNotification({
-          type: 'success',
-          message: t('sshSuspend.notifications.resumeSuccess', { name: suspendedSession.customSuspendName || suspendedSession.connectionName }),
+          type: 'error',
+          message: t('sshSuspend.notifications.resumeErrorGeneric', { error: '无法找到已初始化的恢复会话界面组件。' }),
         });
-        // 后端会开始发送 SSH_OUTPUT_CACHED_CHUNK
-      } else {
-        throw new Error('通过 openNewSession 创建或获取新会话实例失败，或 WebSocket 管理器未初始化。');
+        // 如果会话未找到，可能意味着 resumeSshSession 中的 openNewSession 失败或被意外清理
+        return;
       }
+      
+      // 确保 wsManager 存在，理论上它应该由 openNewSession 创建
+      if (!sessionToUpdate.wsManager) {
+        console.error(`[${t('term.sshSuspend')}] 会话 ${payload.newFrontendSessionId} 存在但缺少 wsManager。`);
+        uiNotificationsStore.addNotification({ type: 'error', message: '恢复失败：会话状态不完整。'});
+        return;
+      }
+
+      sessionToUpdate.isResuming = true; // 标记会话为正在恢复
+      // (可选) 如果需要在 SessionState 中存储原始挂起ID:
+      // sessionToUpdate.originalSuspendId = payload.suspendSessionId;
+
+      console.log(`[${t('term.sshSuspend')}] 会话 ${payload.newFrontendSessionId} 已标记为正在恢复。`);
+      activateSessionAction(payload.newFrontendSessionId); // 激活标签页
+
+      let notificationName = t('sshSuspend.notifications.defaultSessionName'); // 使用 i18n 获取默认名
+      if (suspendedSession) {
+        notificationName = suspendedSession.customSuspendName || suspendedSession.connectionName || notificationName;
+      }
+      uiNotificationsStore.addNotification({
+        type: 'success',
+        message: t('sshSuspend.notifications.resumeSuccess', { name: notificationName }),
+      });
+      // 后端会通过与此 sessionToUpdate.wsManager 关联的 WebSocket 连接发送 SSH_OUTPUT_CACHED_CHUNK
     } catch (error) {
       console.error(`[${t('term.sshSuspend')}] 处理会话恢复通知时出错:`, error);
       uiNotificationsStore.addNotification({
@@ -305,32 +394,51 @@ const handleSshSuspendResumedNotif = async (payload: SshSuspendResumedNotifPaylo
       });
     }
     // 成功恢复后，从挂起列表中移除 (或者等 SSH_SUSPEND_ENTRY_REMOVED_RESP)
-    // fetchSuspendedSshSessions(); // 刷新列表
+    fetchSuspendedSshSessions(); // 在这里主动刷新一次，确保列表更新
   } else {
     uiNotificationsStore.addNotification({
       type: 'error',
       message: t('sshSuspend.notifications.resumeErrorBackend', { error: payload.error || t('term.unknownError') }),
     });
-    console.error(`[${t('term.sshSuspend')}] 恢复会话失败 (挂起 ID: ${payload.suspendSessionId}): ${payload.error}`);
+    console.error(`[${t('term.sshSuspend')}] 后端报告恢复会话失败 (挂起 ID: ${payload.suspendSessionId}): ${payload.error}`);
+    // 如果后端报告恢复失败，可能需要关闭由 resumeSshSession 创建的前端会话
+    if (sessions.value.has(payload.newFrontendSessionId)) {
+        console.log(`[${t('term.sshSuspend')}] 因后端恢复失败，正在关闭前端会话 ${payload.newFrontendSessionId}`);
+        closeSession(payload.newFrontendSessionId);
+    }
   }
 };
 
 const handleSshOutputCachedChunk = (payload: SshOutputCachedChunkPayload): void => {
   const session = sessions.value.get(payload.frontendSessionId) as SessionState | undefined;
-  if (session && session.terminalManager && session.terminalManager.terminalInstance.value) { // 检查 terminalInstance.value
-    // console.debug(`[${t('term.sshSuspend')}] (会话: ${payload.frontendSessionId}) 接到 SSH_OUTPUT_CACHED_CHUNK, isLast: ${payload.isLastChunk}`);
-    session.terminalManager.terminalInstance.value.write(payload.data); // 调用 terminalInstance.value.write
+  if (session && session.terminalManager) {
+    if (session.terminalManager.terminalInstance.value) {
+      // 终端实例已就绪，直接写入
+      console.log('[SSH Suspend Frontend] Received cached chunk data (writing to terminal):', payload.data);
+      session.terminalManager.terminalInstance.value.write(payload.data);
+    } else {
+      // 终端实例尚未就绪，暂存输出
+      if (!session.pendingOutput) {
+        session.pendingOutput = [];
+      }
+      console.log('[SSH Suspend Frontend] Received cached chunk data (buffering):', payload.data);
+      session.pendingOutput.push(payload.data);
+      // console.log(`[${t('term.sshSuspend')}] (会话: ${payload.frontendSessionId}) 终端实例未就绪，已暂存数据块 (长度: ${payload.data.length})。当前暂存块数: ${session.pendingOutput.length}`);
+    }
+
+    // isLastChunk 逻辑应该在数据被处理（写入或暂存）后执行
     if (payload.isLastChunk) {
-      console.log(`[${t('term.sshSuspend')}] (会话: ${payload.frontendSessionId}) 已接收所有缓存输出。`);
-      // 可选：在这里触发一个事件或状态，表明缓存输出已加载完毕
-      // 例如，如果之前终端是只读/加载状态，现在可以解除
+      console.log(`[${t('term.sshSuspend')}] (会话: ${payload.frontendSessionId}) 已接收所有缓存输出的最后一个数据块标记。`);
       if (session.isResuming === true) {
-        session.isResuming = false;
-         // 可能需要重新聚焦终端或进行其他 UI 更新
+        // 如果终端实例还未就绪，isResuming 状态的解除可能需要等到 pendingOutput 被清空时
+        // 但如果 isLastChunk 到了，至少可以认为后端数据发送完毕
+        // 实际的 isResuming = false 最好在 pendingOutput 被写入终端后处理
+        // 这里只记录日志，具体状态变更由 Terminal.vue 或相关 manager 负责
+        console.log(`[${t('term.sshSuspend')}] (会话: ${payload.frontendSessionId}) isResuming 标记仍为 true，等待终端处理暂存数据（如有）。`);
       }
     }
   } else {
-    console.warn(`[${t('term.sshSuspend')}] 收到缓存数据块，但找不到对应会话、终端管理器或终端实例 (ID: ${payload.frontendSessionId})`);
+    console.warn(`[${t('term.sshSuspend')}] 收到缓存数据块，但找不到对应会话或其终端管理器 (ID: ${payload.frontendSessionId})`);
   }
 };
 
@@ -428,7 +536,8 @@ export const registerSshSuspendHandlers = (wsManager: WsManagerInstance): void =
 
   // 注意：wsManager.onMessage 返回一个注销函数，如果需要，可以收集它们并在会话关闭时调用。
   // 但通常这些处理器会随 wsManager 实例的生命周期一起存在。
-  wsManager.onMessage('SSH_SUSPEND_STARTED_RESP', (p: MessagePayload) => handleSshSuspendStartedResp(p as SshSuspendStartedRespPayload));
+  // wsManager.onMessage('SSH_SUSPEND_STARTED_RESP', (p: MessagePayload) => handleSshSuspendStartedResp(p as SshSuspendStartedRespPayload)); // 已移除
+  wsManager.onMessage('SSH_MARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshMarkedForSuspendAck(p as SshMarkedForSuspendAckPayload)); // +++ 新增处理器 +++
   wsManager.onMessage('SSH_SUSPEND_LIST_RESPONSE', (p: MessagePayload) => handleSshSuspendListResponse(p as SshSuspendListResponsePayload));
   wsManager.onMessage('SSH_SUSPEND_RESUMED_NOTIF', (p: MessagePayload) => handleSshSuspendResumedNotif(p as SshSuspendResumedNotifPayload));
   wsManager.onMessage('SSH_OUTPUT_CACHED_CHUNK', (p: MessagePayload) => handleSshOutputCachedChunk(p as SshOutputCachedChunkPayload));

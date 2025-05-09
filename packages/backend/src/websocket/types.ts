@@ -22,6 +22,9 @@ export interface ClientState { // 导出以便 Service 可以导入
     ipAddress?: string; // 添加 IP 地址字段
     isShellReady?: boolean; // 新增：标记 Shell 是否已准备好处理输入和调整大小
     isSuspendedByService?: boolean; // 新增：标记此会话是否已被 SshSuspendService 接管
+    isMarkedForSuspend?: boolean; // 新增：标记此会话是否已被用户请求挂起（等待断开连接）
+    suspendLogPath?: string;      // 新增：如果标记挂起，则存储日志路径
+    suspendLogWritableStream?: NodeJS.WritableStream; // 新增：用于写入挂起日志的流
 }
 
 export interface PortInfo {
@@ -65,6 +68,7 @@ export interface SshSuspendStartRequest {
   type: "SSH_SUSPEND_START";
   payload: {
     sessionId: string; // The ID of the active SSH session to be suspended
+    initialBuffer?: string; // Optional: content of the terminal buffer at the time of suspend
   };
 }
 
@@ -99,6 +103,13 @@ export interface SshSuspendEditNameRequest {
   payload: {
     suspendSessionId: string;
     customName: string;
+  };
+}
+
+export interface SshMarkForSuspendRequest {
+  type: "SSH_MARK_FOR_SUSPEND";
+  payload: {
+    sessionId: string; // The ID of the active SSH session to be marked
   };
 }
 
@@ -177,6 +188,15 @@ export interface SshSuspendNameEditedResponse {
   };
 }
 
+export interface SshMarkedForSuspendAck {
+  type: "SSH_MARKED_FOR_SUSPEND_ACK";
+  payload: {
+    sessionId: string; // The ID of the session that was marked
+    success: boolean;
+    error?: string;
+  };
+}
+
 export interface SshSuspendAutoTerminatedNotification {
   type: "SSH_SUSPEND_AUTO_TERMINATED";
   payload: {
@@ -192,7 +212,8 @@ export type SshSuspendClientToServerMessages =
   | SshSuspendResumeRequest
   | SshSuspendTerminateRequest
   | SshSuspendRemoveEntryRequest
-  | SshSuspendEditNameRequest;
+  | SshSuspendEditNameRequest
+  | SshMarkForSuspendRequest; // Added new request type
 
 // Union type for all server-to-client messages for SSH Suspend
 export type SshSuspendServerToClientMessages =
@@ -203,7 +224,8 @@ export type SshSuspendServerToClientMessages =
   | SshSuspendTerminatedResponse
   | SshSuspendEntryRemovedResponse
   | SshSuspendNameEditedResponse
-  | SshSuspendAutoTerminatedNotification;
+  | SshSuspendAutoTerminatedNotification
+  | SshMarkedForSuspendAck; // Added new response type
 
 // It might be useful to have a general type for incoming messages if not already present
 // For example, if you have a main message handler:

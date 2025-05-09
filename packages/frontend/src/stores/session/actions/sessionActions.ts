@@ -43,7 +43,13 @@ export const openNewSession = (
   const dbConnId = String(connInfo.id);
 
   // 1. 创建管理器实例
-  const wsManager = createWebSocketConnectionManager(newSessionId, dbConnId, t);
+  const isResume = !!existingSessionId; // 如果提供了 existingSessionId，则为恢复流程
+  const wsManager = createWebSocketConnectionManager(
+      newSessionId,
+      dbConnId,
+      t,
+      { isResumeFlow: isResume } // 传递 isResumeFlow 选项
+  );
   const sshTerminalDeps: SshTerminalDependencies = {
       sendMessage: wsManager.sendMessage,
       onMessage: wsManager.onMessage,

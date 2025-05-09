@@ -24,6 +24,7 @@ import type { SuspendedSshSession } from './ssh-suspend.types'; // 路径: packa
 // --- Client to Server (C2S) Message Payloads ---
 export interface SshSuspendStartReqPayload {
   sessionId: string;
+  initialBuffer?: string; // Optional: content of the terminal buffer at the time of suspend
 }
 
 export interface SshSuspendResumeReqPayload {
@@ -44,7 +45,17 @@ export interface SshSuspendEditNameReqPayload {
   customName: string;
 }
 
+export interface SshMarkForSuspendReqPayload { // +++ 新增 +++
+  sessionId: string;
+}
+
 // --- Server to Client (S2C) Message Payloads ---
+export interface SshMarkedForSuspendAckPayload { // +++ 新增 +++
+  sessionId: string;
+  success: boolean;
+  error?: string;
+}
+
 export interface SshSuspendStartedRespPayload {
   frontendSessionId: string;
   suspendSessionId: string;
@@ -124,7 +135,17 @@ export interface SshSuspendEditNameReqMessage extends WebSocketMessage {
   payload: SshSuspendEditNameReqPayload;
 }
 
+export interface SshMarkForSuspendReqMessage extends WebSocketMessage { // +++ 新增 +++
+  type: 'SSH_MARK_FOR_SUSPEND';
+  payload: SshMarkForSuspendReqPayload;
+}
+
 // --- Specific S2C Message Interfaces ---
+export interface SshMarkedForSuspendAckMessage extends WebSocketMessage { // +++ 新增 +++
+  type: 'SSH_MARKED_FOR_SUSPEND_ACK';
+  payload: SshMarkedForSuspendAckPayload;
+}
+
 export interface SshSuspendStartedRespMessage extends WebSocketMessage {
   type: 'SSH_SUSPEND_STARTED';
   payload: SshSuspendStartedRespPayload;
@@ -172,9 +193,11 @@ export type SshSuspendC2SMessage =
   | SshSuspendResumeReqMessage
   | SshSuspendTerminateReqMessage
   | SshSuspendRemoveEntryReqMessage
-  | SshSuspendEditNameReqMessage;
+  | SshSuspendEditNameReqMessage
+  | SshMarkForSuspendReqMessage; // +++ 新增 +++
 
 export type SshSuspendS2CMessage =
+  | SshMarkedForSuspendAckMessage // +++ 新增 +++
   | SshSuspendStartedRespMessage
   | SshSuspendListResponseMessage
   | SshSuspendResumedNotifMessage
