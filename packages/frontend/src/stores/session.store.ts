@@ -13,6 +13,9 @@ import {
   rdpConnectionInfo,
   isVncModalOpen,
   vncConnectionInfo,
+  // SSH Suspend Mode State
+  suspendedSshSessions,
+  isLoadingSuspendedSessions,
 } from './session/state';
 
 // 从新模块导入 Getters
@@ -28,6 +31,7 @@ import * as editorActions from './session/actions/editorActions';
 import * as sftpManagerActions from './session/actions/sftpManagerActions';
 import * as modalActions from './session/actions/modalActions';
 import * as commandInputActions from './session/actions/commandInputActions';
+import * as sshSuspendActions from './session/actions/sshSuspendActions'; // 新增：导入 SSH 挂起 Actions
 
 // 导入需要的类型 (例如 FileInfo 可能会在参数中使用)
 import type { FileInfo } from './fileEditor.store';
@@ -51,7 +55,7 @@ export const useSessionStore = defineStore('session', () => {
 
   // Session Actions
   const openNewSession = (connectionId: number | string) =>
-    sessionActions.openNewSession(connectionId, { connectionsStore, t });
+    sessionActions.openNewSession(connectionId, { connectionsStore, t }); // 移除了 router 和不正确的 registerSshSuspendHandlers
   const activateSession = (sessionId: string) => sessionActions.activateSession(sessionId);
   const closeSession = (sessionId: string) => sessionActions.closeSession(sessionId);
   const handleConnectRequest = (connection: ConnectionInfo) =>
@@ -63,7 +67,7 @@ export const useSessionStore = defineStore('session', () => {
       t,
     });
   const handleOpenNewSession = (connectionId: number | string) =>
-    sessionActions.handleOpenNewSession(connectionId, { connectionsStore, t });
+    sessionActions.handleOpenNewSession(connectionId, { connectionsStore, t }); // 移除了 router 和不正确的 registerSshSuspendHandlers
   const cleanupAllSessions = () => sessionActions.cleanupAllSessions();
 
   // SFTP Manager Actions
@@ -105,6 +109,9 @@ export const useSessionStore = defineStore('session', () => {
     rdpConnectionInfo,
     isVncModalOpen,
     vncConnectionInfo,
+    // SSH Suspend Mode State
+    suspendedSshSessions,
+    isLoadingSuspendedSessions,
 
     // Getters (直接从 getters 模块导出)
     sessionTabs,
@@ -134,5 +141,8 @@ export const useSessionStore = defineStore('session', () => {
     openVncModal,
     closeVncModal,
     updateSessionCommandInput,
+
+    // SSH Suspend Actions (直接从模块导出，Pinia 会处理)
+    ...sshSuspendActions,
   };
 });

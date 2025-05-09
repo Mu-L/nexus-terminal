@@ -975,7 +975,8 @@
       "statusMonitor": "Status Monitor",
       "commandHistory": "Command History",
       "quickCommands": "Quick Commands",
-      "dockerManager": "Docker Manager"
+      "dockerManager": "Docker Manager",
+      "suspendedSshSessions": "Suspended Sessions Management"
     },
     "noActiveSession": {
       "title": "No Active Session",
@@ -985,7 +986,8 @@
     }
   },
   "header": {
-    "hide": "Hide"
+    "hide": "Hide",
+    "show": "Show Top Navigation"
   },
   "commandHistory": {
     "searchPlaceholder": "Search history...",
@@ -1134,8 +1136,11 @@
       "close": "Close Tab",
       "closeOthers": "Close Other Tabs",
       "closeRight": "Close Tabs to the Right",
-      "closeLeft": "Close Tabs to the Left"
-    }
+      "closeLeft": "Close Tabs to the Left",
+      "suspendSession": "Suspend Session"
+    },
+    "closeTabTooltip": "Close Tab",
+    "newTabTooltip": "New Connection Tab"
   },
   "sshKeys": {
     "selector": {
@@ -1166,5 +1171,30 @@
       "keyUpdateNote": "Leave private key blank to keep the existing key. Passphrase always needs re-entry if required.",
       "passphraseUpdateNote": "Leave blank to keep or remove the passphrase. Enter a new passphrase to update."
     }
+  },
+  "suspendedSshSessions": {
+    "searchPlaceholder": "Search sessions (name, connection...)",
+    "loading": "Loading suspended sessions...",
+    "noResults": "No suspended sessions found matching your criteria.",
+    "tooltip": {
+      "editName": "Click to edit name"
+    },
+    "label": {
+      "originalConnection": "Original Connection",
+      "suspendedAt": "Suspended At"
+    },
+    "disconnectedAt": "Disconnected at {time}",
+    "status": {
+      "hanging": "Active",
+      "disconnected": "Disconnected"
+    },
+    "action": {
+      "resume": "Resume",
+      "remove": "Remove"
+    }
+  },
+  "time": {
+    "unknown": "Unknown time",
+    "invalidDate": "Invalid date"
   }
 }

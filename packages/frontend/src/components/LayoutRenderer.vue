@@ -79,6 +79,7 @@ const componentMap: Record<PaneName, Component> = {
   commandHistory: defineAsyncComponent(() => import('../views/CommandHistoryView.vue')),
   quickCommands: defineAsyncComponent(() => import('../views/QuickCommandsView.vue')),
   dockerManager: defineAsyncComponent(() => import('./DockerManager.vue')), // <--- 添加 dockerManager 映射
+  suspendedSshSessions: defineAsyncComponent(() => import('../views/SuspendedSshSessionsView.vue')),
 };
 
 // --- Computed ---
@@ -111,6 +112,7 @@ const paneLabels = computed(() => ({
   commandHistory: t('layout.pane.commandHistory', '命令历史'),
   quickCommands: t('layout.pane.quickCommands', '快捷指令'),
   dockerManager: t('layout.pane.dockerManager', 'Docker 管理器'),
+  suspendedSshSessions: t('layout.panes.suspendedSshSessions', '挂起会话管理'),
 }));
 
 
@@ -194,6 +196,10 @@ const componentProps = computed(() => {
        // 假设 DockerManager 会发出 'docker-command' 事件
        // onDockerCommand: (payload: { containerId: string; command: 'up' | 'down' | 'restart' | 'stop' }) => emit('dockerCommand', payload),
        // 暂时不添加事件转发，等组件实现后再确定
+     };
+   case 'suspendedSshSessions':
+     return {
+       class: 'flex flex-col flex-grow h-full overflow-auto', // 与 quickCommands 类似
      };
    default:
      return { class: 'pane-content' };
@@ -345,6 +351,7 @@ const getIconClasses = (paneName: PaneName): string[] => {
     case 'dockerManager': return ['fab', 'fa-docker']; // Use 'fab' for Docker
     case 'editor': return ['fas', 'fa-file-alt'];
     case 'statusMonitor': return ['fas', 'fa-tachometer-alt'];
+    case 'suspendedSshSessions': return ['fas', 'fa-pause-circle']; // 图标：暂停圈
     // Add other specific icons here if needed
     default: return ['fas', 'fa-question-circle']; // Default icon
   }

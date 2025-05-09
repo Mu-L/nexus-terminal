@@ -11,7 +11,7 @@ import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
-import type { SessionTabInfoWithStatus } from '../stores/session.store';
+import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
 
 const { t } = useI18n(); // 初始化 i18n
@@ -171,6 +171,15 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
       // 注意：关闭左侧通常不包括当前标签本身
       emitWorkspaceEvent('session:closeToLeft', { targetSessionId: targetId });
       break;
+    case 'suspend-session': // 新增处理 suspend-session 动作
+      // 确保 targetId 是字符串类型的 sessionId
+      if (typeof targetId === 'string') {
+        console.log(`[TabBar] Context menu action 'suspend-session' requested for session ID: ${targetId}`);
+        sessionStore.requestStartSshSuspend(targetId);
+      } else {
+        console.warn(`[TabBar] 'suspend-session' action called with invalid targetId:`, targetId);
+      }
+      break;
     default:
       console.warn(`[TabBar] Unknown context menu action: ${action}`);
   }
@@ -180,24 +189,50 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
 // 计算右键菜单项
 const contextMenuItems = computed(() => {
   const items = [];
-  const targetId = contextTargetSessionId.value;
-  if (!targetId) return [];
+  const targetSessionIdValue = contextTargetSessionId.value; // 使用局部变量以避免多次访问 .value
+  if (!targetSessionIdValue) return [];
 
-  const currentIndex = props.sessions.findIndex(s => s.sessionId === targetId);
+  const targetSessionState = sessionStore.sessions.get(targetSessionIdValue);
+  if (!targetSessionState) return []; // 如果找不到会话状态，则不显示菜单
+
+  const connectionIdNum = parseInt(targetSessionState.connectionId, 10);
+  const connectionInfo = connectionsStore.connections.find(c => c.id === connectionIdNum);
+
+  const currentIndex = props.sessions.findIndex(s => s.sessionId === targetSessionIdValue);
   const totalTabs = props.sessions.length;
 
-  items.push({ label: 'tabs.contextMenu.close', action: 'close' }); // 使用 i18n key
+  // 添加挂起会话菜单项（如果适用）
+  if (connectionInfo && connectionInfo.type === 'SSH') {
+    // 仅对活动的SSH会话显示 (可以进一步判断会话是否真的已连接等)
+    const isActiveSession = targetSessionState.wsManager.isConnected.value; // 检查 WebSocket 是否连接
+    if (isActiveSession) {
+        items.push({ label: 'tabs.contextMenu.suspendSession', action: 'suspend-session' });
+        // 为分隔符提供空的 label 和 action 以满足 MenuItem 类型
+        items.push({ label: '', action: '', isSeparator: true });
+    }
+  }
+
+  items.push({ label: 'tabs.contextMenu.close', action: 'close' });
 
   if (totalTabs > 1) {
     items.push({ label: 'tabs.contextMenu.closeOthers', action: 'close-others' });
   }
 
-  if (currentIndex < totalTabs - 1) {
+  if (currentIndex < totalTabs - 1 && totalTabs > 1) { // 仅当有右侧标签时显示
     items.push({ label: 'tabs.contextMenu.closeRight', action: 'close-right' });
   }
 
-  if (currentIndex > 0) {
+  if (currentIndex > 0 && totalTabs > 1) { // 仅当有左侧标签时显示
     items.push({ label: 'tabs.contextMenu.closeLeft', action: 'close-left' });
+  }
+  
+  // 移除末尾可能存在的分隔符（如果它是最后一项）
+  // 确保在 pop 之前检查 items[items.length - 1] 是否真的存在并且是分隔符
+  if (items.length > 0) {
+    const lastItem = items[items.length - 1];
+    if (lastItem && lastItem.isSeparator) {
+        items.pop();
+    }
   }
 
   return items;
@@ -314,7 +349,7 @@ animation="150"
           <span class="truncate text-sm" style="transform: translateY(-1px);">{{ session.connectionName }}</span>
           <button class="ml-2 p-0.5 rounded-full text-text-secondary hover:bg-border hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                   :class="{'text-foreground hover:bg-header': session.sessionId === activeSessionId}"
-                  @click="closeSession($event, session.sessionId)" title="关闭标签页">
+                  @click="closeSession($event, session.sessionId)" :title="$t('tabs.closeTabTooltip')">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -324,7 +359,7 @@ animation="150"
       </draggable>
       <!-- Add Tab Button -->
       <button class="flex items-center justify-center px-3 h-full border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150 flex-shrink-0"
-              @click="togglePopup" title="新建连接标签页">
+              @click="togglePopup" :title="$t('tabs.newTabTooltip')">
         <i class="fas fa-plus text-sm"></i>
       </button>
     </div>

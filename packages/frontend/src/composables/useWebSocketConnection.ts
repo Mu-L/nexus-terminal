@@ -1,4 +1,5 @@
 import { ref, shallowRef, computed, readonly } from 'vue';
+import { useI18n } from 'vue-i18n'; // +++ Add import for useI18n +++
 // 从 websocket.types.ts 导入并重新导出 ConnectionStatus
 import type { ConnectionStatus as WsConnectionStatusType, MessagePayload, WebSocketMessage, MessageHandler } from '../types/websocket.types';
 
@@ -14,7 +15,7 @@ export type WsConnectionStatus = WsConnectionStatusType;
  * @param {Function} t - i18n 翻译函数，从父组件传入
  * @returns 一个包含状态和方法的 WebSocket 连接管理器对象。
  */
-export function createWebSocketConnectionManager(sessionId: string, dbConnectionId: string, t: Function) {
+export function createWebSocketConnectionManager(sessionId: string, dbConnectionId: string, t: ReturnType<typeof useI18n>['t']) { // +++ Update type of t +++
     // --- Instance State ---
     // 每个实例拥有独立的 WebSocket 对象、状态和消息处理器
     const ws = shallowRef<WebSocket | null>(null); // WebSocket 实例

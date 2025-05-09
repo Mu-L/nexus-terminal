@@ -80,8 +80,15 @@ export const cleanupClientConnection = (sessionId: string | undefined) => {
         sftpService.cleanupSftpSession(sessionId);
 
         // 3. 清理 SSH 连接
-        state.sshShellStream?.end(); // 结束 shell 流
-        state.sshClient?.end(); // 结束 SSH 客户端
+        // +++ 仅当会话未被 SshSuspendService 接管时才关闭 SSH 连接 +++
+        if (!state.isSuspendedByService) {
+            state.sshShellStream?.end(); // 结束 shell 流
+            state.sshClient?.end(); // 结束 SSH 客户端
+            console.log(`WebSocket: 会话 ${sessionId} 的 SSH 连接已关闭 (未被挂起服务接管)。`);
+        } else {
+            console.log(`WebSocket: 会话 ${sessionId} 的 SSH 连接由挂起服务管理，跳过关闭。`);
+        }
+        // +++ 结束条件关闭 +++
 
         // 4. 清理 Docker 状态轮询定时器
         if (state.dockerStatusIntervalId) {

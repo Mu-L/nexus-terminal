@@ -1,4 +1,5 @@
 import { ref, readonly, type Ref, ComputedRef } from 'vue';
+import { useI18n } from 'vue-i18n'; // +++ Add import for useI18n +++
 // import { useWebSocketConnection } from './useWebSocketConnection'; // 移除全局导入
 import type { Terminal } from 'xterm';
 import type { SearchAddon, ISearchOptions } from '@xterm/addon-search'; // *** 移除 ISearchResult 导入 ***
@@ -18,7 +19,7 @@ export interface SshTerminalDependencies {
  * @param t i18n 翻译函数，从父组件传入
  * @returns SSH 终端管理器实例
  */
-export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalDependencies, t: Function) {
+export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalDependencies, t: ReturnType<typeof useI18n>['t']) { // +++ Update type of t +++
     // 使用依赖注入的 WebSocket 函数
     const { sendMessage, onMessage, isConnected } = wsDeps;
 

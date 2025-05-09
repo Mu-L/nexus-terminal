@@ -4,11 +4,32 @@ import { RequestHandler } from 'express';
 import { initializeHeartbeat } from './websocket/heartbeat';
 import { initializeUpgradeHandler } from './websocket/upgrade';
 import { initializeConnectionHandler } from './websocket/connection';
-import { clientStates } from './websocket/state'; 
+import { clientStates } from './websocket/state';
+import { sshSuspendService } from './services/ssh-suspend.service'; // 导入实例
+// TemporaryLogStorageService 是 SshSuspendService 的依赖，SshSuspendService 内部会处理它的实例化或导入，
+// websocket.ts 层面不需要直接使用 temporaryLogStorageService。
+// 如果 SshSuspendService 的构造函数需要一个 TemporaryLogStorageService 实例，
+// 并且 sshSuspendService 实例是由 ssh-suspend.service.ts 文件创建和导出的，
+// 那么该文件应该已经处理了 TemporaryLogStorageService 的注入。
+// 因此，我们只需要导入 sshSuspendService。
+import {
+    SshSuspendClientToServerMessages,
+    SshSuspendServerToClientMessages,
+    SuspendedSessionInfo
+} from './websocket/types';
 import { cleanupClientConnection } from './websocket/utils';
 
 
-export { ClientState, AuthenticatedWebSocket, DockerContainer, DockerStats, PortInfo } from './websocket/types'; // Re-export essential types
+export {
+    ClientState,
+    AuthenticatedWebSocket,
+    DockerContainer,
+    DockerStats,
+    PortInfo,
+    SshSuspendClientToServerMessages,
+    SshSuspendServerToClientMessages,
+    SuspendedSessionInfo
+} from './websocket/types'; // Re-export essential types
 
 export const initializeWebSocket = async (server: http.Server, sessionParser: RequestHandler): Promise<WebSocketServer> => {
     // Environment variables are expected to be loaded by index.ts
@@ -23,7 +44,7 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
     initializeUpgradeHandler(server, wss, sessionParser);
 
     // 3. Initialize Connection Handler (handles 'connection' event and message routing)
-    initializeConnectionHandler(wss);
+    initializeConnectionHandler(wss, sshSuspendService); // 传递 sshSuspendService 实例
 
     // --- WebSocket 服务器关闭处理 ---
     wss.on('close', () => {

@@ -15,3 +15,173 @@ export interface WebSocketMessage {
 
 // 消息处理器函数类型
 export type MessageHandler = (payload: MessagePayload, message: WebSocketMessage) => void; // 恢复 message 参数为必需
+
+// --- SSH Suspend Mode WebSocket Message Types ---
+
+// 导入挂起会话类型，用于相关消息的 payload
+import type { SuspendedSshSession } from './ssh-suspend.types'; // 路径: packages/frontend/src/types/ssh-suspend.types.ts
+
+// --- Client to Server (C2S) Message Payloads ---
+export interface SshSuspendStartReqPayload {
+  sessionId: string;
+}
+
+export interface SshSuspendResumeReqPayload {
+  suspendSessionId: string;
+  newFrontendSessionId: string;
+}
+
+export interface SshSuspendTerminateReqPayload {
+  suspendSessionId: string;
+}
+
+export interface SshSuspendRemoveEntryReqPayload {
+  suspendSessionId: string;
+}
+
+export interface SshSuspendEditNameReqPayload {
+  suspendSessionId: string;
+  customName: string;
+}
+
+// --- Server to Client (S2C) Message Payloads ---
+export interface SshSuspendStartedRespPayload {
+  frontendSessionId: string;
+  suspendSessionId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface SshSuspendListResponsePayload {
+  suspendSessions: SuspendedSshSession[];
+}
+
+export interface SshSuspendResumedNotifPayload {
+  suspendSessionId: string;
+  newFrontendSessionId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface SshOutputCachedChunkPayload {
+  frontendSessionId: string;
+  data: string;
+  isLastChunk: boolean;
+}
+
+export interface SshSuspendTerminatedRespPayload {
+  suspendSessionId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface SshSuspendEntryRemovedRespPayload {
+  suspendSessionId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface SshSuspendNameEditedRespPayload {
+  suspendSessionId: string;
+  success: boolean;
+  customName?: string;
+  error?: string;
+}
+
+export interface SshSuspendAutoTerminatedNotifPayload {
+  suspendSessionId: string;
+  reason: string;
+}
+
+// --- Specific C2S Message Interfaces ---
+export interface SshSuspendStartReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_START';
+  payload: SshSuspendStartReqPayload;
+}
+
+export interface SshSuspendListReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_LIST_REQUEST';
+  payload?: {}; // 明确 payload 可以为空对象
+}
+
+export interface SshSuspendResumeReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_RESUME_REQUEST';
+  payload: SshSuspendResumeReqPayload;
+}
+
+export interface SshSuspendTerminateReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_TERMINATE_REQUEST';
+  payload: SshSuspendTerminateReqPayload;
+}
+
+export interface SshSuspendRemoveEntryReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_REMOVE_ENTRY';
+  payload: SshSuspendRemoveEntryReqPayload;
+}
+
+export interface SshSuspendEditNameReqMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_EDIT_NAME';
+  payload: SshSuspendEditNameReqPayload;
+}
+
+// --- Specific S2C Message Interfaces ---
+export interface SshSuspendStartedRespMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_STARTED';
+  payload: SshSuspendStartedRespPayload;
+}
+
+export interface SshSuspendListResponseMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_LIST_RESPONSE';
+  payload: SshSuspendListResponsePayload;
+}
+
+export interface SshSuspendResumedNotifMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_RESUMED';
+  payload: SshSuspendResumedNotifPayload;
+}
+
+export interface SshOutputCachedChunkMessage extends WebSocketMessage {
+  type: 'SSH_OUTPUT_CACHED_CHUNK';
+  payload: SshOutputCachedChunkPayload;
+}
+
+export interface SshSuspendTerminatedRespMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_TERMINATED';
+  payload: SshSuspendTerminatedRespPayload;
+}
+
+export interface SshSuspendEntryRemovedRespMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_ENTRY_REMOVED';
+  payload: SshSuspendEntryRemovedRespPayload;
+}
+
+export interface SshSuspendNameEditedRespMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_NAME_EDITED';
+  payload: SshSuspendNameEditedRespPayload;
+}
+
+export interface SshSuspendAutoTerminatedNotifMessage extends WebSocketMessage {
+  type: 'SSH_SUSPEND_AUTO_TERMINATED';
+  payload: SshSuspendAutoTerminatedNotifPayload;
+}
+
+// Union type for all SSH Suspend related messages (optional, but can be useful)
+export type SshSuspendC2SMessage =
+  | SshSuspendStartReqMessage
+  | SshSuspendListReqMessage
+  | SshSuspendResumeReqMessage
+  | SshSuspendTerminateReqMessage
+  | SshSuspendRemoveEntryReqMessage
+  | SshSuspendEditNameReqMessage;
+
+export type SshSuspendS2CMessage =
+  | SshSuspendStartedRespMessage
+  | SshSuspendListResponseMessage
+  | SshSuspendResumedNotifMessage
+  | SshOutputCachedChunkMessage
+  | SshSuspendTerminatedRespMessage
+  | SshSuspendEntryRemovedRespMessage
+  | SshSuspendNameEditedRespMessage
+  | SshSuspendAutoTerminatedNotifMessage;
+
+export type AllSshSuspendMessages = SshSuspendC2SMessage | SshSuspendS2CMessage;

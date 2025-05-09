@@ -41,6 +41,8 @@ export interface SessionState {
   activeEditorTabId: Ref<string | null>; // 当前活动的编辑器标签页 ID
   // --- 新增：命令输入框内容 ---
   commandInputContent: Ref<string>; // 当前会话的命令输入框内容
+  isResuming?: boolean; // 新增：标记会话是否正在从挂起状态恢复
+  disposables?: (() => void)[]; // 新增：用于存储清理函数，例如取消注册消息处理器
 }
 
 // 为标签栏定义包含状态的类型
