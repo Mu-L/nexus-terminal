@@ -45,12 +45,23 @@ export interface SshSuspendEditNameReqPayload {
   customName: string;
 }
 
-export interface SshMarkForSuspendReqPayload { // +++ 新增 +++
+export interface SshMarkForSuspendReqPayload {
+  sessionId: string;
+  initialBuffer?: string; // +++ 新增：可选的初始屏幕缓冲区内容 +++
+}
+
+export interface SshUnmarkForSuspendReqPayload {
   sessionId: string;
 }
 
 // --- Server to Client (S2C) Message Payloads ---
-export interface SshMarkedForSuspendAckPayload { // +++ 新增 +++
+export interface SshMarkedForSuspendAckPayload {
+  sessionId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface SshUnmarkedForSuspendAckPayload { // +++ 新增 +++
   sessionId: string;
   success: boolean;
   error?: string;
@@ -135,15 +146,25 @@ export interface SshSuspendEditNameReqMessage extends WebSocketMessage {
   payload: SshSuspendEditNameReqPayload;
 }
 
-export interface SshMarkForSuspendReqMessage extends WebSocketMessage { // +++ 新增 +++
+export interface SshMarkForSuspendReqMessage extends WebSocketMessage {
   type: 'SSH_MARK_FOR_SUSPEND';
   payload: SshMarkForSuspendReqPayload;
 }
 
+export interface SshUnmarkForSuspendReqMessage extends WebSocketMessage { // +++ 新增 +++
+  type: 'SSH_UNMARK_FOR_SUSPEND';
+  payload: SshUnmarkForSuspendReqPayload;
+}
+
 // --- Specific S2C Message Interfaces ---
-export interface SshMarkedForSuspendAckMessage extends WebSocketMessage { // +++ 新增 +++
+export interface SshMarkedForSuspendAckMessage extends WebSocketMessage {
   type: 'SSH_MARKED_FOR_SUSPEND_ACK';
   payload: SshMarkedForSuspendAckPayload;
+}
+
+export interface SshUnmarkedForSuspendAckMessage extends WebSocketMessage { // +++ 新增 +++
+  type: 'SSH_UNMARKED_FOR_SUSPEND_ACK';
+  payload: SshUnmarkedForSuspendAckPayload;
 }
 
 export interface SshSuspendStartedRespMessage extends WebSocketMessage {
@@ -194,10 +215,12 @@ export type SshSuspendC2SMessage =
   | SshSuspendTerminateReqMessage
   | SshSuspendRemoveEntryReqMessage
   | SshSuspendEditNameReqMessage
-  | SshMarkForSuspendReqMessage; // +++ 新增 +++
+  | SshMarkForSuspendReqMessage
+  | SshUnmarkForSuspendReqMessage; // +++ 新增 +++
 
 export type SshSuspendS2CMessage =
-  | SshMarkedForSuspendAckMessage // +++ 新增 +++
+  | SshMarkedForSuspendAckMessage
+  | SshUnmarkedForSuspendAckMessage // +++ 新增 +++
   | SshSuspendStartedRespMessage
   | SshSuspendListResponseMessage
   | SshSuspendResumedNotifMessage

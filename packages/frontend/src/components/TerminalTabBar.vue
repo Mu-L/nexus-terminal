@@ -171,13 +171,20 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
       // 注意：关闭左侧通常不包括当前标签本身
       emitWorkspaceEvent('session:closeToLeft', { targetSessionId: targetId });
       break;
-    case 'suspend-session': // 新增处理 suspend-session 动作
-      // 确保 targetId 是字符串类型的 sessionId
+    case 'mark-for-suspend': // +++ 修改 action 名称 +++
       if (typeof targetId === 'string') {
-        console.log(`[TabBar] Context menu action 'suspend-session' requested for session ID: ${targetId}`);
-        sessionStore.requestStartSshSuspend(targetId);
+        console.log(`[TabBar] Context menu action 'mark-for-suspend' requested for session ID: ${targetId}`);
+        sessionStore.requestStartSshSuspend(targetId); // 这个 action 现在是标记
       } else {
-        console.warn(`[TabBar] 'suspend-session' action called with invalid targetId:`, targetId);
+        console.warn(`[TabBar] 'mark-for-suspend' action called with invalid targetId:`, targetId);
+      }
+      break;
+    case 'unmark-for-suspend': // +++ 新增 case +++
+      if (typeof targetId === 'string') {
+        console.log(`[TabBar] Context menu action 'unmark-for-suspend' requested for session ID: ${targetId}`);
+        sessionStore.requestUnmarkSshSuspend(targetId);
+      } else {
+        console.warn(`[TabBar] 'unmark-for-suspend' action called with invalid targetId:`, targetId);
       }
       break;
     default:
@@ -201,14 +208,17 @@ const contextMenuItems = computed(() => {
   const currentIndex = props.sessions.findIndex(s => s.sessionId === targetSessionIdValue);
   const totalTabs = props.sessions.length;
 
-  // 添加挂起会话菜单项（如果适用）
+  // 添加标记/取消标记挂起会话菜单项（如果适用）
   if (connectionInfo && connectionInfo.type === 'SSH') {
-    // 仅对活动的SSH会话显示 (可以进一步判断会话是否真的已连接等)
-    const isActiveSession = targetSessionState.wsManager.isConnected.value; // 检查 WebSocket 是否连接
-    if (isActiveSession) {
-        items.push({ label: 'tabs.contextMenu.suspendSession', action: 'suspend-session' });
-        // 为分隔符提供空的 label 和 action 以满足 MenuItem 类型
-        items.push({ label: '', action: '', isSeparator: true });
+    const isActiveSession = targetSessionState.wsManager.isConnected.value;
+    if (isActiveSession) { // 只对活动的SSH会话显示相关操作
+      if (targetSessionState.isMarkedForSuspend) {
+        items.push({ label: 'tabs.contextMenu.unmarkForSuspend', action: 'unmark-for-suspend' });
+      } else {
+        // 当未标记时，显示原来的“挂起”文本，但 action 触发新的标记流程
+        items.push({ label: 'tabs.contextMenu.suspendSession', action: 'mark-for-suspend' });
+      }
+      items.push({ label: '', action: '', isSeparator: true }); // 分隔符
     }
   }
 

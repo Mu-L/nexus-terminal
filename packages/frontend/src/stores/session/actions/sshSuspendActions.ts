@@ -3,13 +3,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { sessions, suspendedSshSessions, isLoadingSuspendedSessions, activeSessionId } from '../state';
 import type {
   MessagePayload,
-  SshMarkForSuspendReqMessage, // +++ 修改：导入新的请求类型 +++
+  SshMarkForSuspendReqMessage,
+  SshUnmarkForSuspendReqMessage, // +++ 新增导入 +++
   SshSuspendResumeReqMessage,
   SshSuspendTerminateReqMessage,
   SshSuspendRemoveEntryReqMessage,
   SshSuspendEditNameReqMessage,
   // S2C Payloads
-  SshMarkedForSuspendAckPayload, // +++ 新增：导入新的响应类型 +++
+  SshMarkedForSuspendAckPayload,
+  SshUnmarkedForSuspendAckPayload, // +++ 新增导入 +++
   SshSuspendListResponsePayload,
   SshSuspendResumedNotifPayload,
   SshOutputCachedChunkPayload,
@@ -77,14 +79,28 @@ export const requestStartSshSuspend = (sessionId: string): void => {
       return;
     }
 
-    // 不再需要获取 initialBuffer
+    let initialBuffer = ''; // +++ 恢复 initialBuffer 的获取 +++
+    if (session.terminalManager && session.terminalManager.terminalInstance && session.terminalManager.terminalInstance.value) {
+      const term = session.terminalManager.terminalInstance.value;
+      const buffer = term.buffer.active;
+      for (let i = 0; i < buffer.length; i++) {
+        initialBuffer += (buffer.getLine(i)?.translateToString(true) || '') + '\n';
+      }
+      // 移除可能多余的最后一个换行符
+      if (initialBuffer.endsWith('\n')) {
+        initialBuffer = initialBuffer.slice(0, -1);
+      }
+      console.log(`[${t('term.sshSuspend')}] 已获取会话 ${sessionId} 的初始屏幕缓冲区内容，长度: ${initialBuffer.length}`);
+    } else {
+      console.warn(`[${t('term.sshSuspend')}] 未能获取会话 ${sessionId} 的终端实例以提取初始缓冲区。`);
+    }
 
-    const message: SshMarkForSuspendReqMessage = { // +++ 修改：使用新的消息类型 +++
+    const message: SshMarkForSuspendReqMessage = {
       type: 'SSH_MARK_FOR_SUSPEND',
-      payload: { sessionId },
+      payload: { sessionId, initialBuffer: initialBuffer || undefined }, // +++ 将 initialBuffer 添加到 payload +++
     };
     session.wsManager.sendMessage(message);
-    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_MARK_FOR_SUSPEND 请求 (会话 ID: ${sessionId})`);
+    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_MARK_FOR_SUSPEND 请求 (会话 ID: ${sessionId}, 包含初始缓冲区: ${!!initialBuffer})`);
     // 前端在发送此请求后，会话应保持活动状态，直到用户关闭标签页或网络断开。
     // 后端会在 WebSocket 关闭时处理实际的挂起。
     // 用户界面上可以给一个提示，表明“此会话已标记，关闭后将尝试挂起”。
@@ -96,6 +112,38 @@ export const requestStartSshSuspend = (sessionId: string): void => {
 
   } else {
     console.warn(`[${t('term.sshSuspend')}] 未找到会话或 WebSocket 管理器 (会话 ID: ${sessionId})，无法请求标记挂起。`);
+    useUiNotificationsStore().addNotification({ type: 'error', message: t('sshSuspend.notifications.sessionNotFoundError') });
+  }
+};
+
+/**
+ * 请求取消标记一个会话为待挂起
+ * @param sessionId 要取消标记的活动会话 ID
+ */
+export const requestUnmarkSshSuspend = (sessionId: string): void => {
+  const session = sessions.value.get(sessionId);
+  if (session && session.wsManager) {
+    if (!session.wsManager.isConnected.value) {
+      console.warn(`[${t('term.sshSuspend')}] WebSocket 未连接，无法请求取消标记挂起 (会话 ID: ${sessionId})。`);
+      useUiNotificationsStore().addNotification({ type: 'error', message: t('sshSuspend.notifications.wsNotConnectedError') });
+      return;
+    }
+    if (!session.isMarkedForSuspend) {
+      console.warn(`[${t('term.sshSuspend')}] 会话 ${sessionId} 并未被标记为待挂起，无需取消。`);
+      // 可以选择不发送请求或发送一个让后端确认的请求
+      // 为保持简单，如果前端状态已经是未标记，则不执行操作或仅给用户提示
+      useUiNotificationsStore().addNotification({ type: 'info', message: t('sshSuspend.notifications.notMarkedWarning') });
+      return;
+    }
+
+    const message: SshUnmarkForSuspendReqMessage = {
+      type: 'SSH_UNMARK_FOR_SUSPEND',
+      payload: { sessionId },
+    };
+    session.wsManager.sendMessage(message);
+    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_UNMARK_FOR_SUSPEND 请求 (会话 ID: ${sessionId})`);
+  } else {
+    console.warn(`[${t('term.sshSuspend')}] 未找到会话或 WebSocket 管理器 (会话 ID: ${sessionId})，无法请求取消标记挂起。`);
     useUiNotificationsStore().addNotification({ type: 'error', message: t('sshSuspend.notifications.sessionNotFoundError') });
   }
 };
@@ -331,6 +379,32 @@ const handleSshMarkedForSuspendAck = (payload: SshMarkedForSuspendAckPayload): v
   }
 };
 
+const handleSshUnmarkedForSuspendAck = (payload: SshUnmarkedForSuspendAckPayload): void => {
+  const uiNotificationsStore = useUiNotificationsStore();
+  console.log(`[${t('term.sshSuspend')}] 接到 SSH_UNMARKED_FOR_SUSPEND_ACK:`, payload);
+  const session = sessions.value.get(payload.sessionId);
+
+  if (payload.success) {
+    if (session) {
+      session.isMarkedForSuspend = false;
+    }
+    uiNotificationsStore.addNotification({
+      type: 'success',
+      message: t('sshSuspend.notifications.unmarkedSuccess', { id: payload.sessionId.slice(0,8) }),
+    });
+  } else {
+    // 即便后端失败，如果前端之前是标记状态，也最好保持一致或提示用户检查
+    // 但通常后端失败意味着前端状态可能与后端不一致，提示错误让用户知晓
+    uiNotificationsStore.addNotification({
+      type: 'error',
+      message: t('sshSuspend.notifications.unmarkError', { error: payload.error || t('term.unknownError') }),
+    });
+    console.error(`[${t('term.sshSuspend')}] 取消标记会话 ${payload.sessionId} 失败: ${payload.error}`);
+    // 此处不自动回滚前端的 isMarkedForSuspend 状态，因为后端是权威源。
+    // 如果后端说操作失败，那么会话可能仍然被后端认为是标记的（尽管这不应该发生，因为后端会先清除标记）。
+  }
+};
+
 const handleSshSuspendListResponse = (payload: SshSuspendListResponsePayload): void => {
   console.log(`[${t('term.sshSuspend')}] 接到 SSH_SUSPEND_LIST_RESPONSE，数量: ${payload.suspendSessions.length}`);
   suspendedSshSessions.value = payload.suspendSessions;
@@ -536,8 +610,9 @@ export const registerSshSuspendHandlers = (wsManager: WsManagerInstance): void =
 
   // 注意：wsManager.onMessage 返回一个注销函数，如果需要，可以收集它们并在会话关闭时调用。
   // 但通常这些处理器会随 wsManager 实例的生命周期一起存在。
-  // wsManager.onMessage('SSH_SUSPEND_STARTED_RESP', (p: MessagePayload) => handleSshSuspendStartedResp(p as SshSuspendStartedRespPayload)); // 已移除
-  wsManager.onMessage('SSH_MARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshMarkedForSuspendAck(p as SshMarkedForSuspendAckPayload)); // +++ 新增处理器 +++
+  // wsManager.onMessage('SSH_SUSPEND_STARTED_RESP', (p: MessagePayload) => handleSshSuspendStartedResp(p as SshSuspendStartedRespPayload));
+  wsManager.onMessage('SSH_MARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshMarkedForSuspendAck(p as SshMarkedForSuspendAckPayload));
+  wsManager.onMessage('SSH_UNMARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshUnmarkedForSuspendAck(p as SshUnmarkedForSuspendAckPayload)); // +++ 新增处理器 +++
   wsManager.onMessage('SSH_SUSPEND_LIST_RESPONSE', (p: MessagePayload) => handleSshSuspendListResponse(p as SshSuspendListResponsePayload));
   wsManager.onMessage('SSH_SUSPEND_RESUMED_NOTIF', (p: MessagePayload) => handleSshSuspendResumedNotif(p as SshSuspendResumedNotifPayload));
   wsManager.onMessage('SSH_OUTPUT_CACHED_CHUNK', (p: MessagePayload) => handleSshOutputCachedChunk(p as SshOutputCachedChunkPayload));

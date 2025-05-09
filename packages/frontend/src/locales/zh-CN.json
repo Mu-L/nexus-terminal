@@ -1139,7 +1139,8 @@
       "closeOthers": "关闭其他标签页",
       "closeRight": "关闭右侧标签页",
       "closeLeft": "关闭左侧标签页",
-      "suspendSession": "挂起会话"
+      "suspendSession": "挂起会话",
+      "unmarkForSuspend": "取消挂起"
     },
     "closeTabTooltip": "关闭标签页",
     "newTabTooltip": "新建连接标签页"

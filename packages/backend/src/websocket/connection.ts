@@ -16,8 +16,10 @@ import {
     SshSuspendEntryRemovedResponse,
     SshSuspendNameEditedResponse,
     SshSuspendAutoTerminatedNotification,
-    SshMarkForSuspendRequest,      // +++ 新增导入
-    SshMarkedForSuspendAck,        // +++ 新增导入
+    SshMarkForSuspendRequest,
+    SshMarkedForSuspendAck,
+    SshUnmarkForSuspendRequest,    // +++ 新增导入 +++
+    SshUnmarkedForSuspendAck,      // +++ 新增导入 +++
     ClientState
 } from './types';
 import { SshSuspendService } from '../services/ssh-suspend.service';
@@ -317,7 +319,8 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                         case 'SSH_MARK_FOR_SUSPEND': {
                             const markPayload = payload as SshMarkForSuspendRequest['payload'];
                             const sessionToMarkId = markPayload.sessionId;
-                            console.log(`[WebSocket Handler] Received SSH_MARK_FOR_SUSPEND. UserID: ${ws.userId}, TargetSessionID: ${sessionToMarkId}`);
+                            const initialBuffer = markPayload.initialBuffer; // +++ 获取 initialBuffer +++
+                            console.log(`[WebSocket Handler] Received SSH_MARK_FOR_SUSPEND. UserID: ${ws.userId}, TargetSessionID: ${sessionToMarkId}, InitialBuffer provided: ${!!initialBuffer}`);
 
                             if (!ws.userId) {
                                 console.error(`[SSH_MARK_FOR_SUSPEND] 用户 ID 未定义。`);
@@ -346,8 +349,16 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                 
                                 // 确保日志目录存在 (服务内部通常会做，但这里也可以调用一次)
                                 await temporaryLogStorageService.ensureLogDirectoryExists();
-                                // 可以在这里预先写入一个标记，表明日志开始记录
-                                await temporaryLogStorageService.writeToLog(logPathSuffix, `--- Log recording started for session ${sessionToMarkId} at ${new Date().toISOString()} ---\n`);
+
+                                // +++ 如果有 initialBuffer，先写入它 +++
+                                if (initialBuffer) {
+                                    // 确保 initialBuffer 后有一个换行符，以便后续日志在新行开始
+                                    const formattedInitialBuffer = initialBuffer.endsWith('\n') ? initialBuffer : `${initialBuffer}\n`;
+                                    await temporaryLogStorageService.writeToLog(logPathSuffix, formattedInitialBuffer);
+                                    console.log(`[SSH_MARK_FOR_SUSPEND] 已将初始缓冲区写入日志 (会话: ${sessionToMarkId})。`);
+                                }
+                                // --- 移除自动添加的日志标记行 ---
+                                // await temporaryLogStorageService.writeToLog(logPathSuffix, `--- Log recording continued for session ${sessionToMarkId} at ${new Date().toISOString()} ---\n`);
 
                                 console.log(`[SSH_MARK_FOR_SUSPEND] 会话 ${sessionToMarkId} 已成功标记待挂起。日志将记录到与 ${logPathSuffix} 关联的文件。`);
                                 const response: SshMarkedForSuspendAck = {
@@ -362,6 +373,59 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                     activeSessionState.suspendLogPath = undefined;
                                 }
                                 if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_MARKED_FOR_SUSPEND_ACK', payload: { sessionId: sessionToMarkId, success: false, error: error.message || '标记会话失败' } as SshMarkedForSuspendAck['payload'] }));
+                            }
+                            break;
+                        }
+                        case 'SSH_UNMARK_FOR_SUSPEND': {
+                            const unmarkPayload = payload as SshUnmarkForSuspendRequest['payload'];
+                            const sessionToUnmarkId = unmarkPayload.sessionId;
+                            console.log(`[WebSocket Handler] Received SSH_UNMARK_FOR_SUSPEND. UserID: ${ws.userId}, TargetSessionID: ${sessionToUnmarkId}`);
+                            const ackPayloadBase = { sessionId: sessionToUnmarkId };
+
+                            if (!ws.userId) {
+                                console.error(`[SSH_UNMARK_FOR_SUSPEND] 用户 ID 未定义。`);
+                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_UNMARKED_FOR_SUSPEND_ACK', payload: { ...ackPayloadBase, success: false, error: '用户认证失败' } as SshUnmarkedForSuspendAck['payload'] }));
+                                break;
+                            }
+
+                            const activeSessionState = clientStates.get(sessionToUnmarkId);
+                            if (!activeSessionState) {
+                                console.warn(`[SSH_UNMARK_FOR_SUSPEND] 未找到会话: ${sessionToUnmarkId}`);
+                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_UNMARKED_FOR_SUSPEND_ACK', payload: { ...ackPayloadBase, success: false, error: '未找到要取消标记的会话' } as SshUnmarkedForSuspendAck['payload'] }));
+                                break;
+                            }
+
+                            if (!activeSessionState.isMarkedForSuspend) {
+                                console.warn(`[SSH_UNMARK_FOR_SUSPEND] 会话 ${sessionToUnmarkId} 并未被标记为待挂起。`);
+                                // 即使未标记，也回复成功，因为最终状态是“未标记”
+                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_UNMARKED_FOR_SUSPEND_ACK', payload: { ...ackPayloadBase, success: true, error: '会话本就未标记' } as SshUnmarkedForSuspendAck['payload'] }));
+                                break;
+                            }
+
+                            try {
+                                activeSessionState.isMarkedForSuspend = false;
+                                const logPathToDelete = activeSessionState.suspendLogPath;
+                                activeSessionState.suspendLogPath = undefined; // 清除日志路径
+
+                                if (logPathToDelete) {
+                                    await temporaryLogStorageService.deleteLog(logPathToDelete);
+                                    console.log(`[SSH_UNMARK_FOR_SUSPEND] 已删除会话 ${sessionToUnmarkId} 的临时挂起日志: ${logPathToDelete}`);
+                                }
+
+                                console.log(`[SSH_UNMARK_FOR_SUSPEND] 会话 ${sessionToUnmarkId} 已成功取消标记。`);
+                                const response: SshUnmarkedForSuspendAck = {
+                                    type: 'SSH_UNMARKED_FOR_SUSPEND_ACK',
+                                    payload: { ...ackPayloadBase, success: true }
+                                };
+                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(response));
+                            } catch (error: any) {
+                                console.error(`[SSH_UNMARK_FOR_SUSPEND] 取消标记会话 ${sessionToUnmarkId} 失败:`, error);
+                                // 尝试回滚状态（尽管可能意义不大，因为错误可能在删除日志时发生）
+                                if (activeSessionState) {
+                                     activeSessionState.isMarkedForSuspend = true; // 保持标记状态
+                                     // activeSessionState.suspendLogPath = logPathToDelete; // 如果需要，可以恢复路径，但删除失败更可能是问题
+                                }
+                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_UNMARKED_FOR_SUSPEND_ACK', payload: { ...ackPayloadBase, success: false, error: error.message || '取消标记会话失败' } as SshUnmarkedForSuspendAck['payload'] }));
                             }
                             break;
                         }

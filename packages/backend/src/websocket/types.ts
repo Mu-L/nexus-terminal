@@ -23,8 +23,8 @@ export interface ClientState { // 导出以便 Service 可以导入
     isShellReady?: boolean; // 新增：标记 Shell 是否已准备好处理输入和调整大小
     isSuspendedByService?: boolean; // 新增：标记此会话是否已被 SshSuspendService 接管
     isMarkedForSuspend?: boolean; // 新增：标记此会话是否已被用户请求挂起（等待断开连接）
-    suspendLogPath?: string;      // 新增：如果标记挂起，则存储日志路径
-    suspendLogWritableStream?: NodeJS.WritableStream; // 新增：用于写入挂起日志的流
+    suspendLogPath?: string;      // 新增：如果标记挂起，则存储日志路径 (基于原始 sessionId)
+    // suspendLogWritableStream?: NodeJS.WritableStream; // 移除，将直接使用 temporaryLogStorageService.writeToLog
 }
 
 export interface PortInfo {
@@ -110,6 +110,14 @@ export interface SshMarkForSuspendRequest {
   type: "SSH_MARK_FOR_SUSPEND";
   payload: {
     sessionId: string; // The ID of the active SSH session to be marked
+    initialBuffer?: string; // +++ 新增：可选的初始屏幕缓冲区内容 +++
+  };
+}
+
+export interface SshUnmarkForSuspendRequest {
+  type: "SSH_UNMARK_FOR_SUSPEND";
+  payload: {
+    sessionId: string; // The ID of the active SSH session to be unmarked
   };
 }
 
@@ -197,6 +205,15 @@ export interface SshMarkedForSuspendAck {
   };
 }
 
+export interface SshUnmarkedForSuspendAck { // +++ 新增 S2C 类型 +++
+  type: "SSH_UNMARKED_FOR_SUSPEND_ACK";
+  payload: {
+    sessionId: string; // The ID of the session that was unmarked
+    success: boolean;
+    error?: string;
+  };
+}
+
 export interface SshSuspendAutoTerminatedNotification {
   type: "SSH_SUSPEND_AUTO_TERMINATED";
   payload: {
@@ -213,7 +230,8 @@ export type SshSuspendClientToServerMessages =
   | SshSuspendTerminateRequest
   | SshSuspendRemoveEntryRequest
   | SshSuspendEditNameRequest
-  | SshMarkForSuspendRequest; // Added new request type
+  | SshMarkForSuspendRequest
+  | SshUnmarkForSuspendRequest; // +++ 新增到联合类型 +++
 
 // Union type for all server-to-client messages for SSH Suspend
 export type SshSuspendServerToClientMessages =
@@ -225,7 +243,8 @@ export type SshSuspendServerToClientMessages =
   | SshSuspendEntryRemovedResponse
   | SshSuspendNameEditedResponse
   | SshSuspendAutoTerminatedNotification
-  | SshMarkedForSuspendAck; // Added new response type
+  | SshMarkedForSuspendAck
+  | SshUnmarkedForSuspendAck; // +++ 新增到联合类型 +++
 
 // It might be useful to have a general type for incoming messages if not already present
 // For example, if you have a main message handler:

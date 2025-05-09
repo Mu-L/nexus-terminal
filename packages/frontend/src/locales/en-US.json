@@ -1137,7 +1137,8 @@
       "closeOthers": "Close Other Tabs",
       "closeRight": "Close Tabs to the Right",
       "closeLeft": "Close Tabs to the Left",
-      "suspendSession": "Suspend Session"
+      "suspendSession": "Suspend Session",
+      "unmarkForSuspend": "Unmark Suspend"
     },
     "closeTabTooltip": "Close Tab",
     "newTabTooltip": "New Connection Tab"
