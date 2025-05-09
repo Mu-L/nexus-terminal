@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import { Terminal, ITerminalAddon, IDisposable } from 'xterm'; 
-import { useAppearanceStore } from '../stores/appearance.store'; 
-import { useSettingsStore } from '../stores/settings.store'; 
-import { storeToRefs } from 'pinia'; 
+import { Terminal, ITerminalAddon, IDisposable } from 'xterm';
+import { useAppearanceStore } from '../stores/appearance.store';
+import { useSettingsStore } from '../stores/settings.store';
+import { storeToRefs } from 'pinia';
 import { FitAddon } from '@xterm/addon-fit'; // Updated import path
 import { WebLinksAddon } from 'xterm-addon-web-links';
-import { SearchAddon, type ISearchOptions } from '@xterm/addon-search'; 
-import 'xterm/css/xterm.css'; 
+import { SearchAddon, type ISearchOptions } from '@xterm/addon-search';
+import 'xterm/css/xterm.css';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 
 // 定义 props 和 emits
@@ -18,12 +19,9 @@ const props = defineProps<{
   options?: object; // xterm 的配置选项
 }>();
 
-const emit = defineEmits<{
-  (e: 'data', data: string): void; // 用户输入事件
-  (e: 'resize', dimensions: { cols: number; rows: number }): void; // 终端大小调整事件
-  // *** 更新 ready 事件 payload，包含 searchAddon ***
-  (e: 'ready', payload: { sessionId: string; terminal: Terminal; searchAddon: SearchAddon | null }): void;
-}>();
+
+
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 
 const terminalRef = ref<HTMLElement | null>(null); // 终端容器的引用
 let terminal: Terminal | null = null;
@@ -70,7 +68,7 @@ const debouncedEmitResize = debounce((term: Terminal) => {
     if (term && props.isActive) { // 仅当标签仍处于活动状态时才发送防抖后的 resize
         const dimensions = { cols: term.cols, rows: term.rows };
         console.log(`[Terminal ${props.sessionId}] Debounced resize emit (from ResizeObserver):`, dimensions);
-        emit('resize', dimensions);
+        emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
         // *** 新增：尝试在发送 resize 后强制刷新终端显示 ***
         try {
             term.refresh(0, term.rows - 1); // Refresh entire viewport
@@ -92,7 +90,7 @@ const fitAndEmitResizeNow = (term: Terminal) => {
             fitAddon?.fit();
             const dimensions = { cols: term.cols, rows: term.rows };
             console.log(`[Terminal ${props.sessionId}] Immediate resize emit:`, dimensions);
-            emit('resize', dimensions);
+            emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
 
             // *** 恢复：仅使用 nextTick 触发 window resize ***
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
@@ -162,11 +160,11 @@ onMounted(() => {
 
     // 适应容器大小
     fitAddon.fit();
-    emit('resize', { cols: terminal.cols, rows: terminal.rows }); // 触发初始 resize 事件
+    emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: { cols: terminal.cols, rows: terminal.rows } }); // 触发初始 resize 事件
 
     // 监听用户输入
     terminal.onData((data) => {
-      emit('data', data);
+      emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data });
     });
 
     // 监听终端大小变化 (通过 ResizeObserver) - 主要处理浏览器窗口大小变化等
@@ -244,7 +242,7 @@ onMounted(() => {
 
     // 触发 ready 事件，传递 sessionId, terminal 和 searchAddon 实例
     if (terminal) {
-        emit('ready', { sessionId: props.sessionId, terminal: terminal, searchAddon: searchAddon });
+        emitWorkspaceEvent('terminal:ready', { sessionId: props.sessionId, terminal: terminal, searchAddon: searchAddon });
     }
 
     // --- 监听并处理选中即复制 ---
@@ -359,7 +357,7 @@ onMounted(() => {
                     const text = await navigator.clipboard.readText();
                     if (text) {
                         // 将粘贴的文本发送到后端，模拟用户输入
-                        emit('data', text);
+                        emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
                         console.log('[Terminal] Pasted via Ctrl+Shift+V');
                     }
                 } catch (err) {
@@ -380,7 +378,7 @@ onMounted(() => {
           const text = await navigator.clipboard.readText();
           if (text && terminal) {
             // 将粘贴的文本发送到后端
-            emit('data', text);
+            emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
             console.log('[Terminal] Pasted via Right Click');
           }
         } catch (err) {

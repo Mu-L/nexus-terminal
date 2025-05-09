@@ -166,6 +166,7 @@ import { useI18n } from 'vue-i18n';
 import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue'; // 导入表单组件
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
 import { useSettingsStore } from '../stores/settings.store'; // 新增：导入设置 store
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 const quickCommandsStore = useQuickCommandsStore();
 const quickCommandTagsStore = useQuickCommandTagsStore(); // +++ Instantiate the new tag store +++
@@ -173,6 +174,7 @@ const uiNotificationsStore = useUiNotificationsStore(); // 如果需要显示通
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const settingsStore = useSettingsStore(); // 新增：实例化设置 store
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 
 const hoveredItemId = ref<number | null>(null);
 const isFormVisible = ref(false);
@@ -213,10 +215,7 @@ const isCommandSelected = (commandId: number): boolean => {
     return flatVisibleCommands.value[storeSelectedIndex.value].id === commandId;
 };
 
-// --- 事件定义 ---
-const emit = defineEmits<{
-  (e: 'execute-command', command: string): void; // 用于通知 WorkspaceView 执行命令
-}>();
+
 
 // --- 生命周期钩子 ---
 onMounted(async () => { // Make onMounted async
@@ -399,7 +398,7 @@ const executeCommand = (command: QuickCommandFE) => {
   // 1. 增加使用次数 (后台操作，不阻塞执行)
   quickCommandsStore.incrementUsage(command.id);
   // 2. 发出执行事件给父组件
-  emit('execute-command', command.command);
+  emitWorkspaceEvent('terminal:sendCommand', { command: command.command });
   // Optionally reset selection after execution
   // selectedIndex.value = -1; // REMOVED: Store handles index
 };

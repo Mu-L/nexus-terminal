@@ -9,11 +9,13 @@ import TabBarContextMenu from './TabBarContextMenu.vue';
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 import type { SessionTabInfoWithStatus } from '../stores/session.store';
 
 
 const { t } = useI18n(); // 初始化 i18n
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const layoutStore = useLayoutStore(); // 初始化布局 store
 const connectionsStore = useConnectionsStore();
 const { isHeaderVisible } = storeToRefs(layoutStore); // 从 layout store 获取主导航栏可见状态
@@ -37,30 +39,21 @@ const props = defineProps({
   },
 });
 
-// 定义事件 (使用对象语法修复类型)
+// 定义事件 (保留 update:sessions 用于 v-model)
 const emit = defineEmits<{
-  (e: 'activate-session', sessionId: string): void;
-  (e: 'close-session', sessionId: string): void;
-  (e: 'open-layout-configurator'): void;
-  (e: 'request-add-connection-from-popup'): void;
-  (e: 'request-edit-connection-from-popup', connection: any): void; // 保持 any 或使用 ConnectionInfo
-  // + 新增右键菜单事件
-  (e: 'close-other-sessions', sessionId: string): void;
-  (e: 'close-sessions-to-right', sessionId: string): void;
-  (e: 'close-sessions-to-left', sessionId: string): void;
-  (e: 'update:sessions', newSessions: SessionTabInfoWithStatus[]): void; // + Add event for reordering
+  (e: 'update:sessions', newSessions: SessionTabInfoWithStatus[]): void;
 }>();
 
 
 const activateSession = (sessionId: string) => {
   if (sessionId !== props.activeSessionId) {
-    emit('activate-session', sessionId);
+    emitWorkspaceEvent('session:activate', { sessionId });
   }
 };
 
 const closeSession = (event: MouseEvent, sessionId: string) => {
   event.stopPropagation(); // 阻止事件冒泡到标签点击事件
-  emit('close-session', sessionId);
+  emitWorkspaceEvent('session:close', { sessionId });
 };
 
 // --- 本地状态 ---
@@ -109,15 +102,15 @@ const handlePopupConnect = (connectionId: number) => {
 const handleRequestAddFromPopup = () => {
   console.log('[TabBar] Received request-add-connection from popup component.');
   showConnectionListPopup.value = false; // 关闭弹窗
-  emit('request-add-connection-from-popup'); // 向上发出事件
+  emitWorkspaceEvent('connection:requestAdd'); // 向上发出事件
 };
 
 // 新增：处理从弹窗内部发出的编辑连接请求
-const handleRequestEditFromPopup = (connection: any) => { // 假设 WorkspaceConnectionList 传递了连接对象
+const handleRequestEditFromPopup = (connection: ConnectionInfo) => { // 假设 WorkspaceConnectionList 传递了连接对象
   console.log('[TabBar] Received request-edit-connection from popup component for connection:', connection);
   showConnectionListPopup.value = false; // 关闭弹窗
   // 向上发出事件，并携带连接信息
-  emit('request-edit-connection-from-popup', connection);
+  emitWorkspaceEvent('connection:requestEdit', { connectionInfo: connection });
 };
 
 // --- 移除 handleRequestRdpFromPopup 方法 ---
@@ -166,17 +159,17 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
 
   switch (action) {
     case 'close':
-      emit('close-session', targetId);
+      emitWorkspaceEvent('session:close', { sessionId: targetId });
       break;
     case 'close-others':
-      emit('close-other-sessions', targetId);
+      emitWorkspaceEvent('session:closeOthers', { targetSessionId: targetId });
       break;
     case 'close-right':
-      emit('close-sessions-to-right', targetId);
+      emitWorkspaceEvent('session:closeToRight', { targetSessionId: targetId });
       break;
     case 'close-left':
       // 注意：关闭左侧通常不包括当前标签本身
-      emit('close-sessions-to-left', targetId);
+      emitWorkspaceEvent('session:closeToLeft', { targetSessionId: targetId });
       break;
     default:
       console.warn(`[TabBar] Unknown context menu action: ${action}`);
@@ -214,7 +207,7 @@ const contextMenuItems = computed(() => {
 // 新增：处理打开布局配置器的事件
 const openLayoutConfigurator = () => {
   console.log('[TabBar] Emitting open-layout-configurator event');
-  emit('open-layout-configurator'); // 发出事件
+  emitWorkspaceEvent('ui:openLayoutConfigurator'); // 发出事件
 };
 
 // --- Header Visibility Logic ---

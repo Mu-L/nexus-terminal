@@ -68,13 +68,14 @@ import { storeToRefs } from 'pinia'; // Import storeToRefs
 import { useCommandHistoryStore, CommandHistoryEntryFE } from '../stores/commandHistory.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useI18n } from 'vue-i18n';
-import PaneTitleBar from '../components/PaneTitleBar.vue'; // 导入标题栏
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 const commandHistoryStore = useCommandHistoryStore();
 const uiNotificationsStore = useUiNotificationsStore();
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const hoveredItemId = ref<number | null>(null);
 // const selectedIndex = ref<number>(-1); // REMOVED: Use store's selectedIndex
 const historyListRef = ref<HTMLUListElement | null>(null); // Ref for the history list UL
@@ -88,11 +89,6 @@ const filteredHistory = computed(() => commandHistoryStore.filteredHistory);
 const isLoading = computed(() => commandHistoryStore.isLoading);
 const { selectedIndex: storeSelectedIndex } = storeToRefs(commandHistoryStore); // Get selectedIndex reactively
 
-// --- 事件定义 ---
-// 定义组件发出的事件
-const emit = defineEmits<{
-  (e: 'execute-command', command: string): void; // 定义新事件
-}>();
 
 // --- 生命周期钩子 ---
 onMounted(() => {
@@ -207,7 +203,7 @@ const deleteSingleCommand = (id: number) => {
 
 // 新增：执行命令 (发出事件)
 const executeCommand = (command: string) => {
-  emit('execute-command', command);
+  emitWorkspaceEvent('terminal:sendCommand', { command });
   // Optionally reset selection after execution
   // selectedIndex.value = -1; // REMOVED: Store handles index
 };

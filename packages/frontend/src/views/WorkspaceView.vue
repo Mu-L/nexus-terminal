@@ -20,6 +20,11 @@ import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import type { Terminal as XtermTerminal } from 'xterm'; // --- 重命名避免冲突 ---
 import type { ISearchOptions } from '@xterm/addon-search';
+import {
+  useWorkspaceEventSubscriber,
+  useWorkspaceEventOff,
+  type WorkspaceEventPayloads
+} from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 // --- Setup ---
 const { t } = useI18n();
@@ -112,6 +117,40 @@ onMounted(() => {
   // 添加键盘事件监听器
   window.addEventListener('keydown', handleGlobalKeyDown);
   // 确保布局已初始化 (layoutStore 内部会处理)
+
+  // +++ 订阅工作区事件 +++
+  subscribeToWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command));
+  subscribeToWorkspaceEvents('terminal:input', handleTerminalInput);
+  subscribeToWorkspaceEvents('terminal:resize', handleTerminalResize);
+  subscribeToWorkspaceEvents('terminal:ready', handleTerminalReady);
+  subscribeToWorkspaceEvents('terminal:clear', handleClearTerminal);
+
+  subscribeToWorkspaceEvents('editor:closeTab', (payload) => handleCloseEditorTab(payload.tabId));
+  subscribeToWorkspaceEvents('editor:activateTab', (payload) => handleActivateEditorTab(payload.tabId));
+  subscribeToWorkspaceEvents('editor:updateContent', handleUpdateEditorContent);
+  subscribeToWorkspaceEvents('editor:saveTab', (payload) => handleSaveEditorTab(payload.tabId));
+  subscribeToWorkspaceEvents('editor:changeEncoding', handleChangeEncoding);
+  subscribeToWorkspaceEvents('editor:closeOtherTabs', (payload) => handleCloseOtherEditorTabs(payload.tabId));
+  subscribeToWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
+  subscribeToWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
+
+  subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  subscribeToWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
+  subscribeToWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
+  subscribeToWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));
+
+  subscribeToWorkspaceEvents('search:start', (payload) => handleSearch(payload.term));
+  subscribeToWorkspaceEvents('search:findNext', handleFindNext);
+  subscribeToWorkspaceEvents('search:findPrevious', handleFindPrevious);
+  subscribeToWorkspaceEvents('search:close', handleCloseSearch);
+
+  // 来自 TerminalTabBar 的事件
+  subscribeToWorkspaceEvents('session:activate', (payload) => sessionStore.activateSession(payload.sessionId));
+  subscribeToWorkspaceEvents('session:close', (payload) => sessionStore.closeSession(payload.sessionId));
+  subscribeToWorkspaceEvents('session:closeOthers', (payload) => handleCloseOtherSessions(payload.targetSessionId));
+  subscribeToWorkspaceEvents('session:closeToRight', (payload) => handleCloseSessionsToRight(payload.targetSessionId));
+  subscribeToWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
+  subscribeToWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
 });
 
 onBeforeUnmount(() => {
@@ -119,7 +158,43 @@ onBeforeUnmount(() => {
   // 移除键盘事件监听器
   window.removeEventListener('keydown', handleGlobalKeyDown);
   sessionStore.cleanupAllSessions();
+
+  // +++ 取消订阅工作区事件 +++
+  unsubscribeFromWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command));
+  unsubscribeFromWorkspaceEvents('terminal:input', handleTerminalInput);
+  unsubscribeFromWorkspaceEvents('terminal:resize', handleTerminalResize);
+  unsubscribeFromWorkspaceEvents('terminal:ready', handleTerminalReady);
+  unsubscribeFromWorkspaceEvents('terminal:clear', handleClearTerminal);
+
+  unsubscribeFromWorkspaceEvents('editor:closeTab', (payload) => handleCloseEditorTab(payload.tabId));
+  unsubscribeFromWorkspaceEvents('editor:activateTab', (payload) => handleActivateEditorTab(payload.tabId));
+  unsubscribeFromWorkspaceEvents('editor:updateContent', handleUpdateEditorContent);
+  unsubscribeFromWorkspaceEvents('editor:saveTab', (payload) => handleSaveEditorTab(payload.tabId));
+  unsubscribeFromWorkspaceEvents('editor:changeEncoding', handleChangeEncoding);
+  unsubscribeFromWorkspaceEvents('editor:closeOtherTabs', (payload) => handleCloseOtherEditorTabs(payload.tabId));
+  unsubscribeFromWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
+  unsubscribeFromWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
+
+  unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  unsubscribeFromWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
+  unsubscribeFromWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
+  unsubscribeFromWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));
+
+  unsubscribeFromWorkspaceEvents('search:start', (payload) => handleSearch(payload.term));
+  unsubscribeFromWorkspaceEvents('search:findNext', handleFindNext);
+  unsubscribeFromWorkspaceEvents('search:findPrevious', handleFindPrevious);
+  unsubscribeFromWorkspaceEvents('search:close', handleCloseSearch);
+
+  unsubscribeFromWorkspaceEvents('session:activate', (payload) => sessionStore.activateSession(payload.sessionId));
+  unsubscribeFromWorkspaceEvents('session:close', (payload) => sessionStore.closeSession(payload.sessionId));
+  unsubscribeFromWorkspaceEvents('session:closeOthers', (payload) => handleCloseOtherSessions(payload.targetSessionId));
+  unsubscribeFromWorkspaceEvents('session:closeToRight', (payload) => handleCloseSessionsToRight(payload.targetSessionId));
+  unsubscribeFromWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
+  unsubscribeFromWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
 });
+
+const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
+const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
 
  // --- 本地方法 (仅处理 UI 状态) ---
  const handleRequestAddConnection = () => {
@@ -571,27 +646,6 @@ const toggleVirtualKeyboard = () => {
           class="layout-renderer-wrapper"
           :editor-tabs="editorTabs"
           :active-editor-tab-id="activeEditorTabId"
-          @send-command="handleSendCommand"
-          @terminal-input="handleTerminalInput"
-          @terminal-resize="handleTerminalResize"
-          @terminal-ready="handleTerminalReady"
-          @close-editor-tab="handleCloseEditorTab"
-          @activate-editor-tab="handleActivateEditorTab"
-          @update-editor-content="handleUpdateEditorContent"
-          @save-editor-tab="handleSaveEditorTab"
-          @connect-request="handleConnectRequest"
-          @open-new-session="handleOpenNewSession"
-          @request-add-connection="handleRequestAddConnection"
-          @request-edit-connection="handleRequestEditConnection"
-          @search="handleSearch"
-          @find-next="handleFindNext"
-          @find-previous="handleFindPrevious"
-          @close-search="handleCloseSearch"
-          @clear-terminal="handleClearTerminal"
-          @change-encoding="handleChangeEncoding"
-          @close-other-tabs="handleCloseOtherEditorTabs"
-          @close-tabs-to-right="handleCloseEditorTabsToRight"
-          @close-tabs-to-left="handleCloseEditorTabsToLeft"
         ></LayoutRenderer>
         <div v-else class="pane-placeholder">
           {{ t('layout.loading', '加载布局中...') }}

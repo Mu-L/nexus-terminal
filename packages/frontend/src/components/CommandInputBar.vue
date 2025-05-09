@@ -8,19 +8,14 @@ import { useSettingsStore } from '../stores/settings.store';
 import { useQuickCommandsStore } from '../stores/quickCommands.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import QuickCommandsModal from './QuickCommandsModal.vue'; // +++ Import the modal component +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 // Disable attribute inheritance as this component has multiple root nodes (div + modal)
 defineOptions({ inheritAttrs: false });
 
-const emit = defineEmits([
-  'send-command',
-  'search',
-  'find-next',
-  'find-previous',
-  'close-search',
-  'clear-terminal',
-  'toggle-virtual-keyboard' // +++ Add new emit +++
-]);
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
+const emit = defineEmits(['toggle-virtual-keyboard']);
+
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore();
 const settingsStore = useSettingsStore();
@@ -72,7 +67,7 @@ const currentSessionCommandInput = computed({
 const sendCommand = () => {
   const command = currentSessionCommandInput.value; // 使用计算属性获取值
   console.log(`[CommandInputBar] Sending command: ${command || '<Enter>'} `);
-  emit('send-command', command);
+  emitWorkspaceEvent('terminal:sendCommand', { command });
   // 清空 store 中的值
   if (activeSessionId.value) {
     updateSessionCommandInput(activeSessionId.value, '');
@@ -83,7 +78,7 @@ const toggleSearch = () => {
   isSearching.value = !isSearching.value;
   if (!isSearching.value) {
     searchTerm.value = ''; // 关闭搜索时清空
-    emit('close-search'); // 通知父组件关闭搜索
+    emitWorkspaceEvent('search:close'); // 通知父组件关闭搜索
   } else {
     // 可以在这里聚焦搜索输入框
     // nextTick(() => searchInputRef.value?.focus());
@@ -91,16 +86,16 @@ const toggleSearch = () => {
 };
 
 const performSearch = () => {
-  emit('search', searchTerm.value);
+  emitWorkspaceEvent('search:start', { term: searchTerm.value });
   // 实际的计数更新逻辑应该由父组件通过 props 或事件传递回来
 };
 
 const findNext = () => {
-  emit('find-next');
+  emitWorkspaceEvent('search:findNext');
 };
 
 const findPrevious = () => {
-  emit('find-previous');
+  emitWorkspaceEvent('search:findPrevious');
 };
 
 // 监听搜索词变化，执行搜索
@@ -151,7 +146,7 @@ const handleCommandInputKeydown = (event: KeyboardEvent) => {
     if (selectedCommand !== undefined) {
       event.preventDefault();
       console.log(`[CommandInputBar] Enter detected with selection. Sending selected command: ${selectedCommand}`);
-      emit('send-command', selectedCommand); // 发送选中命令 (移除多余的 \n)
+      emitWorkspaceEvent('terminal:sendCommand', { command: selectedCommand }); // 发送选中命令
       if (activeSessionId.value) {
         updateSessionCommandInput(activeSessionId.value, ''); // 清空输入框
       }
@@ -190,7 +185,7 @@ const handleCommandInputKeydown = (event: KeyboardEvent) => {
     // Handle Ctrl+C when input is empty
     event.preventDefault();
     console.log('[CommandInputBar] Ctrl+C detected with empty input. Sending SIGINT.');
-    emit('send-command', '\x03'); // Send ETX character (Ctrl+C)
+    emitWorkspaceEvent('terminal:sendCommand', { command: '\x03' }); // Send ETX character (Ctrl+C)
   } else if (!event.altKey && event.key === 'Enter') {
      // Handle regular Enter key press - send current input (empty or not)
      event.preventDefault(); // Prevent default if needed, e.g., form submission
@@ -288,7 +283,7 @@ const closeQuickCommandsModal = () => {
 // +++ Handler for command execution from the modal +++
 const handleQuickCommandExecute = (command: string) => {
   console.log(`[CommandInputBar] Executing quick command: ${command}`);
-  emit('send-command', command); // Emit the command to the parent
+  emitWorkspaceEvent('terminal:sendCommand', { command }); // Emit the command to the parent
   closeQuickCommandsModal(); // Close the modal after selection
 };
 </script>
@@ -298,7 +293,7 @@ const handleQuickCommandExecute = (command: string) => {
     <div class="flex-grow flex items-center bg-transparent relative gap-1 px-2"> <!-- Added px-2 here -->
       <!-- Clear Terminal Button -->
       <button
-        @click="emit('clear-terminal')"
+        @click="emitWorkspaceEvent('terminal:clear')"
         class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
         :title="t('commandInputBar.clearTerminal', '清空终端')"
       >

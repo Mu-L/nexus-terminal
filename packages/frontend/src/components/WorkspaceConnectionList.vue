@@ -10,15 +10,11 @@ import { useSessionStore } from '../stores/session.store';
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // +++ 修正导入大小写 +++
 import { useSettingsStore } from '../stores/settings.store'; // 新增：导入设置 store
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 // 定义事件
-const emit = defineEmits([
-  'connect-request',        // 左键单击 - 请求激活或替换当前标签
-  // 'open-new-session',       // 中键单击 - 请求在新标签中打开 (已移除)
-  'request-add-connection', // 右键菜单 - 添加
-  'request-edit-connection' // 右键菜单 - 编辑
 
-]);
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 
 const { t } = useI18n();
 // const router = useRouter(); // 不再需要
@@ -307,7 +303,7 @@ const handleConnect = (connectionId: number, event?: MouseEvent | KeyboardEvent)
   closeContextMenu(); // 关闭右键菜单
 
   // 统一发出 connect-request 事件，让 sessionStore.handleConnectRequest 处理模态框和会话
-  emit('connect-request', connectionId);
+  emitWorkspaceEvent('connection:connect', { connectionId });
 };
 
 // --- 移除 closeRdpModal 方法 ---
@@ -346,11 +342,11 @@ const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // �
   if (action === 'add') {
     console.log('[WorkspaceConnectionList] handleMenuAction called with action: add. Emitting request-add-connection...'); // 添加日志
     // router.push('/connections/add'); // 改为触发事件
-    emit('request-add-connection');
+    emitWorkspaceEvent('connection:requestAdd');
   } else if (conn) {
     if (action === 'edit') {
       // router.push(`/connections/edit/${conn.id}`); // 改为触发事件
-      emit('request-edit-connection', conn); // 传递整个连接对象
+      emitWorkspaceEvent('connection:requestEdit', { connectionInfo: conn }); // 传递整个连接对象
     } else if (action === 'delete') {
       if (confirm(t('connections.prompts.confirmDelete', { name: conn.name || conn.host }))) {
         connectionsStore.deleteConnection(conn.id);

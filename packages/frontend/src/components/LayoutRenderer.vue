@@ -11,7 +11,7 @@ import { useFileEditorStore } from '../stores/fileEditor.store'; // <-- Import F
 import { useSettingsStore } from '../stores/settings.store'; // +++ Import SettingsStore +++
 import { useSidebarResize } from '../composables/useSidebarResize'; // +++ Import useSidebarResize +++
 import { storeToRefs } from 'pinia';
-import { defineEmits } from 'vue';
+// import { defineEmits } from 'vue'; // --- 移除 ---
 
 // --- Props ---
 const props = defineProps({
@@ -44,39 +44,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Removed terminalManager prop definition
 });
 
-// --- Emits ---
-// *** 新增：声明所有需要转发的事件 (使用对象语法) ***
-const emit = defineEmits({
-  'sendCommand': null, // (command: string) - No validation needed here for now
-  'terminalInput': null, // (payload: { sessionId: string; data: string })
-  'terminalResize': null, // (payload: { sessionId: string; dims: { cols: number; rows: number } })
-  'closeEditorTab': null, // (tabId: string)
-  'activateEditorTab': null, // (tabId: string)
-  'updateEditorContent': null, // (payload: { tabId: string; content: string })
-  'saveEditorTab': null, // (tabId: string)
-  'connect-request': null, // (id: number)
-  'open-new-session': null, // (id: number)
-  'request-add-connection': null, // ()
-  'request-edit-connection': null, // (conn: any)
-  // *** 修正：更新 terminal-ready 事件的 payload 类型 ***
-  'terminal-ready': (payload: { sessionId: string; terminal: any }) => // 使用 any 简化类型检查，或导入 Terminal
-    typeof payload === 'object' && typeof payload.sessionId === 'string' && typeof payload.terminal === 'object',
-  // *** 新增：声明搜索相关事件 ***
-  'search': null, // (searchTerm: string)
-  'find-next': null, // ()
-  'find-previous': null, // ()
-  'close-search': null, // ()
-  'clear-terminal': null, // () +++ 添加 clear-terminal 事件 +++
-  'change-encoding': null, // +++ 添加 change-encoding 事件 +++
-  // +++ 添加文件编辑器标签页关闭事件 +++
-  'close-other-tabs': null, // (tabId: string)
-  'close-tabs-to-right': null, // (tabId: string)
-  'close-tabs-to-left': null, // (tabId: string)
-  // --- 移除 RDP 事件 ---
-});
+
 
 // --- Setup ---
 const layoutStore = useLayoutStore();
@@ -160,17 +130,8 @@ const componentProps = computed(() => {
       return {
         sessionId: props.activeSessionId ?? '', // 如果 activeSessionId 为 null，则传递空字符串
         isActive: true,
-        // *** 添加日志并修正事件处理 ***
-        onReady: (payload: { sessionId: string; terminal: any }) => {
-          console.log(`[LayoutRenderer ${props.activeSessionId}] 收到内部 Terminal 的 'ready' 事件:`, payload); // 添加日志
-          emit('terminal-ready', payload); // 直接转发收到的 payload
-        },
-        onData: (data: string) => emit('terminalInput', { sessionId: props.activeSessionId ?? '', data }), // 包装成 payload，确保 sessionId 不为 null
-        onResize: (dims: { cols: number; rows: number }) => emit('terminalResize', { sessionId: props.activeSessionId ?? '', dims }), // 包装成 payload，确保 sessionId 不为 null
+        // --- 移除事件转发 ---
       };
-      // --- 添加日志：确认 onReady 是否在 props 中 ---
-      console.log(`[LayoutRenderer ${props.activeSessionId}] Terminal componentProps 计算完成，包含 onReady。`);
-      // -----------------------------------------
     case 'fileManager':
       // 仅当有活动会话时才返回实际 props，否则返回空对象
       if (!currentActiveSession) return {};
@@ -208,50 +169,26 @@ const componentProps = computed(() => {
         activeTabId: props.activeEditorTabId, // 从 WorkspaceView 传入
         sessionId: props.activeSessionId,
         class: 'pane-content',
-        // 绑定内部处理器以转发事件 (恢复正确的编辑器事件)
-        onCloseTab: (tabId: string) => emit('closeEditorTab', tabId),
-        onActivateTab: (tabId: string) => emit('activateEditorTab', tabId),
-        'onUpdate:content': (payload: { tabId: string; content: string }) => emit('updateEditorContent', payload), // 注意事件名
-        onRequestSave: (tabId: string) => emit('saveEditorTab', tabId),
-        // +++ 添加：转发 change-encoding 事件 +++
-        onChangeEncoding: (payload: { tabId: string; encoding: string }) => emit('change-encoding', payload),
-        // +++ 添加：转发其他关闭事件 +++
-        onCloseOtherTabs: (tabId: string) => emit('close-other-tabs', tabId),
-        onCloseTabsToRight: (tabId: string) => emit('close-tabs-to-right', tabId),
-        onCloseTabsToLeft: (tabId: string) => emit('close-tabs-to-left', tabId),
+        // --- 移除事件转发 ---
       };
     case 'commandBar':
-       // CommandInputBar 需要转发 send-command 事件
-       // searchResultCount 和 currentSearchResultIndex 将在模板中直接从 terminalManager 绑定
        return {
          class: 'pane-content',
-         onSendCommand: (command: string) => emit('sendCommand', command),
-         // 转发搜索事件
-         onSearch: (term: string) => emit('search', term),
-         onFindNext: () => emit('find-next'),
-         onFindPrevious: () => emit('find-previous'),
-         onCloseSearch: () => emit('close-search'),
-         onClearTerminal: () => emit('clear-terminal'), // --- 移除日志 ---
+         // --- 移除事件转发 ---
        };
     case 'connections':
-       // WorkspaceConnectionList 需要转发 connect-request 等事件
        return {
          class: 'pane-content',
-         // 绑定内部处理器以转发事件 (除了 request-add-connection)
-         onConnectRequest: (id: number) => emit('connect-request', id),
-         onOpenNewSession: (id: number) => emit('open-new-session', id),
-         // onRequestAddConnection: () => { ... }, // 移除，将在模板中处理
-         onRequestEditConnection: (conn: any) => emit('request-edit-connection', conn),
+         // --- 移除事件转发 ---
        };
      case 'commandHistory':
     case 'quickCommands':
-       // 这两个视图需要转发 execute-command 事件
        return {
          class: 'flex flex-col flex-grow h-full overflow-auto', // 移除 pane-content，保留填充类
-         onExecuteCommand: (command: string) => emit('sendCommand', command), // 复用 sendCommand 事件
+         // --- 移除事件转发 ---
        };
    case 'dockerManager':
-     // DockerManager 可能不需要 session 信息，但需要转发事件
+     // DockerManager 可能不需要 session 信息
      return {
        class: 'flex-grow h-full overflow-hidden', // <-- 修改：添加 flex-grow 和 h-full，并保留 overflow-hidden
        // 假设 DockerManager 会发出 'docker-command' 事件
@@ -277,30 +214,12 @@ const sidebarProps = computed(() => (paneName: PaneName | null, side: 'left' | '
        tabs: editorTabsFromStore.value, // Access .value for refs from storeToRefs
        activeTabId: activeEditorTabIdFromStore.value, // Access .value
        sessionId: props.activeSessionId,
-       // Event forwarding
-       onCloseTab: (tabId: string) => emit('closeEditorTab', tabId),
-       onActivateTab: (tabId: string) => emit('activateEditorTab', tabId),
-       'onUpdate:content': (payload: { tabId: string; content: string }) => emit('updateEditorContent', payload),
-       onRequestSave: (tabId: string) => emit('saveEditorTab', tabId),
+       // --- 移除事件转发 ---
      };
    case 'connections':
      return {
        ...baseProps,
-       // Event forwarding
-       onConnectRequest: (id: number) => emit('connect-request', id),
-       onOpenNewSession: (id: number) => {
-          console.log(`[LayoutRenderer Sidebar] Forwarding 'open-new-session' for ID: ${id}`);
-          emit('open-new-session', id);
-       },
-       onRequestEditConnection: (conn: any) => {
-          console.log(`[LayoutRenderer Sidebar] Forwarding 'request-edit-connection'`);
-          emit('request-edit-connection', conn);
-       },
-       // Forward 'request-add-connection' from sidebar context
-       onRequestAddConnection: () => {
-           console.log(`[LayoutRenderer Sidebar] Forwarding 'request-add-connection'`);
-           emit('request-add-connection');
-       },
+       // --- 移除事件转发 ---
      };
    case 'fileManager':
      // Only provide props if there's an active session
@@ -508,27 +427,6 @@ onMounted(() => {
                         :active-session-id="activeSessionId"
                         :editor-tabs="editorTabs"
                         :active-editor-tab-id="activeEditorTabId"
-                        @send-command="emit('sendCommand', $event)"
-                        @terminal-input="emit('terminalInput', $event)"
-                        @terminal-resize="emit('terminalResize', $event)"
-                        @terminal-ready="emit('terminal-ready', $event)"
-                        @close-editor-tab="emit('closeEditorTab', $event)"
-                        @activate-editor-tab="emit('activateEditorTab', $event)"
-                        @update-editor-content="emit('updateEditorContent', $event)"
-                        @save-editor-tab="emit('saveEditorTab', $event)"
-                        @connect-request="emit('connect-request', $event)"
-                        @open-new-session="emit('open-new-session', $event)"
-                        @request-add-connection="() => emit('request-add-connection')"
-                        @request-edit-connection="emit('request-edit-connection', $event)"
-                        @search="emit('search', $event)"
-                        @find-next="emit('find-next')"
-                        @find-previous="emit('find-previous')"
-                        @close-search="emit('close-search')"
-                        @clear-terminal="() => emit('clear-terminal')"
-                        @change-encoding="emit('change-encoding', $event)"
-                        @close-other-tabs="emit('close-other-tabs', $event)"
-                        @close-tabs-to-right="emit('close-tabs-to-right', $event)"
-                        @close-tabs-to-left="emit('close-tabs-to-left', $event)"
                         class="flex-grow overflow-auto"
                     />
                   </pane>
@@ -597,7 +495,6 @@ onMounted(() => {
                       v-if="layoutNode.component === 'connections'"
                       :is="currentMainComponent"
                       v-bind="componentProps"
-                      @request-add-connection="() => emit('request-add-connection')"
                       class="flex-grow overflow-auto"
                     />
                     <component

@@ -10,8 +10,10 @@ import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ �
 import { useSessionStore } from '../stores/session.store'; // +++ 导入会话 Store +++
 import { useSettingsStore } from '../stores/settings.store'; // +++ 导入设置 Store +++
 import { storeToRefs } from 'pinia'; // +++ 导入 storeToRefs +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 const { t } = useI18n();
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const sessionStore = useSessionStore(); // +++ 实例化会话 Store +++
 const settingsStore = useSettingsStore(); // +++ 实例化设置 Store +++
@@ -33,18 +35,7 @@ const props = defineProps({
   },
 });
 
-// --- Emits ---
-const emit = defineEmits<{
-  (e: 'activate-tab', tabId: string): void;
-  (e: 'close-tab', tabId: string): void;
-  (e: 'request-save', tabId: string): void; // 发送保存请求，携带 tabId
-  (e: 'update:content', payload: { tabId: string; content: string }): void; // 用于 v-model 同步
-  (e: 'change-encoding', payload: { tabId: string; encoding: string }): void; // +++ 新增：编码更改事件 +++
-  // +++ 新增：传递右键菜单关闭事件 +++
-  (e: 'close-other-tabs', tabId: string): void;
-  (e: 'close-tabs-to-right', tabId: string): void;
-  (e: 'close-tabs-to-left', tabId: string): void;
-}>();
+
 
 
 // --- 计算属性，用于模板绑定 ---
@@ -112,7 +103,7 @@ watch(localEditorContent, (newContent) => {
     if (activeTab.value && newContent !== activeTab.value.content) {
         // console.log(`[EditorContainer] Emitting update:content for tab ${activeTab.value.id}`);
         // 只有当内容实际改变时才发出事件
-        emit('update:content', { tabId: activeTab.value.id, content: newContent });
+        emitWorkspaceEvent('editor:updateContent', { tabId: activeTab.value.id, content: newContent });
         // 注意：isModified 状态应该由 Store 根据 content 和 originalContent 计算
     }
 });
@@ -199,7 +190,7 @@ const encodingOptions = ref([
 // --- 事件处理 ---
 const handleSaveRequest = () => {
   if (activeTab.value) {
-    emit('request-save', activeTab.value.id); // 发出保存请求事件
+    emitWorkspaceEvent('editor:saveTab', { tabId: activeTab.value.id }); // 发出保存请求事件
   }
 };
 
@@ -209,7 +200,7 @@ const handleEncodingChange = (event: Event) => {
   const newEncoding = target.value;
   if (activeTab.value && newEncoding && newEncoding !== currentSelectedEncoding.value) {
     console.log(`[EditorContainer] Encoding changed to ${newEncoding} for tab ${activeTab.value.id}`);
-    emit('change-encoding', { tabId: activeTab.value.id, encoding: newEncoding });
+    emitWorkspaceEvent('editor:changeEncoding', { tabId: activeTab.value.id, encoding: newEncoding });
   }
 };
 
@@ -278,7 +269,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
     const nextTabId = props.tabs[nextIndex]?.id;
     if (nextTabId) {
-      emit('activate-tab', nextTabId);
+      emitWorkspaceEvent('editor:activateTab', { tabId: nextTabId });
     }
   }
 };
@@ -292,11 +283,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
       <FileEditorTabs
         :tabs="orderedTabs"
         :active-tab-id="props.activeTabId"
-        @activate-tab="(tabId: string) => emit('activate-tab', tabId)"
-        @close-tab="(tabId: string) => emit('close-tab', tabId)"
-        @close-other-tabs="(tabId: string) => emit('close-other-tabs', tabId)"
-        @close-tabs-to-right="(tabId: string) => emit('close-tabs-to-right', tabId)"
-        @close-tabs-to-left="(tabId: string) => emit('close-tabs-to-left', tabId)"
+        @activate-tab="(tabId: string) => emitWorkspaceEvent('editor:activateTab', { tabId })"
+        @close-tab="(tabId: string) => emitWorkspaceEvent('editor:closeTab', { tabId })"
+        @close-other-tabs="(tabId: string) => emitWorkspaceEvent('editor:closeOtherTabs', { tabId })"
+        @close-tabs-to-right="(tabId: string) => emitWorkspaceEvent('editor:closeTabsToRight', { tabId })"
+        @close-tabs-to-left="(tabId: string) => emitWorkspaceEvent('editor:closeTabsToLeft', { tabId })"
       />
 
       <!-- 2. 编辑器头部 (显示当前激活标签信息) -->
