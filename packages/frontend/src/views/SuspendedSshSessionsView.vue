@@ -80,7 +80,7 @@
 
             <div class="session-status-actions flex flex-col items-end">
               
-              <div class="actions flex space-x-2 mt-1"> 
+              <div class="actions flex flex-col space-y-2 mt-1">
                 <button
                   v-if="session.backendSshStatus === 'hanging'"
                   @click="resumeSession(session)"
@@ -345,41 +345,45 @@ onUnmounted(() => {
     padding-right: 0.5rem; /* px-2 */
   }
 
-  /* Adjust list item layout for narrow view */
-  .session-item > .flex { /* Targeting the main flex container inside session-item */
-    flex-direction: column;
-    align-items: stretch;
-  }
+  /* Adjust list item layout for narrow view - Now we want to keep the two-column layout */
+  /* .session-item > .flex { */ /* Targeting the main flex container inside session-item */
+    /* flex-direction: column; */ /* REMOVED to keep horizontal layout */
+    /* align-items: stretch; */   /* REMOVED */
+  /* } */
 
-  .session-item .session-info {
-    margin-right: 0;
-    margin-bottom: 0.5rem; /* mb-2 */
-  }
+  /* .session-item .session-info { */
+    /* margin-right: 0; */ /* REMOVED */
+    /* margin-bottom: 0.5rem; */ /* mb-2 */ /* REMOVED */
+  /* } */
 
   .session-item .session-status-actions {
-    /* 之前的窄视图特定样式可能不再需要，或需要调整 */
-    /* 现在按钮组总是垂直排列（默认）或根据其父容器调整 */
-    margin-top: 0.5rem;
-    align-items: flex-end; /* 按钮组整体靠右 */
+    /* 按钮组总是垂直排列并靠右 */
+    /* margin-top: 0.5rem; */ /* This might still be useful if .session-info was above it, but now they are side-by-side */
+    align-items: flex-end; /* 按钮组整体靠右 - KEEPING THIS */
   }
   
   .session-item .session-status-actions .actions {
-     /* 按钮组现在应该总是靠右 */
-    justify-content: flex-end;
+     /* 按钮组垂直排列，内部元素（按钮）靠右对齐（如果容器宽度大于按钮）或充满（如果按钮宽度100%）*/
+     /* For flex-col, align-items controls cross-axis (horizontal), justify-content controls main-axis (vertical) */
+     /* We want buttons to be aligned to the end (right) of their vertical container if they are not full width */
+    align-items: flex-end; /* This will align buttons to the right if they are not full width */
+    /* justify-content: flex-end; */ /* This was for horizontal flex, for vertical, it would push to bottom */
   }
 
   /* 在窄视图下，确保按钮容器占满宽度，使按钮能正确对齐 */
+  /* The nested container query might not be needed or needs simplification */
   @container suspended-sessions-view-pane (max-width: 320px) {
     .session-item .session-info .font-bold.text-lg { /* 针对名称和状态标签的容器 */
-        flex-wrap: wrap; /* 如果名称和状态标签加起来太长，允许状态标签换行 */
+        flex-wrap: wrap; /* 如果名称和状态标签加起来太长，允许状态标签换行 - This is still good */
     }
-    .session-item .session-status-actions {
+    /* .session-item .session-status-actions { */
         /* 保持按钮在右侧 */
-        align-items: flex-end;
-    }
+        /* align-items: flex-end; */ /* Already set above */
+    /* } */
     .session-item .session-status-actions .actions {
-      width: 100%; /* 让按钮容器占满，以便按钮可以靠左或靠右 */
-      justify-content: flex-start; /* 在极窄情况下，按钮靠左可能更好 */
+      /* width: 100%; */ /* 让按钮容器占满，以便按钮可以靠左或靠右 - May not be needed if align-items: flex-end works */
+      /* justify-content: flex-start; */ /* 在极窄情况下，按钮靠左可能更好 - REMOVED, we want them right-aligned or as per their container */
+      align-items: flex-end; /* Ensure buttons themselves are right-aligned within their vertical stack */
     }
   }
 }
