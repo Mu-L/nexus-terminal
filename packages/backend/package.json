@@ -14,12 +14,14 @@
       "@types/multer": "^1.4.12",
       "@types/session-file-store": "^1.2.5",
       "@types/uuid": "^10.0.0",
+      "adm-zip": "^0.5.16",
       "archiver": "^7.0.1",
       "axios": "^1.9.0",
       "bcrypt": "^5.1.1",
       "date-fns": "^4.1.0",
       "date-fns-tz": "^3.2.0",
       "dotenv": "^16.5.0",
+      "easyzip": "^1.0.3",
       "express": "^5.1.0",
       "express-session": "^1.18.1",
       "i18next": "^25.0.0",
@@ -40,6 +42,7 @@
       "xterm": "^5.3.0"
    },
    "devDependencies": {
+      "@types/adm-zip": "^0.5.7",
       "@types/bcrypt": "^5.0.2",
       "@types/express": "^5.0.1",
       "@types/express-session": "^1.18.1",

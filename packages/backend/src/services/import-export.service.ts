@@ -2,6 +2,14 @@
 import * as ConnectionRepository from '../repositories/connection.repository';
 import * as ProxyRepository from '../repositories/proxy.repository';
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
+import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; // For decrypting connection details
+import archiver from 'archiver';
+archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
+// We might still need fs, path, os if easyzip requires writing to a temp file for password protection,
+// but let's try to do it in memory first.
+// import fs from 'fs';
+// import path from 'path';
+// import os from 'os';
 
 
 
@@ -11,7 +19,12 @@ interface ImportedConnectionData {
     host: string;
     port: number;
     username: string;
-    auth_method: 'password' | 'key';
+    auth_method: 'password' | 'key'; // For SSH
+    // Plaintext fields for export
+    password?: string | null;
+    private_key?: string | null;
+    passphrase?: string | null;
+    // Encrypted fields might still be part of the base ImportedConnectionData if it's used elsewhere
     encrypted_password?: string | null;
     encrypted_private_key?: string | null;
     encrypted_passphrase?: string | null;
@@ -22,13 +35,44 @@ interface ImportedConnectionData {
         host: string;
         port: number;
         username?: string | null;
-        auth_method?: 'none' | 'password' | 'key';
+        auth_method?: 'none' | 'password' | 'key'; // For proxy
+        // Plaintext fields for proxy export
+        password?: string | null;
+        private_key?: string | null; // If proxy uses key auth
+        passphrase?: string | null; // If proxy key has passphrase
+        // Encrypted fields for proxy
         encrypted_password?: string | null;
         encrypted_private_key?: string | null;
         encrypted_passphrase?: string | null;
     } | null;
 }
-interface ExportedConnectionData extends Omit<ImportedConnectionData, 'id'> {}
+
+// This will represent the structure of the data *before* it's put into the JSON for export,
+// containing plaintext sensitive info.
+interface PlaintextExportConnectionData {
+    name: string;
+    type: 'SSH' | 'RDP' | 'VNC';
+    host: string;
+    port: number;
+    username: string;
+    auth_method: 'password' | 'key'; // SSH auth method
+    password?: string | null; // Plaintext password
+    private_key?: string | null; // Plaintext private key
+    passphrase?: string | null; // Plaintext passphrase for key
+    tag_ids?: number[];
+    proxy?: {
+        name: string;
+        type: 'SOCKS5' | 'HTTP';
+        host: string;
+        port: number;
+        username?: string | null;
+        auth_method?: 'none' | 'password' | 'key'; // Proxy auth method
+        password?: string | null; // Plaintext proxy password
+        private_key?: string | null; // Plaintext proxy private key
+        passphrase?: string | null; // Plaintext proxy key passphrase
+    } | null;
+}
+
 export interface ImportResult {
     successCount: number;
     failureCount: number;
@@ -37,9 +81,10 @@ export interface ImportResult {
 
 
 /**
- * 导出所有连接配置
+ * 获取所有连接的明文数据以供导出。
+ * 敏感信息将被解密。
  */
-export const exportConnections = async (): Promise<ExportedConnectionData[]> => {
+const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionData[]> => {
     try {
         const db = await getDbInstance();
 
@@ -85,32 +130,66 @@ export const exportConnections = async (): Promise<ExportedConnectionData[]> => 
         });
 
 
-        const formattedData: ExportedConnectionData[] = connectionsWithProxies.map(row => {
-            const connection: ExportedConnectionData = {
+        const formattedData: PlaintextExportConnectionData[] = connectionsWithProxies.map(row => {
+            // Decrypt main connection sensitive data
+            let plainPassword = null;
+            if (row.encrypted_password) {
+                try { plainPassword = decrypt(row.encrypted_password); }
+                catch (e) { console.warn(`解密连接 [${row.name}] 密码失败: ${(e as Error).message}`); }
+            }
+            let plainPrivateKey = null;
+            if (row.encrypted_private_key) {
+                try { plainPrivateKey = decrypt(row.encrypted_private_key); }
+                catch (e) { console.warn(`解密连接 [${row.name}] 私钥失败: ${(e as Error).message}`); }
+            }
+            let plainPassphrase = null;
+            if (row.encrypted_passphrase) {
+                try { plainPassphrase = decrypt(row.encrypted_passphrase); }
+                catch (e) { console.warn(`解密连接 [${row.name}] 私钥密码失败: ${(e as Error).message}`); }
+            }
+
+            const connection: PlaintextExportConnectionData = {
                 name: row.name ?? 'Unnamed',
-                type: row.type, // Add type field
+                type: row.type,
                 host: row.host,
                 port: row.port,
                 username: row.username,
-                auth_method: row.auth_method,
-                encrypted_password: row.encrypted_password,
-                encrypted_private_key: row.encrypted_private_key,
-                encrypted_passphrase: row.encrypted_passphrase,
+                auth_method: row.auth_method, // Keep auth_method as is
+                password: plainPassword,
+                private_key: plainPrivateKey,
+                passphrase: plainPassphrase,
                 tag_ids: tagsMap[row.id] || [],
                 proxy: null
             };
 
-            if (row.proxy_db_id) {
+            if (row.proxy_db_id && row.proxy_name && row.proxy_type && row.proxy_host && row.proxy_port !== null) {
+                // Decrypt proxy sensitive data
+                let proxyPlainPassword = null;
+                if (row.proxy_encrypted_password) {
+                    try { proxyPlainPassword = decrypt(row.proxy_encrypted_password); }
+                    catch (e) { console.warn(`解密代理 [${row.proxy_name}] 密码失败: ${(e as Error).message}`); }
+                }
+                let proxyPlainPrivateKey = null;
+                if (row.proxy_encrypted_private_key) {
+                    try { proxyPlainPrivateKey = decrypt(row.proxy_encrypted_private_key); }
+                    catch (e) { console.warn(`解密代理 [${row.proxy_name}] 私钥失败: ${(e as Error).message}`); }
+                }
+                let proxyPlainPassphrase = null;
+                if (row.proxy_encrypted_passphrase) {
+                    try { proxyPlainPassphrase = decrypt(row.proxy_encrypted_passphrase); }
+                    catch (e) { console.warn(`解密代理 [${row.proxy_name}] 私钥密码失败: ${(e as Error).message}`); }
+                }
+
                 connection.proxy = {
-                    name: row.proxy_name ?? 'Unnamed Proxy',
-                    type: row.proxy_type ?? 'SOCKS5', 
-                    host: row.proxy_host ?? '', 
-                    port: row.proxy_port ?? 0,
+                    name: row.proxy_name,
+                    type: row.proxy_type,
+                    host: row.proxy_host,
+                    port: row.proxy_port,
                     username: row.proxy_username,
                     auth_method: row.proxy_auth_method ?? 'none',
-                    encrypted_password: row.proxy_encrypted_password,
-                    encrypted_private_key: row.proxy_encrypted_private_key,
-                    encrypted_passphrase: row.proxy_encrypted_passphrase,
+                    password: proxyPlainPassword,
+                    private_key: proxyPlainPrivateKey,
+                    passphrase: proxyPlainPassphrase,
                 };
             }
             return connection;
@@ -119,8 +198,59 @@ export const exportConnections = async (): Promise<ExportedConnectionData[]> => 
         return formattedData;
 
     } catch (err: any) {
-        console.error('Service: 导出连接时出错:', err.message);
-        throw new Error(`导出连接失败: ${err.message}`);
+        console.error('Service: 获取明文连接数据时出错:', err.message);
+        throw new Error(`获取明文连接数据失败: ${err.message}`);
+    }
+};
+
+/**
+ * 导出所有连接配置为一个加密的 ZIP 文件。
+ * @returns Buffer 包含加密的 ZIP 文件内容 (IV + Ciphertext + AuthTag)。
+ */
+export const exportConnectionsAsEncryptedZip = async (): Promise<Buffer> => {
+    try {
+        const connections = await getPlaintextConnectionsData();
+        const jsonContent = JSON.stringify(connections, null, 2);
+
+        // 注意：当前版本的 adm-zip 不支持在内存中设置密码
+        // const zipPassword = process.env.ENCRYPTION_KEY;
+        // if (!zipPassword || zipPassword.trim() === '') {
+        //     console.error('错误：ENCRYPTION_KEY 环境变量未设置或为空！无法为ZIP文件设置密码。');
+        //     throw new Error('ENCRYPTION_KEY is not set or is empty, cannot password-protect the ZIP file.');
+        // }
+
+        const zipPassword = process.env.ENCRYPTION_KEY;
+        if (!zipPassword || zipPassword.trim() === '') {
+            console.error('错误：ENCRYPTION_KEY 环境变量未设置或为空！无法为ZIP文件设置密码。');
+            throw new Error('ENCRYPTION_KEY is not set or is empty, cannot password-protect the ZIP file.');
+        }
+
+        const archive = archiver.create('zip-encrypted', {
+            zlib: { level: 9 }, // 设置压缩级别
+            encryptionMethod: 'aes256', // 使用 AES-256 加密
+            password: zipPassword // 设置密码
+        });
+
+        const buffer: Buffer[] = [];
+        archive.on('data', (data) => {
+            buffer.push(data);
+        });
+
+        archive.on('error', (err) => {
+            console.error('Service: 使用 archiver 创建加密 ZIP buffer 时出错:', err);
+            throw new Error(`使用 archiver 创建加密 ZIP buffer 失败: ${err.message}`);
+        });
+
+        archive.append(jsonContent, { name: 'connections.json' });
+
+        await archive.finalize();
+        return Buffer.concat(buffer);
+
+    } catch (error: any) {
+        // This catch block might not be reached if errors are only within the Promise.
+        // The promise's reject will handle errors during zip.writeToBuffer.
+        console.error('Service: 导出连接 ZIP (archiver) 时发生意外错误:', error);
+        throw new Error(`导出连接 ZIP (archiver) 失败: ${error.message}`);
     }
 };
 

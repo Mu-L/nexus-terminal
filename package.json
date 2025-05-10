@@ -26,6 +26,7 @@
   "homepage": "https://github.com/Heavrnl/nexus-terminal#readme",
   "description": "",
   "dependencies": {
+    "archiver-zip-encrypted": "^2.0.0",
     "axios": "^1.8.4",
     "fs-extra": "^11.3.0",
     "pinia-plugin-persistedstate": "^4.2.0",

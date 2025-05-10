@@ -51,7 +51,7 @@ export const initializeWebSocket = async (server: http.Server, sessionParser: Re
     });
 
 
-    console.log('WebSocket 服务器初始化完成 (重构版)。');
+    console.log('WebSocket 服务器初始化完成。');
     return wss;
 };
 

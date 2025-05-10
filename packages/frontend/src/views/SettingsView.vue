@@ -684,7 +684,39 @@
               </div>
             </div>
           </div>
-<!-- Appearance Section: Only show if settings data is loaded -->
+          <!-- Data Management Section (including Export) -->
+          <div v-if="settings" class="bg-background border border-border rounded-lg shadow-sm overflow-hidden">
+            <h2 class="text-lg font-semibold text-foreground px-6 py-4 border-b border-border bg-header/50">
+              {{ t('settings.category.dataManagement', '数据管理') }}
+            </h2>
+            <div class="p-6 space-y-6">
+              <!-- Export Connections Section -->
+              <div class="settings-section-content">
+                 <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.exportConnections.title', '导出连接数据') }}</h3>
+                 <p class="text-sm text-text-secondary mb-2">
+                   {{ t('settings.exportConnections.description', '将所有连接配置（包括密码和密钥等敏感信息）导出为一个加密的 ZIP 文件。') }}
+                 </p>
+                 <p class="text-sm text-text-secondary mb-4">
+                   <span class="font-semibold text-warning">{{ t('settings.exportConnections.decryptKeyInfo', '解压密码为您的 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。') }}</span>
+                 </p>
+                 <form @submit.prevent="handleExportConnections" class="space-y-4">
+                   <div class="flex items-center justify-between">
+                      <button type="submit" :disabled="exportConnectionsLoading"
+                              class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out text-sm font-medium inline-flex items-center">
+                        <svg v-if="exportConnectionsLoading" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {{ exportConnectionsLoading ? t('common.loading') : t('settings.exportConnections.buttonText', '开始导出') }}
+                      </button>
+                      <p v-if="exportConnectionsMessage" :class="['text-sm', exportConnectionsSuccess ? 'text-success' : 'text-error']">{{ exportConnectionsMessage }}</p>
+                   </div>
+                 </form>
+              </div>
+            </div>
+          </div> <!-- End Data Management Section -->
+          
+          <!-- Appearance Section: Only show if settings data is loaded -->
           <div v-if="settings" class="bg-background border border-border rounded-lg shadow-sm overflow-hidden">
             <h2 class="text-lg font-semibold text-foreground px-6 py-4 border-b border-border bg-header/50">{{ $t('settings.category.appearance') }}</h2>
             <div class="p-6 space-y-6">
@@ -850,6 +882,7 @@ const terminalScrollbackLimitSuccess = ref(false); // NEW
 const fileManagerShowDeleteConfirmationLoading = ref(false); // NEW
 const fileManagerShowDeleteConfirmationMessage = ref(''); // NEW
 const fileManagerShowDeleteConfirmationSuccess = ref(false); // NEW
+
 // CAPTCHA Form State
 const captchaForm = reactive<UpdateCaptchaSettingsDto>({ // Use reactive for the form object
     enabled: false,
@@ -862,6 +895,11 @@ const captchaForm = reactive<UpdateCaptchaSettingsDto>({ // Use reactive for the
 const captchaLoading = ref(false);
 const captchaMessage = ref('');
 const captchaSuccess = ref(false);
+
+// --- Export Connections State ---
+const exportConnectionsLoading = ref(false);
+const exportConnectionsMessage = ref('');
+const exportConnectionsSuccess = ref(false);
 
 // --- Passkey State ---
 const passkeyLoading = ref(false); // For registering new passkey
@@ -1193,9 +1231,65 @@ const handleUpdateTerminalScrollbackLimit = async () => {
           fileManagerShowDeleteConfirmationLoading.value = false;
       }
   };
-   
-   // --- 外观设置 ---
-const openStyleCustomizer = () => {
+  
+// --- Export Connections Method ---
+const handleExportConnections = async () => {
+  exportConnectionsLoading.value = true;
+  exportConnectionsMessage.value = '';
+  exportConnectionsSuccess.value = false;
+  try {
+    const response = await apiClient.get('/settings/export-connections', { // Corrected API path
+      responseType: 'blob',
+    });
+
+    let filename = 'nexus_connections_export.zip';
+    const disposition = response.headers['content-disposition'];
+    if (disposition && disposition.includes('attachment')) {
+      const filenameRegex = /filename[^;=\n]*=(?:(['"])(.*?)\1|([^;\n]*))/;
+      const matches = filenameRegex.exec(disposition);
+      if (matches != null && (matches[2] || matches[3])) {
+        filename = matches[2] || matches[3]; // Use captured group 2 (quoted) or 3 (unquoted)
+      }
+    }
+
+    const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/zip' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    exportConnectionsMessage.value = t('settings.exportConnections.success', '导出成功。文件已开始下载。');
+    exportConnectionsSuccess.value = true;
+  } catch (error: any) {
+    console.error('导出连接失败:', error);
+    let message = t('settings.exportConnections.error', '导出连接时发生错误。');
+    if (isAxiosError(error) && error.response && error.response.data) {
+        if (error.response.data instanceof Blob && error.response.data.type === 'application/json') {
+            try {
+                const errorJson = JSON.parse(await error.response.data.text());
+                message = errorJson.message || message;
+            } catch (e) { /* Blob not valid JSON */ }
+        } else if (typeof error.response.data === 'string') {
+            message = error.response.data;
+        } else if (error.response.data && typeof error.response.data.message === 'string') {
+            message = error.response.data.message;
+        }
+    } else if (error.message) {
+        message = error.message;
+    }
+    exportConnectionsMessage.value = message;
+    exportConnectionsSuccess.value = false;
+  } finally {
+    exportConnectionsLoading.value = false;
+  }
+};
+
+// --- 外观设置 ---
+  const openStyleCustomizer = () => {
     appearanceStore.toggleStyleCustomizer(true);
 };
 

@@ -8,7 +8,7 @@ const tagLength = 16; // GCM 认证标签长度
 /**
  * Internal helper to get and validate the encryption key buffer on demand.
  */
-const getEncryptionKeyBuffer = (): Buffer => {
+export const getEncryptionKeyBuffer = (): Buffer => {
     const keyEnv = process.env.ENCRYPTION_KEY;
     if (!keyEnv) {
         // This should ideally not happen due to initializeEnvironment in index.ts
