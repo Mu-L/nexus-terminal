@@ -79,18 +79,34 @@ export const requestStartSshSuspend = (sessionId: string): void => {
       return;
     }
 
-    let initialBuffer = ''; // +++ 恢复 initialBuffer 的获取 +++
+    let initialBuffer = '';
     if (session.terminalManager && session.terminalManager.terminalInstance && session.terminalManager.terminalInstance.value) {
       const term = session.terminalManager.terminalInstance.value;
       const buffer = term.buffer.active;
-      for (let i = 0; i < buffer.length; i++) {
-        initialBuffer += (buffer.getLine(i)?.translateToString(true) || '') + '\n';
+      
+      let lastNonEmptyLineIndex = -1;
+      // 从下往上找到最后一个非空行
+      for (let i = buffer.length - 1; i >= 0; i--) {
+        const line = buffer.getLine(i);
+        // translateToString(true) 会移除行尾空白，再 trim() 判断是否整行都是空白
+        if (line && line.translateToString(true).trim() !== '') {
+          lastNonEmptyLineIndex = i;
+          break;
+        }
       }
-      // 移除可能多余的最后一个换行符
-      if (initialBuffer.endsWith('\n')) {
-        initialBuffer = initialBuffer.slice(0, -1);
+
+      if (lastNonEmptyLineIndex !== -1) {
+        const lines = [];
+        for (let i = 0; i <= lastNonEmptyLineIndex; i++) {
+          // 获取行内容，translateToString(true) 会移除行尾空白
+          lines.push(buffer.getLine(i)?.translateToString(true) || '');
+        }
+        initialBuffer = lines.join('\n');
       }
-      console.log(`[${t('term.sshSuspend')}] 已获取会话 ${sessionId} 的初始屏幕缓冲区内容，长度: ${initialBuffer.length}`);
+      // join('\n') 会在行间添加换行符，如果最后一行是空字符串，末尾不会有多余的 \n
+      // 如果最后一行非空，则自然以该行结束。
+
+      console.log(`[${t('term.sshSuspend')}] 已获取会话 ${sessionId} 的初始屏幕缓冲区内容 (处理后)，长度: ${initialBuffer.length}, 最后非空行索引: ${lastNonEmptyLineIndex}`);
     } else {
       console.warn(`[${t('term.sshSuspend')}] 未能获取会话 ${sessionId} 的终端实例以提取初始缓冲区。`);
     }
