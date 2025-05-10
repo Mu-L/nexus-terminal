@@ -36,7 +36,7 @@
         >
           <div class="flex justify-between items-center">
             <div class="session-info flex-grow mr-2">
-              <div class="font-bold text-lg">
+              <div class="font-bold text-lg flex items-center">
                 <span
                   v-if="editingSuspendSessionId !== session.suspendSessionId"
                   class="cursor-pointer hover:text-primary"
@@ -55,6 +55,14 @@
                   @keydown.enter.prevent="finishEditingName()"
                   @keydown.esc.prevent="cancelEditingName()"
                 />
+                <span
+                  :class="[
+                    'px-2 py-0.5 text-xs font-semibold rounded-full ml-2 whitespace-nowrap', /* +++ 调整了 padding 和增加了 ml-2, whitespace-nowrap +++ */
+                    session.backendSshStatus === 'hanging' ? 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-100'
+                  ]"
+                >
+                  {{ session.backendSshStatus === 'hanging' ? $t('suspendedSshSessions.status.hanging') : $t('suspendedSshSessions.status.disconnected') }}
+                </span>
               </div>
               <div class="text-sm text-muted-color">
                 {{ $t('suspendedSshSessions.label.originalConnection') }}: {{ session.connectionName }}
@@ -70,16 +78,9 @@
               </div>
             </div>
 
-            <div class="session-status-actions flex flex-col items-end space-y-2">
-              <span
-                :class="[
-                  'px-2 py-1 text-xs font-semibold rounded-full',
-                  session.backendSshStatus === 'hanging' ? 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-100'
-                ]"
-              >
-                {{ session.backendSshStatus === 'hanging' ? $t('suspendedSshSessions.status.hanging') : $t('suspendedSshSessions.status.disconnected') }}
-              </span>
-              <div class="actions flex space-x-2">
+            <div class="session-status-actions flex flex-col items-end">
+              
+              <div class="actions flex space-x-2 mt-1"> 
                 <button
                   v-if="session.backendSshStatus === 'hanging'"
                   @click="resumeSession(session)"
@@ -356,13 +357,30 @@ onUnmounted(() => {
   }
 
   .session-item .session-status-actions {
-    margin-top: 0.5rem; /* mt-2 */
-    align-items: flex-start;
+    /* 之前的窄视图特定样式可能不再需要，或需要调整 */
+    /* 现在按钮组总是垂直排列（默认）或根据其父容器调整 */
+    margin-top: 0.5rem;
+    align-items: flex-end; /* 按钮组整体靠右 */
   }
   
   .session-item .session-status-actions .actions {
-    width: 100%;
-    justify-content: flex-start; /* Align buttons to the start */
+     /* 按钮组现在应该总是靠右 */
+    justify-content: flex-end;
+  }
+
+  /* 在窄视图下，确保按钮容器占满宽度，使按钮能正确对齐 */
+  @container suspended-sessions-view-pane (max-width: 320px) {
+    .session-item .session-info .font-bold.text-lg { /* 针对名称和状态标签的容器 */
+        flex-wrap: wrap; /* 如果名称和状态标签加起来太长，允许状态标签换行 */
+    }
+    .session-item .session-status-actions {
+        /* 保持按钮在右侧 */
+        align-items: flex-end;
+    }
+    .session-item .session-status-actions .actions {
+      width: 100%; /* 让按钮容器占满，以便按钮可以靠左或靠右 */
+      justify-content: flex-start; /* 在极窄情况下，按钮靠左可能更好 */
+    }
   }
 }
 </style>

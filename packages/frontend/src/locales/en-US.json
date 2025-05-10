@@ -1174,6 +1174,7 @@
     }
   },
   "suspendedSshSessions": {
+    "modalTitle": "Suspended SSH Sessions",
     "searchPlaceholder": "Search sessions (name, connection...)",
     "loading": "Loading suspended sessions...",
     "noResults": "No suspended sessions found matching your criteria.",
