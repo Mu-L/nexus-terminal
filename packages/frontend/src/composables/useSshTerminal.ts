@@ -256,7 +256,7 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
             return; // 忽略不属于此会话的消息
         }
 
-        console.log(`[会话 ${sessionId}][SSH终端模块] SSH 会话已连接。`);
+        console.log(`[会话 ${sessionId}][SSH终端模块] SSH 会话已连接。 Payload:`, payload, 'Full message:', message); // 更详细的日志
         isSshConnected.value = true; // 更新状态
         // 连接成功后聚焦终端
         terminalInstance.value?.focus();

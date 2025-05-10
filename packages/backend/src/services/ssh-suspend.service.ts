@@ -192,12 +192,10 @@ export class SshSuspendService extends EventEmitter {
    * @returns Promise<SuspendedSessionInfo[]> 挂起会话信息的数组。
    */
   async listSuspendedSessions(userId: number): Promise<SuspendedSessionInfo[]> {
-    console.log(`[SshSuspendService DEBUG] listSuspendedSessions: Called for userId=${userId}`);
     const userSessions = this.getUserSessions(userId);
     const sessionsInfo: SuspendedSessionInfo[] = [];
 
     for (const [suspendSessionId, details] of userSessions.entries()) {
-      console.log(`[SshSuspendService DEBUG] listSuspendedSessions: Processing suspendSessionId=${suspendSessionId}, status=${details.backendSshStatus}`);
       sessionsInfo.push({
         suspendSessionId,
         connectionName: details.connectionName,

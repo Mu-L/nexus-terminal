@@ -23,7 +23,6 @@ export class SshSuspendController {
         return;
       }
       
-      console.log(`[SshSuspendController] getSuspendedSshSessions called for user ID: ${userId}`);
 
       const sessions: SuspendedSessionInfo[] = await sshSuspendService.listSuspendedSessions(userId);
       res.status(200).json(sessions);
