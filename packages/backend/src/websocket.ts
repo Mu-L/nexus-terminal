@@ -7,17 +7,6 @@ import { initializeConnectionHandler } from './websocket/connection';
 import { clientStates } from './websocket/state';
 import { sshSuspendService } from './services/ssh-suspend.service'; // 导入实例
 import { SftpService } from './services/sftp.service'; // +++ 导入 SftpService +++
-// TemporaryLogStorageService 是 SshSuspendService 的依赖，SshSuspendService 内部会处理它的实例化或导入，
-// websocket.ts 层面不需要直接使用 temporaryLogStorageService。
-// 如果 SshSuspendService 的构造函数需要一个 TemporaryLogStorageService 实例，
-// 并且 sshSuspendService 实例是由 ssh-suspend.service.ts 文件创建和导出的，
-// 那么该文件应该已经处理了 TemporaryLogStorageService 的注入。
-// 因此，我们只需要导入 sshSuspendService。
-import {
-    SshSuspendClientToServerMessages,
-    SshSuspendServerToClientMessages,
-    SuspendedSessionInfo
-} from './websocket/types';
 import { cleanupClientConnection } from './websocket/utils';
 
 
