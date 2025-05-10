@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick, watch } from 'vue'; // +++ 导入 nextTick 和 watch +++
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'; // +++ 导入 nextTick, watch 和 onUnmounted +++
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useSessionStore } from '../stores/session.store';
@@ -243,8 +243,23 @@ const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 
   }
 };
 
+let fetchIntervalId: number | undefined;
+
 onMounted(async () => {
+  // 立即获取一次数据 (显示加载指示器)
   await sessionStore.fetchSuspendedSshSessions();
+  
+  // 设置定时器，每3秒获取一次数据 (不显示加载指示器)
+  fetchIntervalId = window.setInterval(async () => {
+    await sessionStore.fetchSuspendedSshSessions({ showLoadingIndicator: false });
+  }, 3000);
+});
+
+onUnmounted(() => {
+  // 组件卸载时清除定时器
+  if (fetchIntervalId) {
+    clearInterval(fetchIntervalId);
+  }
 });
 
 </script>

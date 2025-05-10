@@ -151,8 +151,12 @@ export const requestUnmarkSshSuspend = (sessionId: string): void => {
 /**
  * 获取挂起的 SSH 会话列表 (通过 HTTP API)
  */
-export const fetchSuspendedSshSessions = async (): Promise<void> => {
-  isLoadingSuspendedSessions.value = true;
+export const fetchSuspendedSshSessions = async (options?: { showLoadingIndicator?: boolean }): Promise<void> => {
+  const shouldShowLoading = options?.showLoadingIndicator ?? true;
+
+  if (shouldShowLoading) {
+    isLoadingSuspendedSessions.value = true;
+  }
   try {
     // 假设后端 API 端点为 /api/ssh/suspended-sessions
     // 并且它返回 SuspendedSshSession[] 类型的数据
@@ -170,7 +174,9 @@ export const fetchSuspendedSshSessions = async (): Promise<void> => {
     // 即使失败，也可能需要清空旧数据或保留旧数据，具体取决于产品需求
     // suspendedSshSessions.value = []; // 例如，失败时清空
   } finally {
-    isLoadingSuspendedSessions.value = false;
+    if (shouldShowLoading) {
+      isLoadingSuspendedSessions.value = false;
+    }
   }
 };
 
