@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import { clientStates, ClientState } from '../websocket'; // +++ 导入 ClientState +++
-import archiver from 'archiver'; // +++ 引入 archiver +++
+import * as archiver from 'archiver'; // +++ 引入 archiver +++ (尝试修复 TS2349)
 import { SFTPWrapper, Stats } from 'ssh2'; // +++ 移除 Dirent 导入 +++
 // 移除 ssh2-streams 导入
 
@@ -190,15 +190,15 @@ export const downloadDirectory = async (req: Request, res: Response): Promise<vo
         res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`); // 使用修正后的名称
 
         // 3. 创建 Archiver 实例
-        const archive = archiver('zip', {
+        const archive = archiver.create('zip', {
             zlib: { level: 9 } // 设置压缩级别 (可选)
         });
 
         // 监听错误事件
-        archive.on('warning', (err) => {
+        archive.on('warning', (err: Error) => {
             console.warn(`Archiver warning (用户 ${userId}, 路径 ${remotePath}):`, err);
         });
-        archive.on('error', (err) => {
+        archive.on('error', (err: Error) => {
             console.error(`Archiver error (用户 ${userId}, 路径 ${remotePath}):`, err);
             // 尝试发送错误响应，如果头还没发送
             if (!res.headersSent) {
