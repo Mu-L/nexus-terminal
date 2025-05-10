@@ -364,6 +364,7 @@ const handleSshMarkedForSuspendAck = (payload: SshMarkedForSuspendAckPayload): v
     const session = sessions.value.get(payload.sessionId);
     if (session) {
       session.isMarkedForSuspend = true; // 假设 SessionState 有此字段
+      sessions.value = new Map(sessions.value); // 强制更新 Map
     }
 
   } else {
@@ -375,6 +376,7 @@ const handleSshMarkedForSuspendAck = (payload: SshMarkedForSuspendAckPayload): v
     const session = sessions.value.get(payload.sessionId);
     if (session) {
       session.isMarkedForSuspend = false; // 确保标记被清除
+      sessions.value = new Map(sessions.value); // 强制更新 Map
     }
   }
 };
@@ -387,6 +389,7 @@ const handleSshUnmarkedForSuspendAck = (payload: SshUnmarkedForSuspendAckPayload
   if (payload.success) {
     if (session) {
       session.isMarkedForSuspend = false;
+      sessions.value = new Map(sessions.value); // 强制更新 Map
     }
     uiNotificationsStore.addNotification({
       type: 'success',

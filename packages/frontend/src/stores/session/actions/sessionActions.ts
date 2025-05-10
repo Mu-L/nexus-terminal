@@ -81,6 +81,7 @@ export const openNewSession = (
       editorTabs: ref([]),
       activeEditorTabId: ref(null),
       commandInputContent: ref(''),
+      isMarkedForSuspend: false, // +++ 初始化 isMarkedForSuspend状态 +++
       disposables: [], // 初始化 disposables 数组
   };
 

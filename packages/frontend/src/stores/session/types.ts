@@ -52,4 +52,5 @@ export interface SessionTabInfoWithStatus {
   sessionId: string;
   connectionName: string;
   status: WsConnectionStatus; // 添加状态字段
+  isMarkedForSuspend?: boolean; // +++ 新增：用于UI指示会话是否已标记待挂起 +++
 }

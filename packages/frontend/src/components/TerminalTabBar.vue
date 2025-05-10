@@ -353,6 +353,7 @@ animation="150"
         >
           <!-- Status dot -->
           <span :class="['w-2 h-2 rounded-full mr-2 flex-shrink-0',
+                         session.isMarkedForSuspend ? 'bg-blue-500' : // +++ 如果已标记待挂起，则为蓝色 +++
                          session.status === 'connected' ? 'bg-green-500' :
                          session.status === 'connecting' ? 'bg-yellow-500 animate-pulse' :
                          session.status === 'disconnected' ? 'bg-red-500' : 'bg-gray-400']"></span>
