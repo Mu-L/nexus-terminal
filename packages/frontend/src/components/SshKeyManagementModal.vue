@@ -47,7 +47,7 @@ const showEditForm = async (key: SshKeyBasicInfo) => {
     const details = await sshKeysStore.fetchDecryptedSshKey(key.id);
     if (details) {
         formData.name = details.name;
-        formData.private_key = details.privateKey;
+        formData.private_key = ''; // Do not pre-fill private key, empty means no change
         formData.passphrase = ''; // Do not pre-fill passphrase
         isAddEditFormVisible.value = true;
     } else {
@@ -60,7 +60,7 @@ const showEditForm = async (key: SshKeyBasicInfo) => {
 // Handle form submission (add or edit)
 const handleSubmit = async () => {
     formError.value = null;
-    if (!formData.name || !formData.private_key) {
+    if (!formData.name || (!keyToEdit.value && !formData.private_key)) { // Private key is required only for new keys
         formError.value = t('sshKeys.modal.errorRequiredFields');
         return;
     }
@@ -68,10 +68,19 @@ const handleSubmit = async () => {
     let success = false;
     const dataToSend: Partial<SshKeyInput> = {
         name: formData.name,
-        private_key: formData.private_key,
-        // Only send passphrase if it's not empty
-        ...(formData.passphrase && { passphrase: formData.passphrase }),
     };
+
+    // Add private_key to dataToSend only if it's provided by the user.
+    // In edit mode, an empty formData.private_key means the user does not want to change the key.
+    // In add mode, formData.private_key is guaranteed to be non-empty by the validation above.
+    if (formData.private_key) {
+        dataToSend.private_key = formData.private_key;
+    }
+
+    // Only send passphrase if it's not empty
+    if (formData.passphrase) {
+        dataToSend.passphrase = formData.passphrase;
+    }
 
 
     if (keyToEdit.value) {
