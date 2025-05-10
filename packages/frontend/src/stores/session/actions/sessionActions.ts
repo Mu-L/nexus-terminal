@@ -74,10 +74,6 @@ export const openNewSession = (
       {
           isResumeFlow: isResume,
           getIsMarkedForSuspend: () => {
-              // 直接从 newSessionPartial (它将成为完整的 SessionState 对象) 读取状态
-              // 注意：如果 SessionState.sessionId 被后端更新，而 wsManager 内部的 sessionId (instanceSessionId)
-              // 没有相应更新并在 scheduleReconnect 中使用 instanceSessionId 来识别日志，可能会有轻微不一致。
-              // 但对于 isMarkedForSuspend 的判断是准确的。
               return !!newSessionPartial.isMarkedForSuspend;
           }
       }

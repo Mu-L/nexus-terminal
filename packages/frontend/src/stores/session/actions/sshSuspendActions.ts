@@ -35,10 +35,6 @@ const t: ComposerTranslation = i18n.global.t; // 从全局 i18n 实例获取 t �
 // 优先使用当前激活的会话，或者任意一个已连接的 SSH 会话
 // 注意：此函数主要用于那些仍然需要 WebSocket 的操作 (如 resume, terminate)
 const getActiveWsManager = (): WsManagerInstance | null => {
-  // console.log(`[getActiveWsManager] 尝试获取可用 WebSocket。当前 sessions 数量: ${sessions.value.size}`);
-  // sessions.value.forEach((session, sessionId) => {
-  //   console.log(`[getActiveWsManager]   - 会话 ID: ${sessionId}, WS Manager 存在: ${!!session.wsManager}, WS 已连接: ${session.wsManager?.isConnected?.value}`);
-  // });
 
   const firstSessionKey = sessions.value.size > 0 ? sessions.value.keys().next().value : null;
   // console.log(`[getActiveWsManager] 尝试使用第一个会话 Key (如果存在): ${firstSessionKey}`);
