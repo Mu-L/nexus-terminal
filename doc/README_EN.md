@@ -139,8 +139,6 @@ docker-compose up -d
 
 You can right-click in the SSH tab to select "Suspend Session" (long-press on mobile). Once suspended, even if the web connection is lost, the backend will automatically take over and keep the SSH connection active. You can resume the session at any time via the panel. This ensures that tasks such as compilation or long-running processes won’t be interrupted due to network issues.
 
-This feature not only supports uninterrupted execution of long tasks, but also allows sharing the same SSH session across multiple locations, meeting various usage needs.
-
 
 ### Command Input Component
 
