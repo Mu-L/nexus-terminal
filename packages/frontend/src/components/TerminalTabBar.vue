@@ -9,13 +9,14 @@ import TabBarContextMenu from './TabBarContextMenu.vue';
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
 
 const { t } = useI18n(); // 初始化 i18n
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
+const onWorkspaceEvent = useWorkspaceEventSubscriber(); // +++ 获取事件订阅器 +++
 const layoutStore = useLayoutStore(); // 初始化布局 store
 const connectionsStore = useConnectionsStore();
 const { isHeaderVisible } = storeToRefs(layoutStore); // 从 layout store 获取主导航栏可见状态
@@ -272,8 +273,13 @@ onMounted(() => {
   isWorkspaceRoute.value = route.path === '/workspace';
   if (isWorkspaceRoute.value) {
     // 初始加载时，不需要在这里加载 Header 状态，App.vue 会处理
-     console.log('[TabBar] Mounted on /workspace route. Header toggle button is now active.');
+    console.log('[TabBar] Mounted on /workspace route. Header toggle button is now active.');
   }
+  // 监听连接事件
+  onWorkspaceEvent('connection:connect', (payload) => {
+    console.log('[TabBar] Received connection:connect event:', payload);
+    handlePopupConnect(payload.connectionId);
+  });
 });
 
 // +++ 组件卸载前移除全局监听器 +++

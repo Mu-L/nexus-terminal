@@ -135,7 +135,8 @@ onMounted(() => {
   subscribeToWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   subscribeToWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
 
-  subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  // 移除对 connection:connect 事件的监听，以避免重复创建会话
+  // subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   subscribeToWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
   subscribeToWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
   subscribeToWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));
@@ -176,7 +177,8 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   unsubscribeFromWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
 
-  unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  // 移除对 connection:connect 事件的监听，以避免重复创建会话
+  // unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   unsubscribeFromWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
   unsubscribeFromWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
   unsubscribeFromWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));
