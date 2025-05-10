@@ -3,6 +3,7 @@ import { settingsService } from '../services/settings.service';
 import { AuditLogService } from '../services/audit.service';
 import { NotificationService } from '../services/notification.service'; // 添加导入
 import { ipBlacklistService } from '../services/ip-blacklist.service';
+import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; // Import the new export service
 import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; // <-- Import CAPTCHA types
 import i18next from '../i18n'; // +++ Import i18next +++
 
@@ -502,6 +503,32 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
      console.error('[控制器] 设置“显示快捷指令标签”时出错:', error);
      res.status(500).json({ message: '设置“显示快捷指令标签”失败', error: error.message });
    }
- } // <-- No comma after the last method
+ }, // <-- Add comma here for the new method
+
+ /**
+  * 导出所有连接配置为加密的 ZIP 文件
+  */
+ async exportAllConnections(req: Request, res: Response): Promise<void> {
+   try {
+     console.log('[控制器] 收到导出所有连接的请求。');
+     const encryptedZipBuffer = await exportConnectionsAsEncryptedZip(true);
+
+     res.setHeader('Content-Type', 'application/zip');
+     res.setHeader('Content-Disposition', 'attachment; filename="nexus_connections_export.zip"');
+     res.send(encryptedZipBuffer);
+     
+     // auditLogService.logAction('CONNECTIONS_EXPORTED', { userId: (req.user as any)?.id || 'unknown' }); // 移除审计日志
+     console.log('[控制器] 成功发送加密的连接导出文件。');
+
+   } catch (error: any) {
+     console.error('[控制器] 导出所有连接时出错:', error);
+     // 检查是否是因为 ENCRYPTION_KEY 未设置导致的错误
+     if (error.message && (error.message.includes('ENCRYPTION_KEY is not set') || error.message.includes('Failed to decode ENCRYPTION_KEY') || error.message.includes('Invalid ENCRYPTION_KEY length'))) {
+         res.status(500).json({ message: i18next.t('error.exportFailedEncryptionKey'), error: error.message });
+     } else {
+         res.status(500).json({ message: i18next.t('error.exportFailedGeneric'), error: error.message });
+     }
+   }
+ } // <-- No comma after the last method if it's truly the last one
 
 };

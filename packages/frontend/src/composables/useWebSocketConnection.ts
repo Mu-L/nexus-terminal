@@ -1,4 +1,5 @@
 import { ref, shallowRef, computed, readonly } from 'vue';
+import { useI18n } from 'vue-i18n'; // +++ Add import for useI18n +++
 // 从 websocket.types.ts 导入并重新导出 ConnectionStatus
 import type { ConnectionStatus as WsConnectionStatusType, MessagePayload, WebSocketMessage, MessageHandler } from '../types/websocket.types';
 
@@ -12,18 +13,27 @@ export type WsConnectionStatus = WsConnectionStatusType;
  * @param {string} sessionId - 此 WebSocket 连接关联的会话 ID (用于日志记录)。
  * @param {string} dbConnectionId - 此 WebSocket 连接关联的数据库连接 ID (用于后端识别)。
  * @param {Function} t - i18n 翻译函数，从父组件传入
+ * @param {object} [options] - 可选参数对象
+ * @param {boolean} [options.isResumeFlow=false] - 指示此连接是否用于 SSH 恢复流程
  * @returns 一个包含状态和方法的 WebSocket 连接管理器对象。
  */
-export function createWebSocketConnectionManager(sessionId: string, dbConnectionId: string, t: Function) {
+export function createWebSocketConnectionManager(
+    sessionId: string,
+    dbConnectionId: string,
+    t: ReturnType<typeof useI18n>['t'],
+    options?: { isResumeFlow?: boolean; getIsMarkedForSuspend?: () => boolean } // +++ 添加 getIsMarkedForSuspend 回调 +++
+) {
     // --- Instance State ---
     // 每个实例拥有独立的 WebSocket 对象、状态和消息处理器
     const ws = shallowRef<WebSocket | null>(null); // WebSocket 实例
+    const isResumeFlow = options?.isResumeFlow ?? false; // 获取恢复流程标志
     const connectionStatus = ref<WsConnectionStatus>('disconnected'); // 连接状态 (使用导出的类型)
     const statusMessage = ref<string>(''); // 状态描述文本
     const isSftpReady = ref<boolean>(false); // SFTP 是否就绪
     const messageHandlers = new Map<string, Set<MessageHandler>>(); // 此实例的消息处理器注册表
     const instanceSessionId = sessionId; // 保存会话 ID 用于日志
     const instanceDbConnectionId = dbConnectionId; // 保存数据库连接 ID
+    const getIsMarkedForSuspend = options?.getIsMarkedForSuspend; // +++ 获取回调函数 +++
     let reconnectAttempts = 0; // 重连尝试次数
     const maxReconnectAttempts = 5; // 最大重连次数
     let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null; // 重连定时器 ID
@@ -70,6 +80,14 @@ export function createWebSocketConnectionManager(sessionId: string, dbConnection
      */
     const scheduleReconnect = () => {
         if (intentionalDisconnect) return; // 如果是主动断开，则不重连
+
+        // +++ 检查是否标记为待挂起 +++
+        if (getIsMarkedForSuspend && getIsMarkedForSuspend()) {
+            console.log(`[WebSocket ${instanceSessionId}] 会话已标记为待挂起，不执行自动重连。`);
+            statusMessage.value = getStatusText('markedForSuspendNoReconnect'); // 可以为此添加新的i18n文本
+            connectionStatus.value = 'disconnected'; // 保持断开状态或设为特定状态
+            return;
+        }
 
         if (reconnectAttempts >= maxReconnectAttempts) {
             console.log(`[WebSocket ${instanceSessionId}] 已达到最大重连次数 (${maxReconnectAttempts})，停止重连。`);
@@ -166,15 +184,24 @@ export function createWebSocketConnectionManager(sessionId: string, dbConnection
                 reconnectAttempts = 0; // 连接成功，重置尝试次数
                 statusMessage.value = getStatusText('wsConnected');
                 // 状态保持 'connecting' 直到收到 ssh:connected
-                // 发送后端所需的初始连接消息，包含数据库连接 ID
-                sendMessage({ type: 'ssh:connect', payload: { connectionId: instanceDbConnectionId } });
+                if (!isResumeFlow) {
+                    // 对于普通连接，发送 ssh:connect 并等待 ssh:connected 来更新状态
+                    sendMessage({ type: 'ssh:connect', payload: { connectionId: instanceDbConnectionId } });
+                } else {
+                    // 对于恢复流程，WebSocket 打开即表示连接基础已建立
+                    // 后续的 SSH_SUSPEND_RESUME_REQUEST 会完成会话的恢复
+                    connectionStatus.value = 'connected';
+                    console.log(`[WebSocket ${instanceSessionId}] 恢复流程：WebSocket 打开，状态直接设为 connected。`);
+                }
                 dispatchMessage('internal:opened', {}, { type: 'internal:opened' }); // 触发内部打开事件
             };
 
             ws.value.onmessage = (event: MessageEvent) => {
                 try {
-                    const message: WebSocketMessage = JSON.parse(event.data);
-                    // console.debug(`[WebSocket ${instanceSessionId}] 收到:`, message.type);
+                    const rawData = event.data;
+                    // console.log(`[WebSocket ${instanceSessionId}] onmessage: 收到原始数据 (类型: ${typeof rawData}, 长度: ${rawData.toString().length}) 前100字符:`, rawData.toString().substring(0, 100));
+                    const message: WebSocketMessage = JSON.parse(rawData.toString());
+                    // console.log(`[WebSocket ${instanceSessionId}] onmessage: 解析后消息类型: ${message.type}, 会话ID (消息内): ${message.sessionId || 'N/A'}, Payload keys: ${message.payload ? Object.keys(message.payload).join(', ') : 'N/A'}`);
 
                     // --- 更新此实例的连接状态 ---
                     if (message.type === 'ssh:connected') {
@@ -292,8 +319,9 @@ export function createWebSocketConnectionManager(sessionId: string, dbConnection
         if (ws.value && ws.value.readyState === WebSocket.OPEN) {
             try {
                 const messageString = JSON.stringify(message);
-                // console.debug(`[WebSocket ${instanceSessionId}] 发送:`, message.type);
+                // console.log(`[WebSocket ${instanceSessionId}] sendMessage: 准备发送消息。类型: ${message.type}, 会话ID (消息内): ${message.sessionId || 'N/A'}, Payload keys: ${message.payload ? Object.keys(message.payload).join(', ') : 'N/A'}`);
                 ws.value.send(messageString);
+                // console.log(`[WebSocket ${instanceSessionId}] sendMessage: 消息已发送。类型: ${message.type}`);
             } catch (e) {
                 console.error(`[WebSocket ${instanceSessionId}] 序列化或发送消息失败:`, e, message);
             }

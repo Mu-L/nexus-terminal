@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, watch } from 'vue';
+import { defineProps, defineEmits, watch, onMounted, onBeforeUnmount } from 'vue';
 import QuickCommandsView from '../views/QuickCommandsView.vue'; // 导入视图
+import { useWorkspaceEventSubscriber } from '../composables/workspaceEvents'; // 导入事件订阅器
 
 const props = defineProps<{
   isVisible: boolean;
@@ -36,10 +37,20 @@ watch(() => props.isVisible, (newValue) => {
   }
 });
 
+const onWorkspaceEvent = useWorkspaceEventSubscriber(); // 获取事件订阅器
+
 // Clean up listener on unmount (though v-if usually handles this)
 import { onUnmounted } from 'vue';
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
+});
+
+onMounted(() => {
+  // 监听 terminal:sendCommand 事件以关闭模态框
+  onWorkspaceEvent('terminal:sendCommand', () => {
+    console.log('[QuickCommandsModal] Received terminal:sendCommand event, closing modal.');
+    closeModal();
+  });
 });
 
 </script>

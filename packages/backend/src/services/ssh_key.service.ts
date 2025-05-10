@@ -181,3 +181,30 @@ export const deleteSshKey = async (id: number): Promise<boolean> => {
     // 注意：删除密钥前，相关的 connections 表中的 ssh_key_id 会被设为 NULL (ON DELETE SET NULL)
     return SshKeyRepository.deleteSshKey(id);
 };
+/**
+ * 获取所有解密后的 SSH 密钥详情
+ * @returns Promise<DecryptedSshKeyDetails[]> 解密后的密钥详情列表
+ */
+export const getAllDecryptedSshKeys = async (): Promise<DecryptedSshKeyDetails[]> => {
+    const dbRows = await SshKeyRepository.findAllSshKeys();
+    const decryptedKeys: DecryptedSshKeyDetails[] = [];
+    
+    for (const dbRow of dbRows) {
+        try {
+            const privateKey = decrypt(dbRow.encrypted_private_key);
+            const passphrase = dbRow.encrypted_passphrase ? decrypt(dbRow.encrypted_passphrase) : undefined;
+            decryptedKeys.push({
+                id: dbRow.id,
+                name: dbRow.name,
+                privateKey,
+                passphrase,
+            });
+        } catch (error: any) {
+            console.error(`Service: 解密 SSH 密钥 ${dbRow.id} 失败:`, error);
+            // 继续处理其他密钥，不因单个密钥解密失败而中断整个过程
+            // 可以选择记录错误或通知管理员，但这里我们只记录日志
+        }
+    }
+    
+    return decryptedKeys;
+};

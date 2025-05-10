@@ -283,7 +283,7 @@ const localAvailableInputs = computed(() => {
         <section class="p-4 border border-border rounded bg-input flex flex-col overflow-y-auto max-h-64 flex-shrink-0">
           <h3 class="mt-0 mb-4 text-base font-semibold text-text-secondary border-b border-border-light pb-2">{{ t('focusSwitcher.shortcutSettings', '快捷键设置') }}</h3>
           <div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
-            <div v-for="input in focusSwitcherStore.availableInputs" :key="input.id" class="flex items-center justify-between bg-input p-2 rounded border border-border-light">
+            <div v-for="input in focusSwitcherStore.availableInputs" :key="input.id" class="flex items-center justify-between bg-input p-2 rounded border border-border/50">
               <span class="item-label flex-grow mr-3 overflow-hidden text-ellipsis whitespace-nowrap text-sm">{{ input.label }}</span>
               <input
                 type="text"

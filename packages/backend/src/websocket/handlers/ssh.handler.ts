@@ -4,6 +4,7 @@ import { AuthenticatedWebSocket, ClientState } from '../types';
 import { clientStates, sftpService, statusMonitorService, auditLogService, notificationService } from '../state';
 import * as SshService from '../../services/ssh.service';
 import { cleanupClientConnection } from '../utils';
+import { temporaryLogStorageService } from '../../services/temporary-log-storage.service'; // +++ 新增导入
 import { startDockerStatusPolling } from './docker.handler';
 import WebSocket from 'ws';
 
@@ -102,11 +103,25 @@ export async function handleSshConnect(
                     if (ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({ type: 'ssh:output', payload: data.toString('base64'), encoding: 'base64' }));
                     }
+                    // 如果会话被标记为待挂起，则将输出写入日志
+                    const currentState = clientStates.get(newSessionId); // 获取最新的状态
+                    if (currentState?.isMarkedForSuspend && currentState.suspendLogPath) {
+                        temporaryLogStorageService.writeToLog(currentState.suspendLogPath, data.toString('utf-8')).catch(err => {
+                            console.error(`[SSH Handler] 写入标记会话 ${newSessionId} 的日志失败 (路径: ${currentState.suspendLogPath}):`, err);
+                        });
+                    }
                 });
                 stream.stderr.on('data', (data: Buffer) => {
                     console.error(`SSH Stderr (会话: ${newSessionId}): ${data.toString('utf8').substring(0, 100)}...`);
                     if (ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({ type: 'ssh:output', payload: data.toString('base64'), encoding: 'base64' }));
+                    }
+                    // 同样，如果会话被标记为待挂起，则将 stderr 输出写入日志
+                    const currentState = clientStates.get(newSessionId);
+                    if (currentState?.isMarkedForSuspend && currentState.suspendLogPath) {
+                        temporaryLogStorageService.writeToLog(currentState.suspendLogPath, `[STDERR] ${data.toString('utf-8')}`).catch(err => {
+                            console.error(`[SSH Handler] 写入标记会话 ${newSessionId} 的 STDERR 日志失败 (路径: ${currentState.suspendLogPath}):`, err);
+                        });
                     }
                 });
                 stream.on('close', () => {

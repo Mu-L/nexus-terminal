@@ -8,6 +8,7 @@ import { useSettingsStore } from '../stores/settings.store';
 import { useQuickCommandsStore } from '../stores/quickCommands.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import QuickCommandsModal from './QuickCommandsModal.vue'; // +++ Import the modal component +++
+import SuspendedSshSessionsModal from './SuspendedSshSessionsModal.vue'; // +++ Import the new modal +++
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
 
 // Disable attribute inheritance as this component has multiple root nodes (div + modal)
@@ -46,6 +47,7 @@ const props = defineProps<{
 const isSearching = ref(false);
 const searchTerm = ref('');
 const showQuickCommands = ref(false); // +++ Add state for modal visibility +++
+const showSuspendedSshSessionsModal = ref(false); // +++ Add state for suspended SSH sessions modal +++
 // *** 移除本地的搜索结果 ref ***
 // const searchResultCount = ref(0);
 // const currentSearchResultIndex = ref(0);
@@ -280,6 +282,15 @@ const closeQuickCommandsModal = () => {
   showQuickCommands.value = false;
 };
 
+// +++ Functions to control the suspended SSH sessions modal +++
+const openSuspendedSshSessionsModal = () => {
+  showSuspendedSshSessionsModal.value = true;
+};
+
+const closeSuspendedSshSessionsModal = () => {
+  showSuspendedSshSessionsModal.value = false;
+};
+
 // +++ Handler for command execution from the modal +++
 const handleQuickCommandExecute = (command: string) => {
   console.log(`[CommandInputBar] Executing quick command: ${command}`);
@@ -290,7 +301,7 @@ const handleQuickCommandExecute = (command: string) => {
 
 <template>
   <div :class="$attrs.class" class="flex items-center py-1.5 bg-background"> <!-- Bind $attrs.class, removed px-2 and gap-1 -->
-    <div class="flex-grow flex items-center bg-transparent relative gap-1 px-2"> <!-- Added px-2 here -->
+    <div class="flex-grow flex items-center bg-transparent relative gap-1 px-2 w-full"> <!-- Added px-2 here, ensure full width -->
       <!-- Clear Terminal Button -->
       <button
         @click="emitWorkspaceEvent('terminal:clear')"
@@ -326,8 +337,8 @@ const handleQuickCommandExecute = (command: string) => {
         class="flex-grow min-w-0 px-4 py-1.5 border border-border/50 rounded-lg bg-input text-foreground text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 ease-in-out"
         :class="{
           'basis-3/4': !props.isMobile && isSearching,      // Desktop searching: 3/4 width
-          'basis-full': !props.isMobile && !isSearching   // Desktop non-searching: full width
-          // Mobile non-searching: No basis class, rely on flex-grow
+          'basis-full': !props.isMobile && !isSearching,   // Desktop non-searching: full width
+          'w-0': props.isMobile  // Mobile non-searching: adjust width to fit
         }"
         ref="commandInputRef"
         data-focus-id="commandInput"
@@ -342,7 +353,7 @@ const handleQuickCommandExecute = (command: string) => {
         v-model="searchTerm"
         :placeholder="t('commandInputBar.searchPlaceholder')"
         class="flex-grow min-w-0 px-4 py-1.5 border border-border/50 rounded-lg bg-input text-foreground text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 ease-in-out"
-        :class="{ 'basis-1/4': !props.isMobile }"
+        :class="{ 'basis-1/4': !props.isMobile, 'w-0': props.isMobile }"
         data-focus-id="terminalSearch"
         @keydown.enter.prevent="findNext"
         @keydown.shift.enter.prevent="findPrevious"
@@ -354,6 +365,16 @@ const handleQuickCommandExecute = (command: string) => {
       <!-- Search Controls -->
       <div class="flex items-center gap-1 flex-shrink-0">
         <!-- +++ Toggle Virtual Keyboard Button (Moved here, Mobile only) +++ -->
+        <!-- +++ Suspended SSH Sessions Button (Mobile only, new position) +++ -->
+        <button
+          v-if="props.isMobile"
+          @click="openSuspendedSshSessionsModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+          :title="t('suspendedSshSessions.title', '挂起会话')"
+        >
+          <i class="fas fa-pause-circle text-base"></i>
+        </button>
+        <!-- +++ Toggle Virtual Keyboard Button (Mobile only) +++ -->
         <button
           v-if="props.isMobile"
           @click="emit('toggle-virtual-keyboard')"
@@ -400,6 +421,11 @@ const handleQuickCommandExecute = (command: string) => {
     :is-visible="showQuickCommands"
     @close="closeQuickCommandsModal"
     @execute-command="handleQuickCommandExecute"
+  />
+  <!-- +++ Suspended SSH Sessions Modal Instance +++ -->
+  <SuspendedSshSessionsModal
+    :is-visible="showSuspendedSshSessionsModal"
+    @close="closeSuspendedSshSessionsModal"
   />
 </template>
 

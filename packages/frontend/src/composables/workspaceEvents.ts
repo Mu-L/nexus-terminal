@@ -44,6 +44,9 @@ export type WorkspaceEventPayloads = {
   // UI Interaction Events
   'ui:openLayoutConfigurator': void;
   // 'ui:toggleVirtualKeyboard': void; // 如果决定迁移 CommandInputBar 的这个事件
+
+  // Suspended SSH Session Events
+  'suspendedSession:actionCompleted': void; // Emitted when a resume/remove action is completed
 };
 
 // 创建 mitt 事件发射器实例

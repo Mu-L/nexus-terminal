@@ -14,17 +14,18 @@ import VncModal from '../components/VncModal.vue'; // +++ 引入 VncModal 组件
 import Terminal from '../components/Terminal.vue'; // +++ 引入 Terminal 组件 +++
 import CommandInputBar from '../components/CommandInputBar.vue'; // +++ 引入 CommandInputBar 组件 +++
 import VirtualKeyboard from '../components/VirtualKeyboard.vue'; // +++ 引入 VirtualKeyboard 组件 +++
-import { useSessionStore, type SessionTabInfoWithStatus, type SshTerminalInstance } from '../stores/session.store';
+import { useSessionStore } from '../stores/session.store';
+import type { SessionTabInfoWithStatus, SshTerminalInstance } from '../stores/session/types';
 import { useSettingsStore } from '../stores/settings.store';
 import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
-import type { Terminal as XtermTerminal } from 'xterm'; // --- 重命名避免冲突 ---
+import type { Terminal as XtermTerminal } from 'xterm'; 
 import type { ISearchOptions } from '@xterm/addon-search';
 import {
   useWorkspaceEventSubscriber,
   useWorkspaceEventOff,
   type WorkspaceEventPayloads
-} from '../composables/workspaceEvents'; // +++ 新增导入 +++
+} from '../composables/workspaceEvents';
 
 // --- Setup ---
 const { t } = useI18n();
@@ -134,7 +135,8 @@ onMounted(() => {
   subscribeToWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   subscribeToWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
 
-  subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  // 移除对 connection:connect 事件的监听，以避免重复创建会话
+  // subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   subscribeToWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
   subscribeToWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
   subscribeToWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));
@@ -175,7 +177,8 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   unsubscribeFromWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
 
-  unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
+  // 移除对 connection:connect 事件的监听，以避免重复创建会话
+  // unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   unsubscribeFromWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
   unsubscribeFromWorkspaceEvents('connection:requestAdd', handleRequestAddConnection);
   unsubscribeFromWorkspaceEvents('connection:requestEdit', (payload) => handleRequestEditConnection(payload.connectionInfo));

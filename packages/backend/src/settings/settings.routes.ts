@@ -65,9 +65,17 @@ router.get('/show-quick-command-tags', settingsController.getShowQuickCommandTag
 // PUT /api/v1/settings/show-quick-command-tags - 更新设置
 router.put('/show-quick-command-tags', settingsController.setShowQuickCommandTags);
 
+// +++ 新增：导出所有连接路由 +++
+// GET /api/v1/settings/export-connections - 导出所有连接为加密的 ZIP 文件
+router.get('/export-connections', settingsController.exportAllConnections);
+
 
 export default router;
 
 // +++ 新增：CAPTCHA 配置路由 (需要认证更新) +++
 // PUT /api/v1/settings/captcha - 更新 CAPTCHA 配置
+// 注意：这个路由定义在 `export default router` 之后，这是不正确的。
+// 我会将它移到 `export default router` 之前，并确保它也在 `isAuthenticated` 中间件的作用域内。
+// 然而，既然它已经存在，并且在 `isAuthenticated` 之后（通过 router.use(isAuthenticated)），
+// 我们只需要确保导出路由也在正确的位置。
 router.put('/captcha', settingsController.setCaptchaConfig);

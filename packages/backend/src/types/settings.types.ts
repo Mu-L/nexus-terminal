@@ -1,7 +1,7 @@
 // packages/backend/src/types/settings.types.ts
 
 // Define PaneName here as it's logically related to layout/sidebar settings
-export type PaneName = 'connections' | 'terminal' | 'commandBar' | 'fileManager' | 'editor' | 'statusMonitor' | 'commandHistory' | 'quickCommands' | 'dockerManager';
+export type PaneName = 'connections' | 'terminal' | 'commandBar' | 'fileManager' | 'editor' | 'statusMonitor' | 'commandHistory' | 'quickCommands' | 'dockerManager' | 'suspendedSshSessions';
 
 /**
  * 布局节点接口 (Mirrors frontend definition for backend use)
