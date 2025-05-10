@@ -365,15 +365,7 @@ const handleQuickCommandExecute = (command: string) => {
       <!-- Search Controls -->
       <div class="flex items-center gap-1 flex-shrink-0">
         <!-- +++ Toggle Virtual Keyboard Button (Moved here, Mobile only) +++ -->
-        <button
-          v-if="props.isMobile"
-          @click="emit('toggle-virtual-keyboard')"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
-          :title="props.isVirtualKeyboardVisible ? t('commandInputBar.hideKeyboard', '隐藏虚拟键盘') : t('commandInputBar.showKeyboard', '显示虚拟键盘')"
-        >
-          <i class="fas fa-keyboard text-base" :class="{ 'opacity-50': !props.isVirtualKeyboardVisible }"></i>
-        </button>
-        <!-- +++ Suspended SSH Sessions Button (Mobile only, moved here) +++ -->
+        <!-- +++ Suspended SSH Sessions Button (Mobile only, new position) +++ -->
         <button
           v-if="props.isMobile"
           @click="openSuspendedSshSessionsModal"
@@ -381,6 +373,15 @@ const handleQuickCommandExecute = (command: string) => {
           :title="t('suspendedSshSessions.title', '挂起会话')"
         >
           <i class="fas fa-pause-circle text-base"></i>
+        </button>
+        <!-- +++ Toggle Virtual Keyboard Button (Mobile only) +++ -->
+        <button
+          v-if="props.isMobile"
+          @click="emit('toggle-virtual-keyboard')"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+          :title="props.isVirtualKeyboardVisible ? t('commandInputBar.hideKeyboard', '隐藏虚拟键盘') : t('commandInputBar.showKeyboard', '显示虚拟键盘')"
+        >
+          <i class="fas fa-keyboard text-base" :class="{ 'opacity-50': !props.isVirtualKeyboardVisible }"></i>
         </button>
         <!-- Search Toggle Button -->
         <button
