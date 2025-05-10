@@ -232,13 +232,26 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                     } else {
                                         // console.warn(`[WebSocket Handler][${type}] WebSocket 在发送 SSH_OUTPUT_CACHED_CHUNK 前已关闭 (会话 ${newFrontendSessionId})。`);
                                     }
+
+                                    // +++ 新增：发送 ssh:connected 消息 +++
+                                    if (ws.readyState === WebSocket.OPEN) {
+                                        ws.send(JSON.stringify({
+                                            type: 'ssh:connected',
+                                            payload: {
+                                                connectionId: newSessionState.dbConnectionId, // 使用已恢复的 dbConnectionId
+                                                sessionId: newFrontendSessionId // 使用新的前端会话 ID
+                                            }
+                                        }));
+                                        console.log(`[WebSocket Handler][SSH_SUSPEND_RESUME_REQUEST] 已发送 ssh:connected 给 ${newFrontendSessionId}。`);
+                                    }
+                                    // +++ 结束新增 +++
                                     
-                                    const response: SshSuspendResumedNotification = {
-                                        type: 'SSH_SUSPEND_RESUMED',
+                                    const responseNotification: SshSuspendResumedNotification = { // 确保变量名不冲突且类型正确
+                                        type: 'SSH_SUSPEND_RESUMED_NOTIF', // 改回与前端和新类型定义一致
                                         payload: { suspendSessionId, newFrontendSessionId, success: true }
                                     };
                                     if (ws.readyState === WebSocket.OPEN) {
-                                        ws.send(JSON.stringify(response));
+                                        ws.send(JSON.stringify(responseNotification));
                                         // console.log(`[WebSocket Handler][${type}] 已发送 SSH_SUSPEND_RESUMED_NOTIF 给 ${newFrontendSessionId}。`);
                                     } else {
                                         // console.warn(`[WebSocket Handler][${type}] WebSocket 在发送 SSH_SUSPEND_RESUMED_NOTIF 前已关闭 (会话 ${newFrontendSessionId})。`);

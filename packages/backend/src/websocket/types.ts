@@ -150,7 +150,7 @@ export interface SshSuspendListResponse {
 }
 
 export interface SshSuspendResumedNotification {
-  type: "SSH_SUSPEND_RESUMED";
+  type: "SSH_SUSPEND_RESUMED_NOTIF"; // 统一为带 _NOTIF 后缀
   payload: {
     suspendSessionId: string;
     newFrontendSessionId: string; // The frontend session ID this resumed session is now associated with
