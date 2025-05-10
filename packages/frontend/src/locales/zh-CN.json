@@ -1193,7 +1193,8 @@
     },
     "action": {
       "resume": "恢复",
-      "remove": "移除"
+      "remove": "移除",
+      "exportLog": "导出日志"
     }
   },
   "time": {
@@ -1223,7 +1224,9 @@
       "defaultSessionName": "会话",
       "resumeSuccess": "会话 \"{name}\" 已成功恢复。",
       "resumeErrorBackend": "后端恢复会话失败: {error}",
-      "autoTerminated": "已挂起的会话 \"{name}\" 因以下原因被后端自动终止: {reason}"
+      "autoTerminated": "已挂起的会话 \"{name}\" 因以下原因被后端自动终止: {reason}",
+      "logExportSuccess": "已挂起会话日志 {name} 已开始下载。",
+      "logExportError": "导出已挂起会话日志失败: {error}"
     }
   }
 }

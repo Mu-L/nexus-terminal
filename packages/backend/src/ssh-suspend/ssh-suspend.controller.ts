@@ -12,6 +12,7 @@ export class SshSuspendController {
     this.terminateAndRemoveSession = this.terminateAndRemoveSession.bind(this);
     this.removeSessionEntry = this.removeSessionEntry.bind(this);
     this.editSessionNameHttp = this.editSessionNameHttp.bind(this); // 绑定新方法
+    this.exportSessionLog = this.exportSessionLog.bind(this); // +++ 绑定导出日志方法 +++
   }
 
   public async getSuspendedSshSessions(req: Request, res: Response): Promise<void> {
@@ -139,6 +140,43 @@ export class SshSuspendController {
         res.status(500).json({ message: 'Failed to edit suspended session name', error: error.message });
       } else {
         res.status(500).json({ message: 'Failed to edit suspended session name', error: 'Unknown error' });
+      }
+    }
+  }
+
+  public async exportSessionLog(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.session.userId;
+      const { suspendSessionId } = req.params;
+
+      if (!userId) {
+        res.status(401).json({ message: 'Unauthorized. User ID not found in session.' });
+        return;
+      }
+      if (!suspendSessionId) {
+        res.status(400).json({ message: 'Bad Request. suspendSessionId parameter is missing.' });
+        return;
+      }
+
+      console.log(`[SshSuspendController] exportSessionLog called for user ID: ${userId}, suspendSessionId: ${suspendSessionId}`);
+
+      const logData = await sshSuspendService.getSessionLogContent(userId, suspendSessionId);
+
+      if (logData) {
+        res.setHeader('Content-Disposition', `attachment; filename="${logData.filename}"`);
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.send(logData.content);
+      } else {
+        // sshSuspendService.getSessionLogContent 会记录详细的警告/错误
+        // 如果会话不存在，或者状态不符合导出条件，或者读取日志失败
+        res.status(404).json({ message: `Failed to export log for session ${suspendSessionId}. It might not exist, not be in a valid state for export, or log reading failed.` });
+      }
+    } catch (error) {
+      console.error(`[SshSuspendController] Error exporting session log for user ID: ${req.session.userId}, suspendSessionId: ${req.params.suspendSessionId}:`, error);
+      if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to export suspended session log', error: error.message });
+      } else {
+        res.status(500).json({ message: 'Failed to export suspended session log', error: 'Unknown error' });
       }
     }
   }

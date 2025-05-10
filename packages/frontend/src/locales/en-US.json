@@ -1191,7 +1191,8 @@
     },
     "action": {
       "resume": "Resume",
-      "remove": "Remove"
+      "remove": "Remove",
+      "exportLog": "Export Log"
     }
   },
   "time": {
@@ -1221,7 +1222,9 @@
       "defaultSessionName": "Session",
       "resumeSuccess": "Session \"{name}\" resumed successfully.",
       "resumeErrorBackend": "Backend failed to resume session: {error}",
-      "autoTerminated": "Suspended session \"{name}\" was auto-terminated by the backend due to: {reason}"
+      "autoTerminated": "Suspended session \"{name}\" was auto-terminated by the backend due to: {reason}",
+      "logExportSuccess": "Suspended session log {name} has started downloading.",
+      "logExportError": "Failed to export suspended session log: {error}"
     }
   }
 }

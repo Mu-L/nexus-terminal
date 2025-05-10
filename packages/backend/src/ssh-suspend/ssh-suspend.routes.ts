@@ -34,4 +34,11 @@ router.put(
   sshSuspendController.editSessionNameHttp // 新的控制器方法
 );
 
+// Route to export the log of a suspended session
+router.get(
+  '/log/:suspendSessionId',
+  isAuthenticated,
+  sshSuspendController.exportSessionLog
+);
+
 export default router;

@@ -394,6 +394,79 @@ export const editSshSessionName = async (suspendSessionId: string, newCustomName
   }
 };
 
+/**
+ * 请求导出指定挂起 SSH 会话的日志
+ * @param suspendSessionId 要导出日志的挂起会话 ID
+ */
+export const exportSshSessionLog = async (suspendSessionId: string): Promise<void> => {
+  const uiNotificationsStore = useUiNotificationsStore();
+  console.log(`[${t('term.sshSuspend')}] 请求导出挂起会话日志 (ID: ${suspendSessionId})`);
+
+  try {
+    // API 端点为 /api/v1/ssh-suspend/log/:suspendSessionId
+    // apiClient.get会自动处理Blob响应类型，并尝试触发下载
+    // 我们需要获取建议的文件名，后端会在 Content-Disposition 头中提供
+    const response = await apiClient.get<Blob>(`ssh-suspend/log/${suspendSessionId}`, {
+      responseType: 'blob', // 重要：期望响应为 Blob
+      // 我们可以传递一个 onDownloadProgress 回调（如果 apiClient 支持的话）
+    });
+
+    // 从 Content-Disposition 获取文件名
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `ssh_log_${suspendSessionId}.log`; // 默认文件名
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+      if (filenameMatch && filenameMatch.length > 1) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // 创建一个下载链接并点击它
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename); // 设置下载文件名
+    document.body.appendChild(link);
+    link.click();
+
+    // 清理
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    uiNotificationsStore.addNotification({
+      type: 'success',
+      message: t('sshSuspend.notifications.logExportSuccess', { name: filename }),
+    });
+    console.log(`[${t('term.sshSuspend')}] 挂起会话日志 ${filename} (ID: ${suspendSessionId}) 已开始下载。`);
+
+  } catch (error: any) {
+    console.error(`[${t('term.sshSuspend')}] 导出挂起会话日志 ${suspendSessionId} 失败:`, error);
+    let errorMessage = t('term.unknownError');
+    if (error.response && error.response.data) {
+      // 如果响应是 Blob 但我们期望 JSON 错误信息，需要特殊处理
+      // 假设错误时后端会返回 JSON
+      if (error.response.data instanceof Blob && error.response.headers['content-type']?.includes('application/json')) {
+        try {
+          const errorJson = JSON.parse(await error.response.data.text());
+          errorMessage = errorJson.message || errorMessage;
+        } catch (e) {
+          // Blob 不是有效的 JSON，使用通用错误
+        }
+      } else if (typeof error.response.data === 'object') {
+        errorMessage = error.response.data.message || error.message;
+      } else {
+        errorMessage = error.message;
+      }
+    } else {
+      errorMessage = error.message || String(error);
+    }
+    uiNotificationsStore.addNotification({
+      type: 'error',
+      message: t('sshSuspend.notifications.logExportError', { error: errorMessage }),
+    });
+  }
+};
+
 // --- S2C Message Handlers ---
 
 // 旧的 handleSshSuspendStartedResp 不再需要，因为流程已改变

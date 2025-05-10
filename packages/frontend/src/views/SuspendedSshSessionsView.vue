@@ -97,6 +97,15 @@
                   <i class="fas fa-trash-alt action-icon" style="color: white;"></i>
                   <span class="button-session-text">{{ $t('suspendedSshSessions.action.remove') }}</span>
                 </button>
+               <button
+                 v-if="session.backendSshStatus === 'disconnected_by_backend' || session.backendSshStatus === 'hanging'"
+                 @click="exportLog(session)"
+                 :title="$t('suspendedSshSessions.action.exportLog')"
+                 class="responsive-button-padding py-1.5 text-sm font-medium rounded-md text-button-text bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 inline-flex items-center"
+               >
+                 <i class="fas fa-download action-icon" style="color: var(--button-text-color, white);"></i>
+                 <span class="button-session-text">{{ $t('suspendedSshSessions.action.exportLog') }}</span>
+               </button>
               </div>
             </div>
           </div>
@@ -248,6 +257,12 @@ const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 
     sessionStore.removeSshSessionEntry(session.suspendSessionId);
   }
   emitWorkspaceEvent('suspendedSession:actionCompleted');
+};
+
+const exportLog = async (session: SuspendedSshSession) => {
+ console.log(`[SuspendedSshSessionsView] Attempting to export log for session ID: ${session.suspendSessionId}`);
+ await sessionStore.exportSshSessionLog(session.suspendSessionId);
+ // 不需要 emitWorkspaceEvent，因为导出日志通常不关闭模态框
 };
 
 let fetchIntervalId: number | undefined;

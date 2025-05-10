@@ -403,6 +403,50 @@ export class SshSuspendService extends EventEmitter {
       // 确保所有已缓冲的日志已尝试写入 (通常由 'data' 事件处理，这里是最终状态确认)
     }
   }
+
+  /**
+   * 获取指定挂起会话的日志内容。
+   * 允许导出 'disconnected_by_backend' 和 'hanging' 状态的会话日志。
+   * @param userId 用户ID。
+   * @param suspendSessionId 要导出日志的挂起会话ID。
+   * @returns Promise<{ content: string, filename: string } | null> 日志内容和建议的文件名，如果会话不符合条件或读取失败则返回null。
+   */
+  async getSessionLogContent(userId: number, suspendSessionId: string): Promise<{ content: string, filename: string } | null> {
+    console.log(`[SshSuspendService][用户: ${userId}] getSessionLogContent 调用，suspendSessionId: ${suspendSessionId}`);
+    const userSessions = this.getUserSessions(userId);
+    const session = userSessions.get(suspendSessionId);
+
+    if (!session) {
+      console.warn(`[SshSuspendService][用户: ${userId}] getSessionLogContent: 未找到挂起的会话 ${suspendSessionId}。`);
+      return null;
+    }
+
+    if (session.backendSshStatus !== 'disconnected_by_backend' && session.backendSshStatus !== 'hanging') {
+      console.warn(`[SshSuspendService][用户: ${userId}] getSessionLogContent: 会话 ${suspendSessionId} 状态为 ${session.backendSshStatus}，不符合导出条件 (需要 'disconnected_by_backend' 或 'hanging')。`);
+      return null;
+    }
+
+    if (!session.tempLogPath) {
+        console.error(`[SshSuspendService][用户: ${userId}] getSessionLogContent: 会话 ${suspendSessionId} 缺少 tempLogPath。`);
+        return null;
+    }
+
+    try {
+      const logContent = await this.logStorageService.readLog(session.tempLogPath);
+      console.log(`[SshSuspendService][用户: ${userId}] getSessionLogContent: 已读取挂起会话 ${suspendSessionId} (日志: ${session.tempLogPath}) 的数据，长度: ${logContent.length}`);
+      
+      const baseName = session.customSuspendName || session.connectionName || suspendSessionId.substring(0,8);
+      const safeBaseName = baseName.replace(/[^\w.-]/g, '_'); // 替换掉不安全字符为空格或下划线
+      const timestamp = new Date(session.suspendStartTime).toISOString().replace(/[:.]/g, '-');
+      // tempLogPath 通常是 originalSessionId
+      const filename = `ssh_log_${safeBaseName}_${session.tempLogPath}_${timestamp}.log`;
+
+      return { content: logContent, filename };
+    } catch (error) {
+      console.error(`[SshSuspendService][用户: ${userId}] getSessionLogContent: 读取挂起会话 ${suspendSessionId} (日志: ${session.tempLogPath}) 失败:`, error);
+      return null;
+    }
+  }
 }
 
 // 单例模式导出
