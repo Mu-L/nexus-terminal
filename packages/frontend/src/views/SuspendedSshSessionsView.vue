@@ -331,7 +331,7 @@ onUnmounted(() => {
 }
 
 /* Apply styles when the container 'suspended-sessions-view-pane' is narrower than 480px */
-@container suspended-sessions-view-pane (max-width: 320px) {
+@container suspended-sessions-view-pane (max-width: 300px) {
   .button-session-text {
     display: none;
   }
