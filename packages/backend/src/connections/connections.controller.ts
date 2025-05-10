@@ -219,14 +219,14 @@ export const testUnsavedConnection = async (req: Request, res: Response): Promis
  */
 export const exportConnections = async (req: Request, res: Response): Promise<void> => {
     try {
-        const exportedData = await ImportExportService.exportConnections();
+        const exportedData = await ImportExportService.exportConnectionsAsEncryptedZip();
 
         // 设置响应头，提示浏览器下载文件
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `nexus-terminal-connections-${timestamp}.json`;
+        const filename = `nexus-terminal-connections-${timestamp}.zip`;
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200).json(exportedData);
+        res.setHeader('Content-Type', 'application/zip');
+        res.status(200).send(exportedData);
 
     } catch (error: any) {
         console.error('Controller: 导出连接时发生错误:', error);
