@@ -112,8 +112,10 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useSessionStore } from '../stores/session.store';
 import type { SuspendedSshSession } from '../types/ssh-suspend.types';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 导入事件发射器 +++
 
 const { t } = useI18n();
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const sessionStore = useSessionStore();
 const { suspendedSshSessions: storeSuspendedSshSessions, isLoadingSuspendedSessions: isLoading } = storeToRefs(sessionStore);
 
@@ -233,6 +235,9 @@ const resumeSession = async (session: SuspendedSshSession) => { // 参数类型�
   } catch (error) {
     console.error(`[SuspendedSshSessionsView] Error during resumeSession for ${session.suspendSessionId}:`, error);
   }
+  // 无论成功与否（或者仅在成功时，取决于需求），都可能需要通知模态框关闭
+  // 为了简化，这里假设操作已发起，具体成功状态由 store 或后端处理
+  emitWorkspaceEvent('suspendedSession:actionCompleted');
 };
 
 const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 SuspendedSshSession
@@ -241,6 +246,7 @@ const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 
   } else if (session.backendSshStatus === 'disconnected_by_backend') {
     sessionStore.removeSshSessionEntry(session.suspendSessionId);
   }
+  emitWorkspaceEvent('suspendedSession:actionCompleted');
 };
 
 let fetchIntervalId: number | undefined;
