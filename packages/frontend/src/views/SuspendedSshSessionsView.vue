@@ -1,5 +1,5 @@
 <template>
-  <div class="suspended-ssh-sessions-view p-2 flex flex-col h-full">
+  <div class="suspended-ssh-sessions-view p-2 flex flex-col h-full" style="container-type: inline-size; container-name: suspended-sessions-view-pane;">
     <div class="view-header mb-2">
       <div class="relative w-full">
         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -84,18 +84,18 @@
                   v-if="session.backendSshStatus === 'hanging'"
                   @click="resumeSession(session)"
                   :title="$t('suspendedSshSessions.action.resume')"
-                  class="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 inline-flex items-center"
+                  class="responsive-button-padding py-1.5 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 inline-flex items-center"
                 >
-                  <i class="fas fa-play mr-1.5" style="color: white;"></i>
-                  {{ $t('suspendedSshSessions.action.resume') }}
+                  <i class="fas fa-play action-icon" style="color: white;"></i>
+                  <span class="button-session-text">{{ $t('suspendedSshSessions.action.resume') }}</span>
                 </button>
                 <button
                   @click="removeSession(session)"
                   :title="$t('suspendedSshSessions.action.remove')"
-                  class="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150 inline-flex items-center"
+                  class="responsive-button-padding py-1.5 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150 inline-flex items-center"
                 >
-                  <i class="fas fa-trash-alt mr-1.5" style="color: white;"></i>
-                  {{ $t('suspendedSshSessions.action.remove') }}
+                  <i class="fas fa-trash-alt action-icon" style="color: white;"></i>
+                  <span class="button-session-text">{{ $t('suspendedSshSessions.action.remove') }}</span>
                 </button>
               </div>
             </div>
@@ -266,5 +266,55 @@ onMounted(async () => {
 .p-inputtext-sm {
   padding: 0.375rem 0.5rem; /* 调整输入框大小 */
   font-size: 0.875rem;
+}
+
+.responsive-button-padding {
+  padding-left: 0.75rem; /* px-3 */
+  padding-right: 0.75rem; /* px-3 */
+}
+
+.action-icon {
+  margin-right: 0.375rem; /* mr-1.5 */
+}
+
+.button-session-text {
+  display: inline;
+}
+
+/* Apply styles when the container 'suspended-sessions-view-pane' is narrower than 480px */
+@container suspended-sessions-view-pane (max-width: 320px) {
+  .button-session-text {
+    display: none;
+  }
+
+  .action-icon {
+    margin-right: 0;
+  }
+
+  .responsive-button-padding {
+    padding-left: 0.5rem; /* px-2 */
+    padding-right: 0.5rem; /* px-2 */
+  }
+
+  /* Adjust list item layout for narrow view */
+  .session-item > .flex { /* Targeting the main flex container inside session-item */
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .session-item .session-info {
+    margin-right: 0;
+    margin-bottom: 0.5rem; /* mb-2 */
+  }
+
+  .session-item .session-status-actions {
+    margin-top: 0.5rem; /* mt-2 */
+    align-items: flex-start;
+  }
+  
+  .session-item .session-status-actions .actions {
+    width: 100%;
+    justify-content: flex-start; /* Align buttons to the start */
+  }
 }
 </style>
