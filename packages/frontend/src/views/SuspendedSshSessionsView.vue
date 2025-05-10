@@ -111,6 +111,7 @@ import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'; //
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useSessionStore } from '../stores/session.store';
+import { useConnectionsStore } from '../stores/connections.store'; // +++ 导入 Connections Store +++
 import type { SuspendedSshSession } from '../types/ssh-suspend.types';
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 导入事件发射器 +++
 
@@ -252,10 +253,21 @@ const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 
 let fetchIntervalId: number | undefined;
 
 onMounted(async () => {
-  // 立即获取一次数据 (显示加载指示器)
+  const connectionsStore = useConnectionsStore(); // +++ 获取 Connections Store 实例 +++
+  // 确保连接列表已加载或正在加载
+  // 通常 store 的 fetch 方法会处理重复调用或自行管理加载状态
+  try {
+    console.log('[SuspendedSshSessionsView] Ensuring connections are fetched.');
+    await connectionsStore.fetchConnections(); // +++ 获取连接列表 +++
+  } catch (error) {
+    console.error('[SuspendedSshSessionsView] Error fetching connections:', error);
+    // 根据需要处理错误，例如显示通知
+  }
+
+  // 立即获取一次挂起会话数据 (显示加载指示器)
   await sessionStore.fetchSuspendedSshSessions();
   
-  // 设置定时器，每3秒获取一次数据 (不显示加载指示器)
+  // 设置定时器，每3秒获取一次挂起会话数据 (不显示加载指示器)
   fetchIntervalId = window.setInterval(async () => {
     await sessionStore.fetchSuspendedSshSessions({ showLoadingIndicator: false });
   }, 3000);

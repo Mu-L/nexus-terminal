@@ -23,7 +23,7 @@ const findConnectionInfo = (connectionId: number | string, connectionsStore: Ret
 
 // --- Actions ---
 export const openNewSession = (
-    connectionId: number | string,
+    connectionOrId: ConnectionInfo | number | string,
     dependencies: {
         connectionsStore: ReturnType<typeof useConnectionsStore>;
         t: ReturnType<typeof useI18n>['t'];
@@ -31,16 +31,26 @@ export const openNewSession = (
     existingSessionId?: string // 新增：可选的预定义会话 ID
 ) => {
   const { connectionsStore, t } = dependencies;
-  console.log(`[SessionActions] 请求打开新会话: ${connectionId}${existingSessionId ? `, 使用预定义 ID: ${existingSessionId}` : ''}`);
-  const connInfo = findConnectionInfo(connectionId, connectionsStore);
+  let connInfo: ConnectionInfo | undefined;
+  let connIdForLog: string | number;
+
+  if (typeof connectionOrId === 'object' && connectionOrId !== null && 'id' in connectionOrId) {
+    connInfo = connectionOrId as ConnectionInfo;
+    connIdForLog = connInfo.id;
+  } else {
+    connIdForLog = connectionOrId as number | string;
+    connInfo = findConnectionInfo(connIdForLog, connectionsStore);
+  }
+
+  console.log(`[SessionActions] 请求打开新会话: ${connIdForLog}${existingSessionId ? `, 使用预定义 ID: ${existingSessionId}` : ''}`);
   if (!connInfo) {
-    console.error(`[SessionActions] 无法打开新会话：找不到 ID 为 ${connectionId} 的连接信息。`);
+    console.error(`[SessionActions] 无法打开新会话：找不到 ID 为 ${connIdForLog} 的连接信息。`);
     // TODO: 向用户显示错误
     return;
   }
 
   const newSessionId = existingSessionId || generateSessionId();
-  const dbConnId = String(connInfo.id);
+  const dbConnId = String(connInfo.id); // connInfo is now guaranteed to be defined here
 
   // 1. 创建管理器实例
   const isResume = !!existingSessionId; // 如果提供了 existingSessionId，则为恢复流程

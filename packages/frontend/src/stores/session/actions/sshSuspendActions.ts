@@ -225,11 +225,18 @@ export const resumeSshSession = async (suspendSessionId: string): Promise<void> 
   const newFrontendSessionId = uuidv4(); // 为恢复的会话生成新的前端 ID
 
   try {
-    console.log(`[${t('term.sshSuspend')}] 准备恢复会话 ${suspendSessionId}。将创建新前端会话 ${newFrontendSessionId} 并连接 WebSocket。`);
+    // +++ 先从 connectionsStore 获取完整的 ConnectionInfo +++
+    const connectionInfo = connectionsStore.connections.find(c => c.id === originalConnectionId);
+    if (!connectionInfo) {
+      console.error(`[${t('term.sshSuspend')}] 恢复操作失败：在 Connection Store 中未找到原始连接配置 (ID: ${originalConnectionId})。`);
+      uiNotificationsStore.addNotification({ type: 'error', message: t('sshSuspend.notifications.resumeErrorConnectionConfigNotFound', { id: String(originalConnectionId) }) });
+      return;
+    }
+    console.log(`[${t('term.sshSuspend')}] 已找到原始连接配置 (ID: ${originalConnectionId})，准备使用它恢复会话 ${suspendSessionId}。将创建新前端会话 ${newFrontendSessionId} 并连接 WebSocket。`);
     
-    // 1. 调用 openNewSession 创建前端会话状态、WebSocket 连接等
+    // 1. 调用 openNewSession 创建前端会话状态、WebSocket 连接等，传入完整的 connectionInfo
     openNewSession(
-      originalConnectionId,
+      connectionInfo, // +++ 传入完整的 ConnectionInfo 对象 +++
       { connectionsStore, t }, // 传递依赖
       newFrontendSessionId    // 将 newFrontendSessionId 作为 existingSessionId 传递
     );
