@@ -3,13 +3,10 @@ import * as ConnectionRepository from '../repositories/connection.repository';
 import * as ProxyRepository from '../repositories/proxy.repository';
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
 import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; // For decrypting connection details
+import { getAllDecryptedSshKeys } from '../services/ssh_key.service'; // 静态导入
 import archiver from 'archiver';
 archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
-// We might still need fs, path, os if easyzip requires writing to a temp file for password protection,
-// but let's try to do it in memory first.
-// import fs from 'fs';
-// import path from 'path';
-// import os from 'os';
+
 
 
 
@@ -205,19 +202,13 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
 
 /**
  * 导出所有连接配置为一个加密的 ZIP 文件。
+ * @param includeSshKeys 是否包含 SSH 密钥
  * @returns Buffer 包含加密的 ZIP 文件内容 (IV + Ciphertext + AuthTag)。
  */
-export const exportConnectionsAsEncryptedZip = async (): Promise<Buffer> => {
+export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
     try {
         const connections = await getPlaintextConnectionsData();
-        const jsonContent = JSON.stringify(connections, null, 2);
-
-        // 注意：当前版本的 adm-zip 不支持在内存中设置密码
-        // const zipPassword = process.env.ENCRYPTION_KEY;
-        // if (!zipPassword || zipPassword.trim() === '') {
-        //     console.error('错误：ENCRYPTION_KEY 环境变量未设置或为空！无法为ZIP文件设置密码。');
-        //     throw new Error('ENCRYPTION_KEY is not set or is empty, cannot password-protect the ZIP file.');
-        // }
+        const connectionsJsonContent = JSON.stringify(connections, null, 2);
 
         const zipPassword = process.env.ENCRYPTION_KEY;
         if (!zipPassword || zipPassword.trim() === '') {
@@ -241,7 +232,13 @@ export const exportConnectionsAsEncryptedZip = async (): Promise<Buffer> => {
             throw new Error(`使用 archiver 创建加密 ZIP buffer 失败: ${err.message}`);
         });
 
-        archive.append(jsonContent, { name: 'connections.json' });
+        archive.append(connectionsJsonContent, { name: 'connections.json' });
+
+        if (includeSshKeys) {
+            const sshKeys = await getAllDecryptedSshKeys();
+            const sshKeysJsonContent = JSON.stringify(sshKeys, null, 2);
+            archive.append(sshKeysJsonContent, { name: 'ssh_keys.json' });
+        }
 
         await archive.finalize();
         return Buffer.concat(buffer);

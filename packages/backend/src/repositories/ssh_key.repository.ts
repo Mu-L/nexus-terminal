@@ -75,6 +75,21 @@ export const findAllSshKeyNames = async (): Promise<{ id: number; name: string }
     }
 };
 
+/**
+ * 查找所有 SSH 密钥的完整记录
+ * @returns Promise<SshKeyDbRow[]> 密钥列表
+ */
+export const findAllSshKeys = async (): Promise<SshKeyDbRow[]> => {
+    const sql = `SELECT * FROM ssh_keys ORDER BY name ASC`;
+    try {
+        const db = await getDbInstance();
+        const rows = await allDb<SshKeyDbRow>(db, sql);
+        return rows;
+    } catch (err: any) {
+        console.error('Repository: 查找所有 SSH 密钥记录失败:', err.message);
+        throw new Error(`查找所有 SSH 密钥记录失败: ${err.message}`);
+    }
+};
 
 /**
  * 更新 SSH 密钥记录

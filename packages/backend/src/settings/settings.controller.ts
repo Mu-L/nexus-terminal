@@ -511,7 +511,7 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
  async exportAllConnections(req: Request, res: Response): Promise<void> {
    try {
      console.log('[控制器] 收到导出所有连接的请求。');
-     const encryptedZipBuffer = await exportConnectionsAsEncryptedZip();
+     const encryptedZipBuffer = await exportConnectionsAsEncryptedZip(true);
 
      res.setHeader('Content-Type', 'application/zip');
      res.setHeader('Content-Disposition', 'attachment; filename="nexus_connections_export.zip"');
