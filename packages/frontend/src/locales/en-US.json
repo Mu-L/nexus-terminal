@@ -1200,7 +1200,7 @@
   },
   "sshSuspend": {
     "notifications": {
-      "markedForSuspendInfo": "Session {id} marked for suspend. It will be suspended when the tab is closed or the application exits.",
+      "markedForSuspendInfo": "Session {id} marked for suspend. It will be suspended when the tab is closed exits.",
       "wsNotConnectedError": "WebSocket not connected. Cannot perform suspend/resume action.",
       "sessionNotFoundError": "Session not found or WebSocket manager unavailable.",
       "notMarkedWarning": "Session was not marked for suspend.",

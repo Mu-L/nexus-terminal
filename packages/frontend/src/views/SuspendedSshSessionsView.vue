@@ -84,9 +84,9 @@
                   v-if="session.backendSshStatus === 'hanging'"
                   @click="resumeSession(session)"
                   :title="$t('suspendedSshSessions.action.resume')"
-                  class="responsive-button-padding py-1.5 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 inline-flex items-center"
+                  class="responsive-button-padding py-1.5 text-sm font-medium rounded-md text-button-text bg-button hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-150 inline-flex items-center"
                 >
-                  <i class="fas fa-play action-icon" style="color: white;"></i>
+                  <i class="fas fa-play action-icon" style="color: var(--button-text-color, white);"></i> <!-- Assuming icon color should also match button text -->
                   <span class="button-session-text">{{ $t('suspendedSshSessions.action.resume') }}</span>
                 </button>
                 <button

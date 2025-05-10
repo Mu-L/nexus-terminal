@@ -1202,7 +1202,7 @@
   },
   "sshSuspend": {
     "notifications": {
-      "markedForSuspendInfo": "会话 {id} 已标记为挂起。关闭标签页或退出应用程序时，该会话将被挂起。",
+      "markedForSuspendInfo": "会话 {id} 已标记为挂起。关闭标签页时，该会话将被挂起。",
       "wsNotConnectedError": "WebSocket 未连接。无法执行挂起/恢复操作。",
       "sessionNotFoundError": "未找到会话或 WebSocket 管理器不可用。",
       "notMarkedWarning": "会话未被标记为待挂起。",
