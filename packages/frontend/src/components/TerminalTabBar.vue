@@ -328,6 +328,41 @@ const handleDragStart = (event: DragEvent) => {
   }
 };
 
+// 新增：处理长按事件以在手机模式下触发挂起和取消挂起
+let touchTimeout: number | null = null;
+const touchDuration = 800; // 长按时间阈值，单位毫秒
+let touchedSessionId: string | null = null;
+
+const handleTouchStart = (event: TouchEvent, sessionId: string) => {
+  if (props.isMobile) {
+    touchedSessionId = sessionId;
+    if (touchTimeout) {
+      clearTimeout(touchTimeout);
+    }
+    touchTimeout = window.setTimeout(() => {
+      if (touchedSessionId === sessionId) {
+        const sessionState = sessionStore.sessions.get(sessionId);
+        if (sessionState && sessionState.isMarkedForSuspend) {
+          console.log(`[TabBar] Long press to unmark suspend for session ID: ${sessionId}`);
+          sessionStore.requestUnmarkSshSuspend(sessionId);
+        } else if (sessionState) {
+          console.log(`[TabBar] Long press to mark suspend for session ID: ${sessionId}`);
+          sessionStore.requestStartSshSuspend(sessionId);
+        }
+      }
+      touchTimeout = null;
+    }, touchDuration);
+  }
+};
+
+const handleTouchEnd = (event: TouchEvent) => {
+  if (touchTimeout) {
+    clearTimeout(touchTimeout);
+    touchTimeout = null;
+  }
+  touchedSessionId = null;
+};
+
 </script>
 
 <template>
@@ -353,9 +388,11 @@ animation="150"
             :class="['flex items-center px-3 h-full cursor-pointer border-r border-border transition-colors duration-150 relative group',
                      session.sessionId === activeSessionId ? 'bg-background text-foreground' : 'bg-header text-text-secondary hover:bg-border']"
             @click="activateSession(session.sessionId)"
-          @contextmenu.prevent="showContextMenu($event, session.sessionId)"
-          @dragstart="handleDragStart"
-          :title="session.connectionName"
+            @contextmenu.prevent="showContextMenu($event, session.sessionId)"
+            @touchstart="handleTouchStart($event, session.sessionId)"
+            @touchend="handleTouchEnd($event)"
+            @dragstart="handleDragStart"
+            :title="session.connectionName"
         >
           <!-- Status dot -->
           <span :class="['w-2 h-2 rounded-full mr-2 flex-shrink-0',
