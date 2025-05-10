@@ -21,7 +21,7 @@ export function createWebSocketConnectionManager(
     sessionId: string,
     dbConnectionId: string,
     t: ReturnType<typeof useI18n>['t'],
-    options?: { isResumeFlow?: boolean }
+    options?: { isResumeFlow?: boolean; getIsMarkedForSuspend?: () => boolean } // +++ 添加 getIsMarkedForSuspend 回调 +++
 ) {
     // --- Instance State ---
     // 每个实例拥有独立的 WebSocket 对象、状态和消息处理器
@@ -33,6 +33,7 @@ export function createWebSocketConnectionManager(
     const messageHandlers = new Map<string, Set<MessageHandler>>(); // 此实例的消息处理器注册表
     const instanceSessionId = sessionId; // 保存会话 ID 用于日志
     const instanceDbConnectionId = dbConnectionId; // 保存数据库连接 ID
+    const getIsMarkedForSuspend = options?.getIsMarkedForSuspend; // +++ 获取回调函数 +++
     let reconnectAttempts = 0; // 重连尝试次数
     const maxReconnectAttempts = 5; // 最大重连次数
     let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null; // 重连定时器 ID
@@ -79,6 +80,14 @@ export function createWebSocketConnectionManager(
      */
     const scheduleReconnect = () => {
         if (intentionalDisconnect) return; // 如果是主动断开，则不重连
+
+        // +++ 检查是否标记为待挂起 +++
+        if (getIsMarkedForSuspend && getIsMarkedForSuspend()) {
+            console.log(`[WebSocket ${instanceSessionId}] 会话已标记为待挂起，不执行自动重连。`);
+            statusMessage.value = getStatusText('markedForSuspendNoReconnect'); // 可以为此添加新的i18n文本
+            connectionStatus.value = 'disconnected'; // 保持断开状态或设为特定状态
+            return;
+        }
 
         if (reconnectAttempts >= maxReconnectAttempts) {
             console.log(`[WebSocket ${instanceSessionId}] 已达到最大重连次数 (${maxReconnectAttempts})，停止重连。`);

@@ -44,12 +44,36 @@ export const openNewSession = (
 
   // 1. 创建管理器实例
   const isResume = !!existingSessionId; // 如果提供了 existingSessionId，则为恢复流程
+
+  // 稍后创建 wsManager，先创建 SessionState 对象的一部分
+  const newSessionPartial: Omit<SessionState, 'wsManager' | 'sftpManagers' | 'terminalManager' | 'statusMonitorManager' | 'dockerManager'> & { wsManager?: WsManagerInstance } = {
+      sessionId: newSessionId,
+      connectionId: dbConnId,
+      connectionName: connInfo.name || connInfo.host,
+      editorTabs: ref([]),
+      activeEditorTabId: ref(null),
+      commandInputContent: ref(''),
+      isMarkedForSuspend: false,
+      disposables: [],
+  };
+
   const wsManager = createWebSocketConnectionManager(
-      newSessionId,
+      newSessionId, // 这个 sessionId 在 wsManager 内部使用，可能与 SessionState.sessionId 不同步（如果后者被后端更新）
       dbConnId,
       t,
-      { isResumeFlow: isResume } // 传递 isResumeFlow 选项
+      {
+          isResumeFlow: isResume,
+          getIsMarkedForSuspend: () => {
+              // 直接从 newSessionPartial (它将成为完整的 SessionState 对象) 读取状态
+              // 注意：如果 SessionState.sessionId 被后端更新，而 wsManager 内部的 sessionId (instanceSessionId)
+              // 没有相应更新并在 scheduleReconnect 中使用 instanceSessionId 来识别日志，可能会有轻微不一致。
+              // 但对于 isMarkedForSuspend 的判断是准确的。
+              return !!newSessionPartial.isMarkedForSuspend;
+          }
+      }
   );
+  newSessionPartial.wsManager = wsManager; // 将 wsManager 添加回部分对象
+
   const sshTerminalDeps: SshTerminalDependencies = {
       sendMessage: wsManager.sendMessage,
       onMessage: wsManager.onMessage,
@@ -68,22 +92,16 @@ export const openNewSession = (
   };
   const dockerManager = createDockerManager(newSessionId, dockerManagerDeps, { t });
 
-  // 2. 创建 SessionState 对象
+  // 2. 完成 SessionState 对象
   const newSession: SessionState = {
-      sessionId: newSessionId,
-      connectionId: dbConnId,
-      connectionName: connInfo.name || connInfo.host,
-      wsManager: wsManager,
-      sftpManagers: new Map<string, SftpManagerInstance>(), // 初始化 Map
+      ...newSessionPartial, // 包含 sessionId, connectionId, connectionName, wsManager, editorTabs, etc.
+      wsManager: wsManager, // 确保 wsManager 被正确赋值
+      sftpManagers: new Map<string, SftpManagerInstance>(),
       terminalManager: terminalManager,
       statusMonitorManager: statusMonitorManager,
       dockerManager: dockerManager,
-      editorTabs: ref([]),
-      activeEditorTabId: ref(null),
-      commandInputContent: ref(''),
-      isMarkedForSuspend: false, // +++ 初始化 isMarkedForSuspend状态 +++
-      disposables: [], // 初始化 disposables 数组
   };
+  // newSession.isMarkedForSuspend 已经在 newSessionPartial 中初始化为 false
 
   // 3. 添加到 Map 并激活
   const newSessionsMap = new Map(sessions.value);
