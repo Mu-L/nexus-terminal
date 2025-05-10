@@ -8,7 +8,7 @@ import type {
   SshSuspendResumeReqMessage,
   SshSuspendTerminateReqMessage,
   SshSuspendRemoveEntryReqMessage,
-  SshSuspendEditNameReqMessage,
+  // SshSuspendEditNameReqMessage, // Removed, using HTTP API
   // S2C Payloads
   SshMarkedForSuspendAckPayload,
   SshUnmarkedForSuspendAckPayload, // +++ 新增导入 +++
@@ -17,10 +17,10 @@ import type {
   SshOutputCachedChunkPayload,
   SshSuspendTerminatedRespPayload,
   SshSuspendEntryRemovedRespPayload,
-  SshSuspendNameEditedRespPayload,
+  // SshSuspendNameEditedRespPayload, // Removed, using HTTP API
   SshSuspendAutoTerminatedNotifPayload,
 } from '../../../types/websocket.types'; // 路径: packages/frontend/src/types/websocket.types.ts
-import type { WsManagerInstance, SessionState } from '../types'; // 路径: packages/frontend/src/stores/session/types.ts
+import type { WsManagerInstance, SessionState } from '../types'; // 路径: packages/frontend/src/stores/session/types.ts // Re-add WsManagerInstance
 import { closeSession as closeSessionAction, activateSession as activateSessionAction, openNewSession, closeSession } from './sessionActions'; // 使用 openNewSession 和 closeSession
 import { useConnectionsStore } from '../../connections.store'; // 用于获取连接信息
 import { useUiNotificationsStore } from '../../uiNotifications.store'; // 用于显示通知
@@ -325,21 +325,43 @@ export const removeSshSessionEntry = async (suspendSessionId: string): Promise<v
 };
 
 /**
- * 请求编辑挂起 SSH 会话的自定义名称
+ * 请求编辑挂起 SSH 会话的自定义名称 (通过 HTTP API)
  * @param suspendSessionId 要编辑的挂起会话 ID
- * @param customName 新的自定义名称
+ * @param newCustomName 新的自定义名称
  */
-export const editSshSessionName = (suspendSessionId: string, customName: string): void => {
-  const wsManager = getActiveWsManager();
-  if (wsManager) {
-    const message: SshSuspendEditNameReqMessage = {
-      type: 'SSH_SUSPEND_EDIT_NAME',
-      payload: { suspendSessionId, customName },
-    };
-    wsManager.sendMessage(message);
-    console.log(`[${t('term.sshSuspend')}] 已发送 SSH_SUSPEND_EDIT_NAME_REQ (挂起 ID: ${suspendSessionId}, 名称: "${customName}")`);
-  } else {
-     console.warn(`[${t('term.sshSuspend')}] 编辑挂起名称失败 (挂起 ID: ${suspendSessionId})：无可用 WebSocket 连接。`);
+export const editSshSessionName = async (suspendSessionId: string, newCustomName: string): Promise<void> => {
+  console.log(`[${t('term.sshSuspend')}] 请求通过 HTTP API 编辑挂起会话名称 (ID: ${suspendSessionId}, 新名称: "${newCustomName}")`);
+  const uiNotificationsStore = useUiNotificationsStore();
+  try {
+    // 假设后端 API 端点为 /api/ssh-suspend/name/:suspendSessionId
+    // 并且它接受一个包含 { customName: string } 的 PUT 请求体
+    // 并返回包含 { message: string, customName: string } 的成功响应
+    const response = await apiClient.put<{ message: string, customName: string }>(
+      `ssh-suspend/name/${suspendSessionId}`,
+      { customName: newCustomName }
+    );
+
+    console.log(`[${t('term.sshSuspend')}] HTTP API 编辑名称 ${suspendSessionId} 成功:`, response.data);
+
+    // 更新前端状态
+    const session = suspendedSshSessions.value.find(s => s.suspendSessionId === suspendSessionId);
+    if (session) {
+      session.customSuspendName = response.data.customName; // 使用后端返回的名称确保一致性
+      uiNotificationsStore.addNotification({
+        type: 'success',
+        message: t('sshSuspend.notifications.nameEditedSuccess', { name: response.data.customName }),
+      });
+    } else {
+      // 如果会话在前端列表中找不到了（理论上不应该发生，因为是先找到再编辑的）
+      // 也可以选择重新获取列表
+      fetchSuspendedSshSessions();
+    }
+  } catch (error: any) {
+    console.error(`[${t('term.sshSuspend')}] 通过 HTTP API 编辑名称 ${suspendSessionId} 失败:`, error);
+    uiNotificationsStore.addNotification({
+      type: 'error',
+      message: t('sshSuspend.notifications.nameEditedError', { error: error.response?.data?.message || error.message || t('term.unknownError') }),
+    });
   }
 };
 
@@ -561,26 +583,7 @@ const handleSshSuspendEntryRemovedResp = (payload: SshSuspendEntryRemovedRespPay
   }
 };
 
-const handleSshSuspendNameEditedResp = (payload: SshSuspendNameEditedRespPayload): void => {
-  const uiNotificationsStore = useUiNotificationsStore();
-  console.log(`[${t('term.sshSuspend')}] 接到 SSH_SUSPEND_NAME_EDITED_RESP:`, payload);
-  if (payload.success && payload.customName !== undefined) {
-    const session = suspendedSshSessions.value.find(s => s.suspendSessionId === payload.suspendSessionId);
-    if (session) {
-      session.customSuspendName = payload.customName;
-      uiNotificationsStore.addNotification({
-        type: 'success',
-        message: t('sshSuspend.notifications.nameEditedSuccess', { name: payload.customName }),
-      });
-    }
-  } else {
-    uiNotificationsStore.addNotification({
-      type: 'error',
-      message: t('sshSuspend.notifications.nameEditedError', { error: payload.error || t('term.unknownError') }),
-    });
-    console.error(`[${t('term.sshSuspend')}] 编辑挂起名称失败 (ID: ${payload.suspendSessionId}): ${payload.error}`);
-  }
-};
+// handleSshSuspendNameEditedResp removed as edit is now via HTTP
 
 const handleSshSuspendAutoTerminatedNotif = (payload: SshSuspendAutoTerminatedNotifPayload): void => {
   const uiNotificationsStore = useUiNotificationsStore();
@@ -621,10 +624,10 @@ export const registerSshSuspendHandlers = (wsManager: WsManagerInstance): void =
   wsManager.onMessage('SSH_OUTPUT_CACHED_CHUNK', (p: MessagePayload) => handleSshOutputCachedChunk(p as SshOutputCachedChunkPayload));
   wsManager.onMessage('SSH_SUSPEND_TERMINATED_RESP', (p: MessagePayload) => handleSshSuspendTerminatedResp(p as SshSuspendTerminatedRespPayload));
   wsManager.onMessage('SSH_SUSPEND_ENTRY_REMOVED_RESP', (p: MessagePayload) => handleSshSuspendEntryRemovedResp(p as SshSuspendEntryRemovedRespPayload));
-  wsManager.onMessage('SSH_SUSPEND_NAME_EDITED_RESP', (p: MessagePayload) => handleSshSuspendNameEditedResp(p as SshSuspendNameEditedRespPayload));
+  // SSH_SUSPEND_NAME_EDITED_RESP handler removed
   wsManager.onMessage('SSH_SUSPEND_AUTO_TERMINATED_NOTIF', (p: MessagePayload) => handleSshSuspendAutoTerminatedNotif(p as SshSuspendAutoTerminatedNotifPayload));
 
-  console.log(`[${t('term.sshSuspend')}] SSH 挂起模式的 WebSocket 消息处理器已注册。`);
+  console.log(`[${t('term.sshSuspend')}] SSH 挂起模式的 WebSocket 消息处理器已注册 (移除了名称编辑相关的处理器)。`);
 
   // 连接建立后，主动获取一次挂起列表
   // 考虑：是否应该在这里做，或者在应用启动时做一次？

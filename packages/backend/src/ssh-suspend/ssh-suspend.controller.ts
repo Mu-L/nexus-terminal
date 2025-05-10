@@ -11,6 +11,7 @@ export class SshSuspendController {
     this.getSuspendedSshSessions = this.getSuspendedSshSessions.bind(this);
     this.terminateAndRemoveSession = this.terminateAndRemoveSession.bind(this);
     this.removeSessionEntry = this.removeSessionEntry.bind(this);
+    this.editSessionNameHttp = this.editSessionNameHttp.bind(this); // 绑定新方法
   }
 
   public async getSuspendedSshSessions(req: Request, res: Response): Promise<void> {
@@ -104,4 +105,42 @@ export class SshSuspendController {
         }
       }
     }
+
+  public async editSessionNameHttp(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.session.userId;
+      const { suspendSessionId } = req.params;
+      const { customName } = req.body; // 从请求体获取新名称
+
+      if (!userId) {
+        res.status(401).json({ message: 'Unauthorized. User ID not found in session.' });
+        return;
+      }
+      if (!suspendSessionId) {
+        res.status(400).json({ message: 'Bad Request. suspendSessionId parameter is missing.' });
+        return;
+      }
+      if (typeof customName !== 'string') { // 验证 customName
+        res.status(400).json({ message: 'Bad Request. customName must be a string and is missing or invalid.' });
+        return;
+      }
+
+      console.log(`[SshSuspendController] editSessionNameHttp called for user ID: ${userId}, suspendSessionId: ${suspendSessionId}, newName: "${customName}"`);
+
+      const success = await sshSuspendService.editSuspendedSessionName(userId, suspendSessionId, customName);
+      if (success) {
+        res.status(200).json({ message: `Suspended session ${suspendSessionId} name updated to "${customName}".`, customName });
+      } else {
+        // 假设服务层在找不到会话时返回 false
+        res.status(404).json({ message: `Failed to update name for session ${suspendSessionId}. It might not exist.` });
+      }
+    } catch (error) {
+      console.error(`[SshSuspendController] Error editing session name for user ID: ${req.session.userId}, suspendSessionId: ${req.params.suspendSessionId}:`, error);
+      if (error instanceof Error) {
+        res.status(500).json({ message: 'Failed to edit suspended session name', error: error.message });
+      } else {
+        res.status(500).json({ message: 'Failed to edit suspended session name', error: 'Unknown error' });
+      }
+    }
   }
+}

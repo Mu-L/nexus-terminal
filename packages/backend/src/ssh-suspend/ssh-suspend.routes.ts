@@ -27,4 +27,11 @@ router.delete(
   sshSuspendController.removeSessionEntry
 );
 
+// Route to edit a suspended session's custom name
+router.put(
+  '/name/:suspendSessionId',
+  isAuthenticated,
+  sshSuspendController.editSessionNameHttp // 新的控制器方法
+);
+
 export default router;

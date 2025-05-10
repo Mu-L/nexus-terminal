@@ -38,7 +38,7 @@
             <div class="session-info flex-grow mr-2">
               <div class="font-bold text-lg">
                 <span
-                  v-if="!session.isEditingName"
+                  v-if="editingSuspendSessionId !== session.suspendSessionId"
                   class="cursor-pointer hover:text-primary"
                   :title="$t('suspendedSshSessions.tooltip.editName')"
                   @click="startEditingName(session)"
@@ -47,13 +47,13 @@
                 </span>
                 <input
                   v-else
-                  v-model="session.editingNameValue"
+                  ref="nameInputRef"
+                  v-model="currentEditingNameValue"
                   type="text"
                   class="text-lg font-bold w-full px-1 py-0.5 border border-primary rounded-md bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  autofocus
-                  @blur="finishEditingName(session)"
-                  @keydown.enter.prevent="finishEditingName(session)"
-                  @keydown.esc.prevent="cancelEditingName(session)"
+                  @blur="finishEditingName()"
+                  @keydown.enter.prevent="finishEditingName()"
+                  @keydown.esc.prevent="cancelEditingName()"
                 />
               </div>
               <div class="text-sm text-muted-color">
@@ -107,87 +107,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick, watch } from 'vue'; // +++ 导入 nextTick 和 watch +++
 import { useI18n } from 'vue-i18n';
-import { storeToRefs } from 'pinia'; // +++ 导入 storeToRefs +++
-// PrimeVue components (InputText, Button, Tag) are assumed to be globally registered
-// based on the structure of other views like QuickCommandsView.vue
-// and the nature of the 'Cannot find module' errors which might indicate
-// they are not meant to be imported directly here if globally available.
-
-// 假设 sessionStore 存在并且有以下类型和方法
-import { useSessionStore } from '../stores/session.store'; // 使用真实的 store
-import type { SuspendedSshSession } from '../types/ssh-suspend.types'; // 确保 SuspendedSshSession 类型从正确的位置导入
+import { storeToRefs } from 'pinia';
+import { useSessionStore } from '../stores/session.store';
+import type { SuspendedSshSession } from '../types/ssh-suspend.types';
 
 const { t } = useI18n();
-// 模拟类型，实际应从 ssh-suspend.types.ts 导入 (保持这个类型扩展)
-interface SuspendedSshSessionUIData extends SuspendedSshSession {
-  isEditingName?: boolean;
-  editingNameValue?: string;
-}
-
-
-// // 模拟 sessionStore (注释掉)
-// const mockSessionStore = {
-//   suspendedSshSessions: ref<SuspendedSshSessionUIData[]>([
-//     // ... mock data ...
-//   ]),
-//   fetchSuspendedSshSessions: async () => {
-//     console.log('[SuspendedSshSessionsView] Requesting suspended SSH sessions...');
-//     // 模拟 API 调用延迟
-//     return new Promise(resolve => setTimeout(() => {
-//        mockSessionStore.suspendedSshSessions.value = [
-//         // ... mock data ...
-//       ];
-//       isLoading.value = false;
-//       console.log('[SuspendedSshSessionsView] Mock sessions loaded:', mockSessionStore.suspendedSshSessions.value);
-//       resolve(true);
-//     }, 1500));
-//   },
-//   resumeSshSession: async (suspendSessionId: string, newFrontendSessionId: string) => {
-//     console.log(`[SuspendedSshSessionsView] Action: resumeSshSession(${suspendSessionId}, ${newFrontendSessionId})`);
-//     alert(`模拟恢复会话: ${suspendSessionId}`);
-//   },
-//   terminateAndRemoveSshSession: async (suspendSessionId: string) => {
-//     console.log(`[SuspendedSshSessionsView] Action: terminateAndRemoveSshSession(${suspendSessionId})`);
-//     mockSessionStore.suspendedSshSessions.value = mockSessionStore.suspendedSshSessions.value.filter(s => s.suspendSessionId !== suspendSessionId);
-//     alert(`模拟终止并移除会话: ${suspendSessionId}`);
-//   },
-//   removeSshSessionEntry: async (suspendSessionId: string) => {
-//     console.log(`[SuspendedSshSessionsView] Action: removeSshSessionEntry(${suspendSessionId})`);
-//     mockSessionStore.suspendedSshSessions.value = mockSessionStore.suspendedSshSessions.value.filter(s => s.suspendSessionId !== suspendSessionId);
-//     alert(`模拟移除已断开会话条目: ${suspendSessionId}`);
-//   },
-//   editSshSessionName: async (suspendSessionId: string, newName: string) => {
-//     console.log(`[SuspendedSshSessionsView] Action: editSshSessionName(${suspendSessionId}, ${newName})`);
-//     const session = mockSessionStore.suspendedSshSessions.value.find(s => s.suspendSessionId === suspendSessionId);
-//     if (session) {
-//       session.customSuspendName = newName;
-//     }
-//     alert(`模拟编辑名称: ${suspendSessionId} -> ${newName}`);
-//   },
-// };
-const sessionStore = useSessionStore(); // 使用真实的 store
-// const sessionStore = mockSessionStore; // 使用模拟 store (注释掉)
-
-// +++ 使用 storeToRefs 获取响应式状态，并将 isLoadingSuspendedSessions 重命名为 isLoading +++
+const sessionStore = useSessionStore();
 const { suspendedSshSessions: storeSuspendedSshSessions, isLoadingSuspendedSessions: isLoading } = storeToRefs(sessionStore);
 
 const searchTerm = ref('');
-// const isLoading = ref(true); // 现在从 store 的 isLoading 获取
 
-const allSuspendedSshSessions = computed(() => storeSuspendedSshSessions.value.map((s: SuspendedSshSession) => ({ // 显式为 s 添加类型
-  ...(s as SuspendedSshSessionUIData), // 断言为包含 UI 状态的类型
-  isEditingName: (s as SuspendedSshSessionUIData).isEditingName ?? false,
-  editingNameValue: (s as SuspendedSshSessionUIData).editingNameValue ?? s.customSuspendName ?? s.connectionName,
-})));
+// +++ 组件级编辑状态 +++
+const editingSuspendSessionId = ref<string | null>(null);
+const currentEditingNameValue = ref<string>('');
+const nameInputRef = ref<HTMLInputElement | null>(null);
 
+// +++ 监听编辑ID变化以聚焦输入框 +++
+watch(editingSuspendSessionId, async (newId) => {
+  if (newId !== null) {
+    await nextTick(); // 确保DOM已更新，输入框已渲染
+    if (nameInputRef.value && typeof nameInputRef.value.focus === 'function') {
+      nameInputRef.value.focus();
+      // nameInputRef.value.select(); // 可选：如果希望选中所有文本
+    } else {
+      console.warn('[SuspendedSshSessionsView] Watcher: nameInputRef.value is not a focusable input after nextTick.');
+    }
+  }
+});
+
+// filteredSessions 现在直接基于 storeSuspendedSshSessions
 const filteredSessions = computed(() => {
   if (!searchTerm.value.trim()) {
-    return allSuspendedSshSessions.value; // allSuspendedSshSessions 已经是 .value 之后的结果
+    return storeSuspendedSshSessions.value;
   }
   const lowerSearchTerm = searchTerm.value.toLowerCase();
-  return allSuspendedSshSessions.value.filter((session: SuspendedSshSessionUIData) => // 为 session 添加类型
+  return storeSuspendedSshSessions.value.filter((session: SuspendedSshSession) =>
     (session.customSuspendName?.toLowerCase() || '').includes(lowerSearchTerm) ||
     session.connectionName.toLowerCase().includes(lowerSearchTerm)
   );
@@ -201,44 +157,46 @@ const formatDateTime = (isoString?: string) => {
   if (!isoString) return t('time.unknown');
   try {
     return new Date(isoString).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
     });
   } catch (e) {
     return t('time.invalidDate');
   }
 };
 
-const startEditingName = (session: SuspendedSshSessionUIData) => {
-  // 确保同一时间只有一个会话处于编辑状态（可选优化）
-  allSuspendedSshSessions.value.forEach((s: SuspendedSshSessionUIData) => s.isEditingName = false); // 为 s 添加类型
-  session.isEditingName = true;
-  session.editingNameValue = session.customSuspendName || session.connectionName;
+const startEditingName = (session: SuspendedSshSession) => { // async 不再需要，聚焦由 watcher 处理
+  editingSuspendSessionId.value = session.suspendSessionId;
+  currentEditingNameValue.value = session.customSuspendName || session.connectionName;
+  // 聚焦逻辑已移至 watcher
 };
 
-const finishEditingName = (session: SuspendedSshSessionUIData) => {
-  if (!session.isEditingName) return;
-  session.isEditingName = false;
-  const newName = session.editingNameValue?.trim();
-  // 仅当名称有变化且不为空时才提交
-  if (newName && newName !== (session.customSuspendName || session.connectionName)) {
-    sessionStore.editSshSessionName(session.suspendSessionId, newName);
-  } else {
-    // 如果名称未变或变为空，则恢复显示原始值或之前的自定义名
-     session.editingNameValue = session.customSuspendName || session.connectionName;
+const finishEditingName = () => {
+  if (editingSuspendSessionId.value === null) return;
+
+  const sessionId = editingSuspendSessionId.value;
+  const newName = currentEditingNameValue.value.trim();
+
+  const originalSession = storeSuspendedSshSessions.value.find(s => s.suspendSessionId === sessionId);
+  if (!originalSession) {
+    editingSuspendSessionId.value = null; // 重置状态
+    return;
   }
+
+  editingSuspendSessionId.value = null; // 退出编辑模式
+
+  if (newName && newName !== (originalSession.customSuspendName || originalSession.connectionName)) {
+    sessionStore.editSshSessionName(sessionId, newName);
+  }
+  // 如果名称未变或为空，则无需操作，因为 currentEditingNameValue 不会持久化
 };
 
-const cancelEditingName = (session: SuspendedSshSessionUIData) => {
-  session.isEditingName = false;
-  session.editingNameValue = session.customSuspendName || session.connectionName; // 恢复原值
+const cancelEditingName = () => {
+  editingSuspendSessionId.value = null;
+  // currentEditingNameValue 不需要显式重置，因为它会在下次 startEditingName 时被新值覆盖
 };
 
-
-const resumeSession = async (session: SuspendedSshSessionUIData) => {
+const resumeSession = async (session: SuspendedSshSession) => { // 参数类型改为 SuspendedSshSession
   console.log(`[SuspendedSshSessionsView] Attempting to resume session ID: ${session.suspendSessionId}, Name: ${session.customSuspendName || session.connectionName}`);
   // 使用 JSON.parse(JSON.stringify()) 来记录会话对象的一个快照，避免在异步操作后因对象被修改而导致日志不准确
   console.log('[SuspendedSshSessionsView] Session details snapshot:', JSON.parse(JSON.stringify(session)));
@@ -277,7 +235,7 @@ const resumeSession = async (session: SuspendedSshSessionUIData) => {
   }
 };
 
-const removeSession = (session: SuspendedSshSessionUIData) => {
+const removeSession = (session: SuspendedSshSession) => { // 参数类型改为 SuspendedSshSession
   if (session.backendSshStatus === 'hanging') {
     sessionStore.terminateAndRemoveSshSession(session.suspendSessionId);
   } else if (session.backendSshStatus === 'disconnected_by_backend') {
@@ -286,9 +244,7 @@ const removeSession = (session: SuspendedSshSessionUIData) => {
 };
 
 onMounted(async () => {
-  // isLoading.value = true; // storeIsLoading 会自动更新
   await sessionStore.fetchSuspendedSshSessions();
-  // isLoading.value = false; // fetchSuspendedSshSessions 内部应更新 storeIsLoading
 });
 
 </script>

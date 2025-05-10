@@ -7,14 +7,14 @@ import {
     SshSuspendResumeRequest,
     SshSuspendTerminateRequest,
     SshSuspendRemoveEntryRequest,
-    SshSuspendEditNameRequest,
+    // SshSuspendEditNameRequest, // Removed as it's now HTTP
     SshSuspendStartedResponse,
     SshSuspendListResponse,
     SshSuspendResumedNotification,
     SshOutputCachedChunk,
     SshSuspendTerminatedResponse,
     SshSuspendEntryRemovedResponse,
-    SshSuspendNameEditedResponse,
+    // SshSuspendNameEditedResponse, // Removed as it's now HTTP
     SshSuspendAutoTerminatedNotification,
     SshMarkForSuspendRequest,
     SshMarkedForSuspendAck,
@@ -296,26 +296,7 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                             }
                             break;
                         }
-                        case 'SSH_SUSPEND_EDIT_NAME': {
-                            const { suspendSessionId, customName } = payload as SshSuspendEditNameRequest['payload'];
-                            if (!ws.userId) {
-                                console.error(`[SSH_SUSPEND_EDIT_NAME] 用户 ID 未定义。`);
-                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_SUSPEND_NAME_EDITED_RESP', payload: { suspendSessionId, success: false, error: '用户认证失败' } }));
-                                break;
-                            }
-                            try {
-                                const success = await sshSuspendService.editSuspendedSessionName(ws.userId, suspendSessionId, customName);
-                                const response: SshSuspendNameEditedResponse = {
-                                    type: 'SSH_SUSPEND_NAME_EDITED',
-                                    payload: { suspendSessionId, success, customName: success ? customName : undefined }
-                                };
-                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(response));
-                            } catch (error: any) {
-                                console.error(`[SSH_SUSPEND_EDIT_NAME] 编辑名称 ${suspendSessionId} 失败:`, error);
-                                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'SSH_SUSPEND_NAME_EDITED_RESP', payload: { suspendSessionId, success: false, error: error.message || '编辑名称失败' } }));
-                            }
-                            break;
-                        }
+                        // SSH_SUSPEND_EDIT_NAME case removed, handled by HTTP API now
                         case 'SSH_MARK_FOR_SUSPEND': {
                             const markPayload = payload as SshMarkForSuspendRequest['payload'];
                             const sessionToMarkId = markPayload.sessionId;
