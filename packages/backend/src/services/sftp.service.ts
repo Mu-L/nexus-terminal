@@ -619,9 +619,6 @@ export class SftpService {
         }
     }
 
-    // TODO: Implement file upload/download logic with progress reporting
-    // async uploadFile(...)
-    // async downloadFile(...)
 
     /** 获取路径的绝对表示 */
     async realpath(sessionId: string, path: string, requestId: string): Promise<void> {

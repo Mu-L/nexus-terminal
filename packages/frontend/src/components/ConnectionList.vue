@@ -115,7 +115,6 @@ const getConnectionTagNames = (conn: ConnectionInfo): string[] => {
  // 辅助函数：格式化时间戳
 const formatTimestamp = (timestamp: number | null): string => {
   if (!timestamp) return t('connections.status.never'); // 使用 i18n
-  // TODO: 可以考虑使用更专业的日期格式化库 (如 date-fns 或 dayjs) 并结合 i18n locale
   return new Date(timestamp * 1000).toLocaleString(); // 乘以 1000 转换为毫秒
 };
 

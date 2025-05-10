@@ -576,10 +576,6 @@ export const addTagToConnections = async (connectionIds: number[], tagId: number
 export const updateConnectionTags = async (connectionId: number, tagIds: number[]): Promise<boolean> => {
     try {
         const updated = await ConnectionRepository.updateConnectionTags(connectionId, tagIds);
-        // if (updated) {
-        //     // TODO: 定义 'CONNECTION_TAGS_UPDATED' 审计日志类型
-        //     // auditLogService.logAction('CONNECTION_TAGS_UPDATED', { connectionId, tagIds });
-        // }
         return updated;
     } catch (error: any) {
         console.error(`Service: 更新连接 ${connectionId} 的标签时发生错误:`, error);

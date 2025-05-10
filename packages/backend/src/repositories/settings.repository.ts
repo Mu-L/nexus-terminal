@@ -102,7 +102,6 @@ export const getSidebarConfig = async (): Promise<SidebarConfig> => {
             try {
                 const config = JSON.parse(jsonString);
                 if (config && Array.isArray(config.left) && Array.isArray(config.right)) {
-                    // TODO: 如果需要，添加更深入的验证（例如，检查项目是否为有效的 PaneName）
                     return config as SidebarConfig;
                 }
                 console.warn(`[设置仓库] 在数据库中发现无效的 sidebarConfig 格式: ${jsonString}。返回默认值。`);
@@ -124,7 +123,6 @@ export const setSidebarConfig = async (config: SidebarConfig): Promise<void> => 
         if (!config || typeof config !== 'object' || !Array.isArray(config.left) || !Array.isArray(config.right)) {
              throw new Error('提供了无效的侧边栏配置对象。');
         }
-        // TODO: 如果需要，添加更深入的验证（例如，检查 PaneName 的有效性）
         const jsonString = JSON.stringify(config);
         await settingsRepository.setSetting(SIDEBAR_CONFIG_KEY, jsonString);
     } catch (error) {
