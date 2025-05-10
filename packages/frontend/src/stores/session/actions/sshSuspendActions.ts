@@ -492,8 +492,13 @@ const handleSshSuspendResumedNotif = async (payload: SshSuspendResumedNotifPaylo
         message: t('sshSuspend.notifications.resumeErrorGeneric', { error: String(error) }),
       });
     }
-    // 成功恢复后，从挂起列表中移除 (或者等 SSH_SUSPEND_ENTRY_REMOVED_RESP)
-    fetchSuspendedSshSessions(); // 在这里主动刷新一次，确保列表更新
+    // 成功恢复后，立即从前端挂起列表中移除
+    const resumedSessionIndex = suspendedSshSessions.value.findIndex(s => s.suspendSessionId === payload.suspendSessionId);
+    if (resumedSessionIndex !== -1) {
+      suspendedSshSessions.value.splice(resumedSessionIndex, 1);
+      console.log(`[${t('term.sshSuspend')}] Successfully resumed and removed session ${payload.suspendSessionId} from the frontend list.`);
+    }
+    // 可选：fetchSuspendedSshSessions(); // 如果仍然需要与后端同步最新列表，可以保留，但即时性由上面的 splice 保证
   } else {
     uiNotificationsStore.addNotification({
       type: 'error',

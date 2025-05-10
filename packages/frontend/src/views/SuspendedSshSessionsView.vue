@@ -9,7 +9,7 @@
           type="text"
           v-model="searchTerm"
           :placeholder="$t('suspendedSshSessions.searchPlaceholder')"
-          class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          class="w-full pl-10 pr-4 py-1.5 border border-border/50 rounded-lg bg-input text-foreground text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out"
           @input="filterSessions"
         />
       </div>
@@ -31,7 +31,7 @@
         <li
           v-for="session in filteredSessions"
           :key="session.suspendSessionId"
-          class="session-item p-3 mb-2 border rounded-md bg-surface-ground"
+          class="session-item p-3 mb-2 border border-border/70 rounded-md bg-surface-ground"
           :class="{ 'opacity-60': session.backendSshStatus === 'disconnected_by_backend' }"
         >
           <div class="flex justify-between items-center">
@@ -86,7 +86,7 @@
                   :title="$t('suspendedSshSessions.action.resume')"
                   class="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150 inline-flex items-center"
                 >
-                  <i class="fas fa-play mr-1.5"></i>
+                  <i class="fas fa-play mr-1.5" style="color: white;"></i>
                   {{ $t('suspendedSshSessions.action.resume') }}
                 </button>
                 <button
@@ -94,7 +94,7 @@
                   :title="$t('suspendedSshSessions.action.remove')"
                   class="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-150 inline-flex items-center"
                 >
-                  <i class="fas fa-trash-alt mr-1.5"></i>
+                  <i class="fas fa-trash-alt mr-1.5" style="color: white;"></i>
                   {{ $t('suspendedSshSessions.action.remove') }}
                 </button>
               </div>
