@@ -159,7 +159,7 @@
     <!-- Context Menu for Quick Commands -->
     <div
       v-if="quickCommandContextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px]"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px] quick-command-context-menu"
       :style="{ top: `${quickCommandContextMenuPosition.y}px`, left: `${quickCommandContextMenuPosition.x}px` }"
       @click.stop
     >
@@ -556,11 +556,43 @@ const cancelEditingTag = () => {
 
 // +++ 右键菜单方法 +++
 const showQuickCommandContextMenu = (event: MouseEvent, command: QuickCommandFE) => {
-  event.preventDefault();
-  quickCommandContextTargetCommand.value = command;
-  quickCommandContextMenuPosition.value = { x: event.clientX, y: event.clientY };
-  quickCommandContextMenuVisible.value = true;
-  document.addEventListener('click', closeQuickCommandContextMenu, { once: true });
+event.preventDefault();
+quickCommandContextTargetCommand.value = command;
+quickCommandContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+quickCommandContextMenuVisible.value = true;
+document.addEventListener('click', closeQuickCommandContextMenu, { once: true });
+
+// 使用 nextTick 获取菜单尺寸并调整位置以防止超出屏幕
+nextTick(() => {
+  const menuElement = document.querySelector('.quick-command-context-menu') as HTMLElement;
+  if (menuElement) {
+    const menuRect = menuElement.getBoundingClientRect();
+    let finalX = quickCommandContextMenuPosition.value.x;
+    let finalY = quickCommandContextMenuPosition.value.y;
+    const menuWidth = menuRect.width;
+    const menuHeight = menuRect.height;
+
+    // 调整水平位置
+    if (finalX + menuWidth > window.innerWidth) {
+      finalX = window.innerWidth - menuWidth - 5;
+    }
+
+    // 调整垂直位置
+    if (finalY + menuHeight > window.innerHeight) {
+      finalY = window.innerHeight - menuHeight - 5;
+    }
+
+    // 确保菜单不超出屏幕左上角
+    finalX = Math.max(5, finalX);
+    finalY = Math.max(5, finalY);
+
+    // 更新位置
+    if (finalX !== quickCommandContextMenuPosition.value.x || finalY !== quickCommandContextMenuPosition.value.y) {
+      console.log(`[QuickCmdView] Adjusting quick command context menu position: (${quickCommandContextMenuPosition.value.x}, ${quickCommandContextMenuPosition.value.y}) -> (${finalX}, ${finalY})`);
+      quickCommandContextMenuPosition.value = { x: finalX, y: finalY };
+    }
+  }
+});
 };
 
 const closeQuickCommandContextMenu = () => {

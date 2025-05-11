@@ -64,7 +64,7 @@
     <!-- Context Menu for Command History -->
     <div
       v-if="commandHistoryContextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px]"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px] command-history-context-menu"
       :style="{ top: `${commandHistoryContextMenuPosition.y}px`, left: `${commandHistoryContextMenuPosition.x}px` }"
       @click.stop
     >
@@ -249,11 +249,43 @@ defineExpose({ focusSearchInput });
 
 // +++ 右键菜单方法 +++
 const showCommandHistoryContextMenu = (event: MouseEvent, entry: CommandHistoryEntryFE) => {
-  event.preventDefault();
-  commandHistoryContextTargetEntry.value = entry;
-  commandHistoryContextMenuPosition.value = { x: event.clientX, y: event.clientY };
-  commandHistoryContextMenuVisible.value = true;
-  document.addEventListener('click', closeCommandHistoryContextMenu, { once: true });
+event.preventDefault();
+commandHistoryContextTargetEntry.value = entry;
+commandHistoryContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+commandHistoryContextMenuVisible.value = true;
+document.addEventListener('click', closeCommandHistoryContextMenu, { once: true });
+
+// 使用 nextTick 获取菜单尺寸并调整位置以防止超出屏幕
+nextTick(() => {
+  const menuElement = document.querySelector('.command-history-context-menu') as HTMLElement;
+  if (menuElement) {
+    const menuRect = menuElement.getBoundingClientRect();
+    let finalX = commandHistoryContextMenuPosition.value.x;
+    let finalY = commandHistoryContextMenuPosition.value.y;
+    const menuWidth = menuRect.width;
+    const menuHeight = menuRect.height;
+
+    // 调整水平位置
+    if (finalX + menuWidth > window.innerWidth) {
+      finalX = window.innerWidth - menuWidth - 5;
+    }
+
+    // 调整垂直位置
+    if (finalY + menuHeight > window.innerHeight) {
+      finalY = window.innerHeight - menuHeight - 5;
+    }
+
+    // 确保菜单不超出屏幕左上角
+    finalX = Math.max(5, finalX);
+    finalY = Math.max(5, finalY);
+
+    // 更新位置
+    if (finalX !== commandHistoryContextMenuPosition.value.x || finalY !== commandHistoryContextMenuPosition.value.y) {
+      console.log(`[CommandHistoryView] Adjusting command history context menu position: (${commandHistoryContextMenuPosition.value.x}, ${commandHistoryContextMenuPosition.value.y}) -> (${finalX}, ${finalY})`);
+      commandHistoryContextMenuPosition.value = { x: finalX, y: finalY };
+    }
+  }
+});
 };
 
 const closeCommandHistoryContextMenu = () => {

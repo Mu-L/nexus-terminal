@@ -324,17 +324,50 @@ const handleConnect = (connectionId: number, event?: MouseEvent | KeyboardEvent)
 
 // 显示右键菜单
 const showContextMenu = (event: MouseEvent, connection: ConnectionInfo) => {
-  console.log(`[WkspConnList] showContextMenu (右键) called for ID: ${connection.id}. Event:`, event);
-  event.preventDefault(); // 再次确保阻止默认行为
-  event.stopPropagation(); // 阻止事件冒泡
-  event.stopImmediatePropagation(); // 尝试更强力地阻止事件链
-  console.log('[WkspConnList] Right-click default prevented and propagation stopped.');
-  contextTargetConnection.value = connection;
-  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
-  contextMenuVisible.value = true;
-  // 添加全局点击监听器以关闭菜单
-  document.addEventListener('click', closeContextMenu, { once: true });
-  return false; // 彻底停止事件处理
+console.log(`[WkspConnList] showContextMenu (右键) called for ID: ${connection.id}. Event:`, event);
+event.preventDefault(); // 再次确保阻止默认行为
+event.stopPropagation(); // 阻止事件冒泡
+event.stopImmediatePropagation(); // 尝试更强力地阻止事件链
+console.log('[WkspConnList] Right-click default prevented and propagation stopped.');
+contextTargetConnection.value = connection;
+contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+contextMenuVisible.value = true;
+// 添加全局点击监听器以关闭菜单
+document.addEventListener('click', closeContextMenu, { once: true });
+
+// 使用 nextTick 获取菜单尺寸并调整位置以防止超出屏幕
+nextTick(() => {
+  const menuElement = document.querySelector('.context-menu') as HTMLElement;
+  if (menuElement) {
+    const menuRect = menuElement.getBoundingClientRect();
+    let finalX = contextMenuPosition.value.x;
+    let finalY = contextMenuPosition.value.y;
+    const menuWidth = menuRect.width;
+    const menuHeight = menuRect.height;
+
+    // 调整水平位置
+    if (finalX + menuWidth > window.innerWidth) {
+      finalX = window.innerWidth - menuWidth - 5;
+    }
+
+    // 调整垂直位置
+    if (finalY + menuHeight > window.innerHeight) {
+      finalY = window.innerHeight - menuHeight - 5;
+    }
+
+    // 确保菜单不超出屏幕左上角
+    finalX = Math.max(5, finalX);
+    finalY = Math.max(5, finalY);
+
+    // 更新位置
+    if (finalX !== contextMenuPosition.value.x || finalY !== contextMenuPosition.value.y) {
+      console.log(`[WkspConnList] Adjusting context menu position: (${contextMenuPosition.value.x}, ${contextMenuPosition.value.y}) -> (${finalX}, ${finalY})`);
+      contextMenuPosition.value = { x: finalX, y: finalY };
+    }
+  }
+});
+
+return false; // 彻底停止事件处理
 };
 
 // 关闭右键菜单
@@ -392,14 +425,46 @@ const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // �
 
 // 显示标签右键菜单
 const showTagContextMenu = (event: MouseEvent, groupData: (typeof filteredAndGroupedConnections.value)[0]) => {
-  event.preventDefault();
-  event.stopPropagation(); // 阻止事件冒泡到上层，例如关闭连接右键菜单的 document click listener
-  closeContextMenu(); // 如果连接的右键菜单是打开的，先关闭它
-  contextTargetTagGroup.value = groupData;
-  tagContextMenuPosition.value = { x: event.clientX, y: event.clientY };
-  tagContextMenuVisible.value = true;
-  // 添加全局点击监听器以关闭菜单
-  document.addEventListener('click', closeTagContextMenu, { once: true });
+event.preventDefault();
+event.stopPropagation(); // 阻止事件冒泡到上层，例如关闭连接右键菜单的 document click listener
+closeContextMenu(); // 如果连接的右键菜单是打开的，先关闭它
+contextTargetTagGroup.value = groupData;
+tagContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+tagContextMenuVisible.value = true;
+// 添加全局点击监听器以关闭菜单
+document.addEventListener('click', closeTagContextMenu, { once: true });
+
+// 使用 nextTick 获取菜单尺寸并调整位置以防止超出屏幕
+nextTick(() => {
+  const menuElement = document.querySelector('.tag-context-menu') as HTMLElement;
+  if (menuElement) {
+    const menuRect = menuElement.getBoundingClientRect();
+    let finalX = tagContextMenuPosition.value.x;
+    let finalY = tagContextMenuPosition.value.y;
+    const menuWidth = menuRect.width;
+    const menuHeight = menuRect.height;
+
+    // 调整水平位置
+    if (finalX + menuWidth > window.innerWidth) {
+      finalX = window.innerWidth - menuWidth - 5;
+    }
+
+    // 调整垂直位置
+    if (finalY + menuHeight > window.innerHeight) {
+      finalY = window.innerHeight - menuHeight - 5;
+    }
+
+    // 确保菜单不超出屏幕左上角
+    finalX = Math.max(5, finalX);
+    finalY = Math.max(5, finalY);
+
+    // 更新位置
+    if (finalX !== tagContextMenuPosition.value.x || finalY !== tagContextMenuPosition.value.y) {
+      console.log(`[WkspConnList] Adjusting tag context menu position: (${tagContextMenuPosition.value.x}, ${tagContextMenuPosition.value.y}) -> (${finalX}, ${finalY})`);
+      tagContextMenuPosition.value = { x: finalX, y: finalY };
+    }
+  }
+});
 };
 
 // 关闭标签右键菜单
@@ -844,7 +909,7 @@ const cancelEditingTag = () => {
     <!-- Context Menu -->
     <div
       v-if="contextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px]"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px] context-menu"
       :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
       @click.stop
     >
@@ -871,7 +936,7 @@ const cancelEditingTag = () => {
     <!-- 标签右键菜单 -->
     <div
       v-if="tagContextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[200px]"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[200px] tag-context-menu"
       :style="{ top: `${tagContextMenuPosition.y}px`, left: `${tagContextMenuPosition.x}px` }"
       @click.stop
     >
