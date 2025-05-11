@@ -66,8 +66,19 @@ const hostTooltipStyle = ref({});
 const hostIconRef = ref<HTMLElement | null>(null);
 const hostTooltipContentRef = ref<HTMLElement | null>(null);
 
+// Script Mode State
+const isScriptModeActive = ref(false);
+const scriptInputText = ref('');
+
 // 计算属性判断是否为编辑模式
 const isEditMode = computed(() => !!props.connectionToEdit);
+
+// When switching to edit mode, disable script mode
+watch(isEditMode, (editing) => {
+  if (editing) {
+    isScriptModeActive.value = false;
+  }
+});
 
 // 计算属性动态设置表单标题
 const formTitle = computed(() => {
@@ -204,8 +215,338 @@ const parseIpRange = (ipRangeStr: string): string[] | { error: string } => {
     return ips;
 };
 
+// Helper function to parse a single script line
+const parseScriptLine = (line: string): { type: 'SSH' | 'RDP' | 'VNC' | null, userHostPort: string, name: string | null, password: string | null, keyName: string | null, tags: string[], note: string | null, error?: string } => {
+  // 首先提取 user@host:port 部分
+  const firstSpaceIndex = line.indexOf(' ');
+  let userHostPortPart = '';
+  let remainingLine = line;
+  
+  if (firstSpaceIndex !== -1) {
+    userHostPortPart = line.substring(0, firstSpaceIndex);
+    remainingLine = line.substring(firstSpaceIndex + 1).trim();
+  } else {
+    userHostPortPart = line;
+    remainingLine = '';
+  }
+  
+  if (!userHostPortPart) return { type: null, userHostPort: '', name: null, password: null, keyName: null, tags: [], note: null, error: t('connections.form.scriptErrorMissingHost', '缺少 user@host:port 部分') };
+
+  let type: 'SSH' | 'RDP' | 'VNC' | null = 'SSH'; // Default to SSH
+  let name: string | null = null;
+  let password: string | null = null;
+  let keyName: string | null = null;
+  const tags: string[] = [];
+  let note: string | null = null;
+  let currentArg: string | null = null;
+  let noteParts: string[] = [];
+
+  // 使用正则表达式来匹配参数和值，支持带引号的值
+  const argRegex = /(-[^=\s]+)(?:\s+("(?:\\"|[^"])*"|[^-\s][^\s]*))?/g;
+  let match;
+  let lastIndex = 0;
+  
+  while ((match = argRegex.exec(remainingLine)) !== null) {
+    const arg = match[1];
+    let value = match[2] || '';
+    
+    // 清理引号
+    if (value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1).replace(/\\"/g, '"');
+    }
+    
+    // 处理上一个参数的收尾工作
+    if (noteParts.length > 0 && currentArg === '-note') {
+      note = noteParts.join(' ');
+      noteParts = [];
+    }
+    
+    currentArg = arg;
+    
+    if (arg === '-tags') {
+      // 标签将在后续处理
+    } else if (arg === '-note') {
+      // 备注将在后续处理
+    }
+    
+    if (value) {
+      switch (arg) {
+        case '-type':
+          const upperType = value.toUpperCase();
+          if (upperType === 'SSH' || upperType === 'RDP' || upperType === 'VNC') {
+            type = upperType as 'SSH' | 'RDP' | 'VNC';
+          } else {
+            return { type: null, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorInvalidType', { type: value }) };
+          }
+          currentArg = null;
+          break;
+        case '-name':
+          name = value;
+          currentArg = null;
+          break;
+        case '-p':
+          password = value;
+          currentArg = null;
+          break;
+        case '-k':
+          keyName = value;
+          currentArg = null;
+          break;
+        case '-tags':
+          tags.push(value);
+          break;
+        case '-note':
+          noteParts.push(value);
+          break;
+        default:
+          if (currentArg === '-note') {
+            noteParts.push(value);
+          } else {
+            return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorUnknownArg', { arg: currentArg }) };
+          }
+      }
+    }
+    lastIndex = argRegex.lastIndex;
+  }
+  
+  // 处理剩余的部分（可能是标签或备注）
+  const remainingPart = remainingLine.substring(lastIndex).trim();
+  if (remainingPart) {
+    if (currentArg === '-tags') {
+      // 按空格分割剩余部分为多个标签，支持引号
+      const tagRegex = /("(?:\\"|[^"])*"|[^\s"]+)/g;
+      let tagMatch;
+      while ((tagMatch = tagRegex.exec(remainingPart)) !== null) {
+        let tag = tagMatch[1];
+        if (tag.startsWith('"') && tag.endsWith('"')) {
+          tag = tag.slice(1, -1).replace(/\\"/g, '"');
+        }
+        tags.push(tag);
+      }
+    } else if (currentArg === '-note') {
+      noteParts.push(remainingPart);
+    } else {
+      return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorUnexpectedToken', { token: remainingPart }) };
+    }
+  }
+
+  if (noteParts.length > 0 && currentArg === '-note') {
+    note = noteParts.join(' ');
+  }
+
+  // Basic validation for userHostPort
+  const userHostPortRegex = /^[^@]+@[^:]+(:[0-9]+)?$/;
+  if (!userHostPortRegex.test(userHostPortPart)) {
+    return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorInvalidUserHostPort', { part: userHostPortPart })};
+  }
+
+  return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note };
+};
+
 // 处理表单提交
+const handleScriptModeSubmit = async () => {
+  const lines = scriptInputText.value.split('\n').filter(line => line.trim() !== '');
+
+  if (lines.length === 0) {
+    uiNotificationsStore.showError(t('connections.form.scriptModeEmpty', '脚本输入不能为空。'));
+    return;
+  }
+
+  let allConnectionsValid = true;
+  const connectionsToAdd = [];
+
+  for (const line of lines) {
+    const parsed = parseScriptLine(line);
+    if (parsed.error) {
+      uiNotificationsStore.showError(t('connections.form.scriptErrorInLine', { line, error: parsed.error }));
+      allConnectionsValid = false;
+      break; // Stop on first error for now, or collect all errors
+    }
+
+    if (!parsed.type) { // Should be caught by parsed.error, but as a safeguard
+        uiNotificationsStore.showError(t('connections.form.scriptErrorMissingType', { line }));
+        allConnectionsValid = false;
+        break;
+    }
+
+    const [userHost, portStr] = parsed.userHostPort.split(':');
+    const [username, host] = userHost.split('@');
+    const port = portStr ? parseInt(portStr, 10) : (parsed.type === 'RDP' ? 3389 : (parsed.type === 'VNC' ? 5900 : 22));
+
+    if (!username || !host) {
+        uiNotificationsStore.showError(t('connections.form.scriptErrorInvalidUserHostFormat', { line }));
+        allConnectionsValid = false;
+        break;
+    }
+    if (isNaN(port) || port <= 0 || port > 65535) {
+        uiNotificationsStore.showError(t('connections.form.scriptErrorInvalidPort', { line, port: portStr || (parsed.type === 'RDP' ? '3389' : (parsed.type === 'VNC' ? '5900' : '22')) }));
+        allConnectionsValid = false;
+        break;
+    }
+
+    const connectionData: any = {
+      type: parsed.type,
+      name: parsed.name || `${username}@${host}`,
+      host,
+      port,
+      username,
+      notes: parsed.note || '',
+      // tag_ids will be resolved later if tags are provided
+      tag_names: parsed.tags, // Store tag names for now, resolve to IDs before API call
+    };
+
+    if (parsed.type === 'SSH') {
+      connectionData.auth_method = parsed.keyName ? 'key' : 'password';
+      if (connectionData.auth_method === 'password') {
+        if (!parsed.password) {
+          uiNotificationsStore.showError(t('connections.form.scriptErrorMissingPasswordForSsh', { line }));
+          allConnectionsValid = false;
+          break;
+        }
+        connectionData.password = parsed.password;
+      } else { // key auth
+        if (!parsed.keyName) { // Should not happen if auth_method is 'key'
+          uiNotificationsStore.showError(t('connections.form.scriptErrorMissingKeyNameForSsh', { line }));
+          allConnectionsValid = false;
+          break;
+        }
+        // We'll need to find ssh_key_id from keyName later
+        connectionData.ssh_key_name = parsed.keyName;
+      }
+    } else if (parsed.type === 'RDP' || parsed.type === 'VNC') {
+      if (!parsed.password) {
+        uiNotificationsStore.showError(t('connections.form.scriptErrorMissingPasswordForType', { line, type: parsed.type }));
+        allConnectionsValid = false;
+        break;
+      }
+      connectionData.password = parsed.password;
+    }
+    connectionsToAdd.push(connectionData);
+  }
+
+  if (!allConnectionsValid || connectionsToAdd.length === 0) {
+    if (connectionsToAdd.length > 0 && !allConnectionsValid) {
+        // Errors were already shown
+    } else if (lines.length > 0 && connectionsToAdd.length === 0 && allConnectionsValid) {
+        // This case should ideally not be reached if parsing is correct
+        uiNotificationsStore.showError(t('connections.form.scriptErrorInternal', '内部解析错误。'));
+    }
+    return;
+  }
+
+  console.log('Parsed connections to add (pre-resolution):', connectionsToAdd);
+
+  const fullyProcessedConnections = [];
+  let resolutionErrorOccurred = false;
+
+  // Resolve tag names and SSH key names to IDs
+  for (const connData of connectionsToAdd) {
+    // Resolve Tag IDs
+    if (connData.tag_names && connData.tag_names.length > 0) {
+      const tagIds = [];
+      for (const tagName of connData.tag_names) {
+        const foundTag = tags.value.find(t => t.name === tagName);
+        if (foundTag) {
+          tagIds.push(foundTag.id);
+        } else {
+          // Option: Create tag if not found, or show error. For now, error.
+          uiNotificationsStore.showError(t('connections.form.scriptErrorTagNotFound', { tagName }));
+          resolutionErrorOccurred = true;
+          break;
+        }
+      }
+      if (resolutionErrorOccurred) break;
+      connData.tag_ids = tagIds;
+    } else {
+      connData.tag_ids = [];
+    }
+    delete connData.tag_names; // Remove temporary field
+
+    // Resolve SSH Key ID
+    if (connData.type === 'SSH' && connData.auth_method === 'key' && connData.ssh_key_name) {
+      const foundKey = sshKeysStore.sshKeys.find(k => k.name === connData.ssh_key_name);
+      if (foundKey) {
+        connData.ssh_key_id = foundKey.id;
+      } else {
+        uiNotificationsStore.showError(t('connections.form.scriptErrorSshKeyNotFound', { keyName: connData.ssh_key_name }));
+        resolutionErrorOccurred = true;
+        break;
+      }
+      delete connData.ssh_key_name; // Remove temporary field
+    }
+    
+    // Clean up unnecessary fields based on type and auth_method, similar to single add
+    if (connData.type !== 'SSH' || connData.auth_method !== 'key') delete connData.ssh_key_id;
+    if (connData.type === 'SSH' && connData.auth_method === 'key') delete connData.password; // No password if key auth
+    if (connData.type !== 'SSH') delete connData.auth_method; // RDP/VNC don't have auth_method in backend
+
+    fullyProcessedConnections.push(connData);
+  }
+
+  if (resolutionErrorOccurred || (fullyProcessedConnections.length === 0 && lines.length > 0)) {
+    // Errors shown by resolver, or if no connections were processed but there were lines
+    if (!resolutionErrorOccurred && lines.length > 0 && fullyProcessedConnections.length === 0) {
+         uiNotificationsStore.showError(t('connections.form.scriptErrorNothingToProcess', '没有可处理的有效连接数据。'));
+    }
+    return;
+  }
+  
+  if (fullyProcessedConnections.length === 0) { // Should be caught by earlier checks
+    return;
+  }
+
+  console.log('Fully processed connections:', fullyProcessedConnections);
+
+  let successCount = 0;
+  let errorCount = 0;
+  let firstErrorEncountered: string | null = null;
+
+  uiNotificationsStore.showInfo(t('connections.form.scriptModeAddingConnections', { count: fullyProcessedConnections.length }));
+
+  for (const finalConnectionData of fullyProcessedConnections) {
+    const success = await connectionsStore.addConnection(finalConnectionData);
+    if (success) {
+      successCount++;
+    } else {
+      errorCount++;
+      if (!firstErrorEncountered) {
+        firstErrorEncountered = connectionsStore.error || t('errors.unknown', '未知错误');
+      }
+      // Optionally, log which connection failed
+      console.error(`Failed to add connection: ${finalConnectionData.name}`, connectionsStore.error);
+    }
+  }
+
+  if (errorCount > 0) {
+    const message = t('connections.form.errorBatchAddResult', { successCount, errorCount, firstErrorEncountered: firstErrorEncountered || t('errors.unknown', '未知错误') });
+    if (successCount > 0) {
+      uiNotificationsStore.showWarning(message);
+    } else {
+      uiNotificationsStore.showError(message);
+    }
+  }
+  
+  if (successCount > 0) {
+    if (errorCount === 0) { // All successful
+        uiNotificationsStore.showSuccess(t('connections.form.successBatchAddResult', { successCount }));
+    }
+    emit('connection-added'); // Emit even if there were partial successes
+    if (errorCount === 0) { // Clear input only if all were successful
+        scriptInputText.value = '';
+        // emit('close'); // Optionally close form on full success
+    }
+  }
+  
+  // If successCount is 0 and errorCount is 0 but there were lines, it means something went wrong before this loop.
+  // That case should be handled by the `fullyProcessedConnections.length === 0` check earlier.
+};
+
 const handleSubmit = async () => {
+  if (isScriptModeActive.value) {
+    await handleScriptModeSubmit();
+    return;
+  }
+
   formError.value = null;
   connectionsStore.error = null;
   proxiesStore.error = null; // 同时清除代理 store 的错误
@@ -616,10 +957,12 @@ const handleHostIconMouseLeave = () => {
       <h3 class="text-xl font-semibold text-center mb-6 flex-shrink-0">{{ formTitle }}</h3> <!-- Title -->
       <form @submit.prevent="handleSubmit" class="flex-grow overflow-y-auto pr-2 space-y-6"> <!-- Form with scroll and spacing -->
 
-        <!-- Basic Info Section -->
-        <div class="space-y-4 p-4 border border-border rounded-md bg-header/30">
-          <h4 class="text-base font-semibold mb-3 pb-2 border-b border-border/50">{{ t('connections.form.sectionBasic', '基本信息') }}</h4>
-          <div>
+        <!-- Regular Form Sections (conditionally rendered) -->
+        <template v-if="!isScriptModeActive">
+          <!-- Basic Info Section -->
+          <div class="space-y-4 p-4 border border-border rounded-md bg-header/30">
+            <h4 class="text-base font-semibold mb-3 pb-2 border-b border-border/50">{{ t('connections.form.sectionBasic', '基本信息') }}</h4>
+            <div>
             <label for="conn-name" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.name') }} ({{ t('connections.form.optional') }})</label>
             <input type="text" id="conn-name" v-model="formData.name"
                    class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
@@ -656,7 +999,7 @@ const handleHostIconMouseLeave = () => {
               <label for="conn-host" class="block text-sm font-medium text-text-secondary mb-1">
                 {{ t('connections.form.host') }}
                 <span class="relative ml-1" @mouseenter="handleHostIconMouseEnter" @mouseleave="handleHostIconMouseLeave">
-                  <i ref="hostIconRef" class="fas fa-info-circle text-text-secondary cursor-help"></i>
+                  <i ref="hostIconRef" class="fas fa-exclamation-circle text-text-secondary cursor-help"></i>
                   <!-- Tooltip is now handled by Teleport -->
                 </span>
               </label>
@@ -789,15 +1132,55 @@ const handleHostIconMouseLeave = () => {
                        :placeholder="t('connections.form.notesPlaceholder', '输入连接备注...')"></textarea>
            </div>
          </div>
- 
-         <!-- Error message DIV removed -->
- 
+       </template> <!-- End of v-if="!isScriptModeActive" -->
+       
+       <!-- Script Mode Section Toggle -->
+       <div v-if="!isEditMode" class="space-y-4 p-4 border border-border rounded-md bg-header/30 mt-6">
+         <div class="flex justify-between items-center">
+           <h4 class="text-base font-semibold">{{ t('connections.form.sectionScriptMode', '脚本模式') }}</h4>
+           <button
+             type="button"
+             @click="isScriptModeActive = !isScriptModeActive"
+             :class="[
+               'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
+               isScriptModeActive ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+             ]"
+             role="switch"
+             :aria-checked="isScriptModeActive"
+           >
+             <span
+               aria-hidden="true"
+               :class="[
+                 'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200',
+                 isScriptModeActive ? 'translate-x-5' : 'translate-x-0'
+               ]"
+             ></span>
+           </button>
+         </div>
+         <div v-if="isScriptModeActive" class="mt-4">
+           <label for="conn-script-input" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.scriptModeInputLabel', '连接脚本 (每行一个)') }}</label>
+           <textarea
+             id="conn-script-input"
+             v-model="scriptInputText"
+             rows="10"
+             wrap="off"
+             class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+             :placeholder="t('connections.form.scriptModePlaceholder')"
+           ></textarea>
+           <p class="mt-1 text-xs text-text-secondary">
+             {{ t('connections.form.scriptModeFormatInfo', '格式: user@host:port [-type TYPE] [-name NAME] [-p PASSWORD] [-k KEY_NAME] [-tags TAG1 TAG2...] [-note NOTE_TEXT]') }}
+           </p>
+         </div>
+       </div>
+
+       <!-- Error message DIV removed -->
+
        </form> <!-- End Form -->
 
-      <!-- Form Actions -->
+       <!-- Form Actions -->
       <div class="flex justify-between items-center pt-5 mt-6 flex-shrink-0">
-         <!-- Test Area (Only show for SSH) -->
-         <div v-if="formData.type === 'SSH'" class="flex flex-col items-start gap-1">
+         <!-- Test Area (Only show for SSH and when script mode is NOT active) -->
+         <div v-if="formData.type === 'SSH' && !isScriptModeActive" class="flex flex-col items-start gap-1">
              <div class="flex items-center gap-2"> <!-- Button and Icon -->
                  <button type="button" @click="handleTestConnection" :disabled="isLoading || testStatus === 'testing'"
                          class="px-3 py-1.5 border border-border rounded-md text-sm font-medium text-text-secondary bg-background hover:bg-border focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center transition-colors duration-150">
@@ -829,10 +1212,11 @@ const handleHostIconMouseLeave = () => {
                  </div>
              </div>
          </div>
-         <!-- Placeholder for alignment when test button is hidden -->
-         <div v-else class="flex-1"></div> <!-- This div ensures the main action buttons are pushed to the right when test area is hidden -->
+         <!-- Placeholder for alignment when test button is hidden or script mode is active -->
+         <div v-else-if="!isScriptModeActive" class="flex-1"></div>
+         <div v-else class="flex-1"></div> <!-- Also take up space if script mode is active, pushing buttons right -->
          <div class="flex space-x-3"> <!-- Main Actions -->
-             <button v-if="isEditMode" type="button" @click="handleDeleteConnection" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
+             <button v-if="isEditMode && !isScriptModeActive" type="button" @click="handleDeleteConnection" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
                      class="px-4 py-2 bg-transparent text-red-600 border border-red-500 rounded-md shadow-sm hover:bg-red-500/10 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
                {{ t('connections.actions.delete') }}
              </button>
