@@ -1,4 +1,4 @@
-<template>
+ <template>
   <div class="flex flex-col h-full overflow-hidden bg-background">
     <!-- Container for controls and list -->
     <div class="flex flex-col flex-grow overflow-hidden bg-background">
@@ -96,6 +96,7 @@
                             class="group flex justify-between items-center px-3 py-2.5 mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
                             :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                             @click="executeCommand(cmd)"
+                            @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                         >
                             <!-- Command Info (Structure remains the same) -->
                             <div class="flex flex-col overflow-hidden mr-2 flex-grow">
@@ -125,6 +126,7 @@
                     class="group flex justify-between items-center px-3 py-2.5 mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
                     :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                     @click="executeCommand(cmd)"
+                    @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                 >
                     <!-- Command Info -->
                     <div class="flex flex-col overflow-hidden mr-2 flex-grow">
@@ -153,33 +155,55 @@
       :command-to-edit="commandToEdit"
       @close="closeForm"
     />
+
+    <!-- Context Menu for Quick Commands -->
+    <div
+      v-if="quickCommandContextMenuVisible"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px]"
+      :style="{ top: `${quickCommandContextMenuPosition.y}px`, left: `${quickCommandContextMenuPosition.x}px` }"
+      @click.stop
+    >
+      <ul class="list-none p-0 m-0">
+        <li
+          v-if="quickCommandContextTargetCommand"
+          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+          @click="handleQuickCommandMenuAction('sendToAllSessions', quickCommandContextTargetCommand!)"
+        >
+          <span>{{ t('quickCommands.actions.sendToAllSessions', '发送到全部会话') }}</span>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch } from 'vue'; // Import watch
-import { storeToRefs } from 'pinia'; // Import storeToRefs
-import { useQuickCommandsStore, type QuickCommandFE, type QuickCommandSortByType, type GroupedQuickCommands } from '../stores/quickCommands.store'; // Import GroupedQuickCommands
-import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; // +++ Import the new tag store +++
+import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch } from 'vue';
+import { storeToRefs } from 'pinia'; 
+import { useQuickCommandsStore, type QuickCommandFE, type QuickCommandSortByType, type GroupedQuickCommands } from '../stores/quickCommands.store';
+import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useI18n } from 'vue-i18n';
-import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue'; // 导入表单组件
-import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
-import { useSettingsStore } from '../stores/settings.store'; // 新增：导入设置 store
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue';
+import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; 
+import { useSettingsStore } from '../stores/settings.store';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
+import { useSessionStore } from '../stores/session.store';
+import type { SessionState } from '../stores/session/types'; 
+import { useConnectionsStore } from '../stores/connections.store';
 
 const quickCommandsStore = useQuickCommandsStore();
-const quickCommandTagsStore = useQuickCommandTagsStore(); // +++ Instantiate the new tag store +++
-const uiNotificationsStore = useUiNotificationsStore(); // 如果需要显示通知
+const quickCommandTagsStore = useQuickCommandTagsStore(); 
+const uiNotificationsStore = useUiNotificationsStore();
 const { t } = useI18n();
-const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
-const settingsStore = useSettingsStore(); // 新增：实例化设置 store
-const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
+const focusSwitcherStore = useFocusSwitcherStore();
+const settingsStore = useSettingsStore();
+const emitWorkspaceEvent = useWorkspaceEventEmitter();
+const sessionStore = useSessionStore(); 
+const connectionsStore = useConnectionsStore(); 
 
 const hoveredItemId = ref<number | null>(null);
 const isFormVisible = ref(false);
 const commandToEdit = ref<QuickCommandFE | null>(null);
-// const selectedIndex = ref<number>(-1); // REMOVED: Use store's selectedIndex
 const commandListContainerRef = ref<HTMLDivElement | null>(null); // Changed ref name to match template
 const searchInputRef = ref<HTMLInputElement | null>(null); // +++ Ref for the search input +++
 let unregisterFocus: (() => void) | null = null; // +++ 保存注销函数 +++
@@ -189,18 +213,23 @@ const editingTagId = ref<number | null | 'untagged'>(null);
 const editedTagName = ref('');
 const tagInputRefs = ref(new Map<string | number, HTMLInputElement | null>());
 
+// +++ 右键菜单状态 +++
+const quickCommandContextMenuVisible = ref(false);
+const quickCommandContextMenuPosition = ref({ x: 0, y: 0 });
+const quickCommandContextTargetCommand = ref<QuickCommandFE | null>(null);
+
 // --- 从 Store 获取状态和 Getter ---
 const searchTerm = computed(() => quickCommandsStore.searchTerm);
 const sortBy = computed(() => quickCommandsStore.sortBy);
 // Use the new grouped getter
 const filteredAndGroupedCommands = computed(() => quickCommandsStore.filteredAndGroupedCommands);
 const isLoading = computed(() => quickCommandsStore.isLoading);
-// selectedIndex now refers to the index within the flatVisibleCommands list
-// Also get expandedGroups reactively for the template
-const { selectedIndex: storeSelectedIndex, flatVisibleCommands, expandedGroups } = storeToRefs(quickCommandsStore);
-const { showQuickCommandTagsBoolean } = storeToRefs(settingsStore); // 新增：获取设置项
 
-// 新增：计算属性，仅过滤和排序，不分组
+
+const { selectedIndex: storeSelectedIndex, flatVisibleCommands, expandedGroups } = storeToRefs(quickCommandsStore);
+const { showQuickCommandTagsBoolean } = storeToRefs(settingsStore); 
+
+// 计算属性，仅过滤和排序，不分组
 const flatFilteredCommands = computed(() => {
     // 直接使用 store 中的 flatVisibleCommands，因为它已经处理了过滤和排序
     return quickCommandsStore.flatVisibleCommands;
@@ -523,6 +552,49 @@ const finishEditingTag = async () => {
 
 const cancelEditingTag = () => {
   editingTagId.value = null;
+};
+
+// +++ 右键菜单方法 +++
+const showQuickCommandContextMenu = (event: MouseEvent, command: QuickCommandFE) => {
+  event.preventDefault();
+  quickCommandContextTargetCommand.value = command;
+  quickCommandContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  quickCommandContextMenuVisible.value = true;
+  document.addEventListener('click', closeQuickCommandContextMenu, { once: true });
+};
+
+const closeQuickCommandContextMenu = () => {
+  quickCommandContextMenuVisible.value = false;
+  quickCommandContextTargetCommand.value = null;
+  document.removeEventListener('click', closeQuickCommandContextMenu);
+};
+
+const handleQuickCommandMenuAction = (action: 'sendToAllSessions', command: QuickCommandFE) => {
+  closeQuickCommandContextMenu();
+  if (action === 'sendToAllSessions') {
+    const activeSshSessions = Array.from(sessionStore.sessions.values()).filter(
+      (s: SessionState) => {
+        if (s.wsManager.connectionStatus.value !== 'connected') return false;
+        const connInfo = connectionsStore.connections.find(c => c.id === Number(s.connectionId));
+        return connInfo?.type === 'SSH';
+      }
+    );
+
+    if (activeSshSessions.length > 0) {
+      activeSshSessions.forEach((session: SessionState) => {
+        emitWorkspaceEvent('terminal:sendCommand', { sessionId: session.sessionId, command: command.command });
+      });
+      uiNotificationsStore.addNotification({
+        message: t('quickCommands.notifications.sentToAllSessions', { count: activeSshSessions.length }),
+        type: 'success',
+      });
+    } else {
+      uiNotificationsStore.addNotification({
+        message: t('quickCommands.notifications.noActiveSshSessions'),
+        type: 'info',
+      });
+    }
+  }
 };
 
 </script>

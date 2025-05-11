@@ -120,7 +120,7 @@ onMounted(() => {
   // 确保布局已初始化 (layoutStore 内部会处理)
 
   // +++ 订阅工作区事件 +++
-  subscribeToWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command));
+  subscribeToWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command, payload.sessionId));
   subscribeToWorkspaceEvents('terminal:input', handleTerminalInput);
   subscribeToWorkspaceEvents('terminal:resize', handleTerminalResize);
   subscribeToWorkspaceEvents('terminal:ready', handleTerminalReady);
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
   sessionStore.cleanupAllSessions();
 
   // +++ 取消订阅工作区事件 +++
-  unsubscribeFromWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command));
+  unsubscribeFromWorkspaceEvents('terminal:sendCommand', (payload) => handleSendCommand(payload.command, payload.sessionId));
   unsubscribeFromWorkspaceEvents('terminal:input', handleTerminalInput);
   unsubscribeFromWorkspaceEvents('terminal:resize', handleTerminalResize);
   unsubscribeFromWorkspaceEvents('terminal:ready', handleTerminalReady);
@@ -237,42 +237,45 @@ const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
  // --- 事件处理 (传递给 LayoutRenderer 或直接使用) ---
 
  // 处理命令发送 (用于 CommandBar, CommandHistory, QuickCommands)
- const handleSendCommand = (command: string) => {
-   const currentSession = activeSession.value;
-   if (!currentSession) {
-     console.warn('[WorkspaceView] Cannot send command, no active session.');
+ const handleSendCommand = (command: string, targetSessionId?: string) => {
+   const sessionToCommand = targetSessionId ? sessionStore.sessions.get(targetSessionId) : activeSession.value;
+
+   if (!sessionToCommand) {
+     const idForLog = targetSessionId || 'active (none found)';
+     console.warn(`[WorkspaceView] Cannot send command, no session found for ID: ${idForLog}.`);
      return;
    }
-   const terminalManager = currentSession.terminalManager as (SshTerminalInstance | undefined);
+   const terminalManager = sessionToCommand.terminalManager as (SshTerminalInstance | undefined);
 
    if (terminalManager?.isSshConnected && !terminalManager.isSshConnected.value && command.trim() === '') {
-     console.log(`[WorkspaceView] Command bar Enter detected in disconnected session ${currentSession.sessionId}, attempting reconnect...`);
+     console.log(`[WorkspaceView] Command bar Enter detected in disconnected session ${sessionToCommand.sessionId}, attempting reconnect...`);
      if (terminalManager.terminalInstance?.value) {
          terminalManager.terminalInstance.value.writeln(`\r\n\x1b[33m${t('workspace.terminal.reconnectingMsg')}\x1b[0m`);
      }
-     // +++ 修复：传递 ConnectionInfo 而不是 ID +++
-     const connectionInfo = connectionsStore.connections.find(c => c.id === Number(currentSession.connectionId));
+     const connectionInfo = connectionsStore.connections.find(c => c.id === Number(sessionToCommand.connectionId));
      if (connectionInfo) {
        sessionStore.handleConnectRequest(connectionInfo);
      } else {
-       console.error(`[WorkspaceView] handleSendCommand: 未找到 ID 为 ${currentSession.connectionId} 的连接信息。`);
+       console.error(`[WorkspaceView] handleSendCommand: 未找到 ID 为 ${sessionToCommand.connectionId} 的连接信息。`);
      }
      return;
    }
 
    if (terminalManager && typeof terminalManager.sendData === 'function') {
-     const commandToSend = command.trim();
-     console.log(`[WorkspaceView] Sending command/data to active session ${currentSession.sessionId}: ${JSON.stringify(command)}`); // Log raw command
+     const commandToSend = command.trim(); // Keep trimmed for history
+     console.log(`[WorkspaceView] Sending command/data to session ${sessionToCommand.sessionId}: ${JSON.stringify(command)}`); // Log raw command
      // Only append '\r' for regular commands, not for control characters like Ctrl+C (\x03)
+     // Send the raw command as received by the function for control characters
      const dataToSend = command === '\x03' ? command : command + '\r';
      terminalManager.sendData(dataToSend);
+
      // Add to history only if it's a user-typed command (not just Enter or control chars)
-     const commandToHistory = command.trim();
-     if (commandToHistory.length > 0 && command !== '\x03') {
+     // And only if the command is being sent to the active session (to avoid polluting history from "send to all")
+     if (commandToSend.length > 0 && command !== '\x03' && sessionToCommand.sessionId === activeSessionId.value) {
        commandHistoryStore.addCommand(commandToSend);
      }
    } else {
-     console.warn(`[WorkspaceView] Cannot send command for session ${currentSession.sessionId}, terminal manager or sendData method not available.`);
+     console.warn(`[WorkspaceView] Cannot send command for session ${sessionToCommand.sessionId}, terminal manager or sendData method not available.`);
    }
  };
 

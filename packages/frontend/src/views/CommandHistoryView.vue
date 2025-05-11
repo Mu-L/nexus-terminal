@@ -40,6 +40,7 @@
             class="group flex justify-between items-center px-3 py-2.5 mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
             :class="{ 'bg-primary/20 font-medium': index === storeSelectedIndex }"
             @click="executeCommand(entry.command)"
+            @contextmenu.prevent="showCommandHistoryContextMenu($event, entry)"
             :title="entry.command"
           >
             <!-- Command Text -->
@@ -59,28 +60,56 @@
         </ul>
       </div>
     </div>
+
+    <!-- Context Menu for Command History -->
+    <div
+      v-if="commandHistoryContextMenuVisible"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px]"
+      :style="{ top: `${commandHistoryContextMenuPosition.y}px`, left: `${commandHistoryContextMenuPosition.x}px` }"
+      @click.stop
+    >
+      <ul class="list-none p-0 m-0">
+        <li
+          v-if="commandHistoryContextTargetEntry"
+          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+          @click="handleCommandHistoryMenuAction('sendToAllSessions', commandHistoryContextTargetEntry!)"
+        >
+          <span>{{ t('commandHistory.actions.sendToAllSessions', '发送到全部会话') }}</span>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch } from 'vue'; // Import watch
-import { storeToRefs } from 'pinia'; // Import storeToRefs
+import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useCommandHistoryStore, CommandHistoryEntryFE } from '../stores/commandHistory.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useI18n } from 'vue-i18n';
-import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
+import { useSessionStore } from '../stores/session.store'; 
+import type { SessionState } from '../stores/session/types'; 
+import { useConnectionsStore } from '../stores/connections.store';
 
 const commandHistoryStore = useCommandHistoryStore();
 const uiNotificationsStore = useUiNotificationsStore();
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
+const sessionStore = useSessionStore(); // +++ 实例化 SessionStore +++
+const connectionsStore = useConnectionsStore(); // +++ 实例化 ConnectionsStore +++
 const hoveredItemId = ref<number | null>(null);
 // const selectedIndex = ref<number>(-1); // REMOVED: Use store's selectedIndex
 const historyListRef = ref<HTMLUListElement | null>(null); // Ref for the history list UL
 const searchInputRef = ref<HTMLInputElement | null>(null); // +++ Ref for the search input +++
 let unregisterFocus: (() => void) | null = null; // +++ 保存注销函数 +++
+
+// +++ 右键菜单状态 +++
+const commandHistoryContextMenuVisible = ref(false);
+const commandHistoryContextMenuPosition = ref({ x: 0, y: 0 });
+const commandHistoryContextTargetEntry = ref<CommandHistoryEntryFE | null>(null);
 
 // --- 从 Store 获取状态和 Getter ---
 const searchTerm = computed(() => commandHistoryStore.searchTerm);
@@ -218,5 +247,47 @@ const focusSearchInput = (): boolean => {
 };
 defineExpose({ focusSearchInput });
 
+// +++ 右键菜单方法 +++
+const showCommandHistoryContextMenu = (event: MouseEvent, entry: CommandHistoryEntryFE) => {
+  event.preventDefault();
+  commandHistoryContextTargetEntry.value = entry;
+  commandHistoryContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  commandHistoryContextMenuVisible.value = true;
+  document.addEventListener('click', closeCommandHistoryContextMenu, { once: true });
+};
+
+const closeCommandHistoryContextMenu = () => {
+  commandHistoryContextMenuVisible.value = false;
+  commandHistoryContextTargetEntry.value = null;
+  document.removeEventListener('click', closeCommandHistoryContextMenu);
+};
+
+const handleCommandHistoryMenuAction = (action: 'sendToAllSessions', entry: CommandHistoryEntryFE) => {
+  closeCommandHistoryContextMenu();
+  if (action === 'sendToAllSessions') {
+    const activeSshSessions = Array.from(sessionStore.sessions.values()).filter(
+      (s: SessionState) => {
+        if (s.wsManager.connectionStatus.value !== 'connected') return false;
+        const connInfo = connectionsStore.connections.find(c => c.id === Number(s.connectionId));
+        return connInfo?.type === 'SSH';
+      }
+    );
+
+    if (activeSshSessions.length > 0) {
+      activeSshSessions.forEach((session: SessionState) => {
+        emitWorkspaceEvent('terminal:sendCommand', { sessionId: session.sessionId, command: entry.command });
+      });
+      uiNotificationsStore.addNotification({
+        message: t('commandHistory.notifications.sentToAllSessions', { count: activeSshSessions.length }),
+        type: 'success',
+      });
+    } else {
+      uiNotificationsStore.addNotification({
+        message: t('commandHistory.notifications.noActiveSshSessions'),
+        type: 'info',
+      });
+    }
+  }
+};
 </script>
 

@@ -1006,7 +1006,14 @@
     "empty": "No history records",
     "confirmClear": "Are you sure you want to clear all history?",
     "copied": "Copied to clipboard",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "actions": {
+      "sendToAllSessions": "Send to All Sessions"
+    },
+    "notifications": {
+      "sentToAllSessions": "Command sent to {count} sessions.",
+      "noActiveSshSessions": "No active SSH sessions to send command to."
+    }
   },
   "quickCommands": {
     "searchPlaceholder": "Search name or command...",
@@ -1032,6 +1039,13 @@
     "untagged": "Untagged",
     "tags": {
       "clickToEditTag": "Click to edit tag name"
+    },
+    "actions": {
+      "sendToAllSessions": "Send to All Sessions"
+    },
+    "notifications": {
+      "sentToAllSessions": "Command sent to {count} sessions.",
+      "noActiveSshSessions": "No active SSH sessions to send command to."
     }
   },
   "setup": {

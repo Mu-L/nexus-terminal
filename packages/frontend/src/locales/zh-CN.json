@@ -1008,7 +1008,14 @@
     "empty": "没有历史记录",
     "confirmClear": "确定要清空所有历史记录吗？",
     "copied": "已复制到剪贴板",
-    "copyFailed": "复制失败"
+    "copyFailed": "复制失败",
+    "actions": {
+      "sendToAllSessions": "发送到全部会话"
+    },
+    "notifications": {
+      "sentToAllSessions": "指令已发送到 {count} 个会话。",
+      "noActiveSshSessions": "没有活动的 SSH 会话可发送指令。"
+    }
   },
   "quickCommands": {
     "searchPlaceholder": "搜索名称或指令...",
@@ -1034,6 +1041,13 @@
     "untagged": "未标记",
     "tags": {
       "clickToEditTag": "点击编辑标签名称"
+    },
+    "actions": {
+      "sendToAllSessions": "发送到全部会话"
+    },
+    "notifications": {
+      "sentToAllSessions": "指令已发送到 {count} 个会话。",
+      "noActiveSshSessions": "没有活动的 SSH 会话可发送指令。"
     }
   },
   "setup": {

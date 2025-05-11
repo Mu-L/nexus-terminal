@@ -57,9 +57,16 @@
         "delete": "削除",
         "empty": "履歴はありません",
         "loading": "ロード中...",
-        "searchPlaceholder": "履歴を検索..."
-    },
-    "commandInputBar": {
+        "searchPlaceholder": "履歴を検索...",
+        "actions": {
+          "sendToAllSessions": "すべてのセッションに送信"
+        },
+        "notifications": {
+          "sentToAllSessions": "コマンドは {count} 個のセッションに送信されました。",
+          "noActiveSshSessions": "コマンドを送信するアクティブな SSH セッションはありません。"
+        }
+  },
+  "commandInputBar": {
         "closeSearch": "ターミナル検索を閉じる",
         "configureFocusSwitch": "フォーカススイッチャーを設定",
         "findNext": "次を検索",
@@ -572,9 +579,16 @@
         "searchPlaceholder": "名前またはコマンドを検索...",
         "sortByName": "名前",
         "sortByUsage": "使用頻度",
-        "usageCount": "使用回数"
-    },
-    "remoteDesktopModal": {
+        "usageCount": "使用回数",
+        "actions": {
+          "sendToAllSessions": "すべてのセッションに送信"
+        },
+        "notifications": {
+          "sentToAllSessions": "コマンドは {count} 個のセッションに送信されました。",
+          "noActiveSshSessions": "コマンドを送信するアクティブな SSH セッションはありません。"
+        }
+  },
+  "remoteDesktopModal": {
         "errors": {
             "clientError": "クライアントエラー",
             "connectionFailed": "接続に失敗しました",
