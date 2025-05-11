@@ -810,7 +810,7 @@ const formatXtermLabel = (key: keyof ITheme): string => {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
 };
 
-// --- 新增：计算属性 ---
+// --- 计算属性 ---
 
 // 获取当前激活主题的名称
 const activeThemeName = computed(() => {
@@ -938,7 +938,7 @@ const handleFocusAndSelect = (event: FocusEvent) => {
         <main class="flex-grow p-3 md:p-4 md:px-6 overflow-y-auto min-h-0">
           <section v-if="currentTab === 'ui'">
             <h3 class="mt-0 border-b border-border pb-2 mb-4 text-lg font-semibold text-foreground">{{ t('styleCustomizer.uiStyles') }}</h3>
-            <!-- 新增：主题模式选择 - 小屏幕堆叠 -->
+            <!-- 主题模式选择 - 小屏幕堆叠 -->
             <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-start md:items-center gap-2 md:gap-3 mb-6">
                 <label class="text-left text-foreground text-sm font-medium mb-1 md:mb-0">{{ t('styleCustomizer.themeModeLabel', '主题模式:') }}</label> <!-- TODO: 添加翻译 -->
                 <div class="flex gap-2 justify-start flex-wrap"> 

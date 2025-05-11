@@ -22,7 +22,7 @@ const props = defineProps<{
 // 定义组件发出的事件 (添加 edit-connection)
 const emit = defineEmits(['edit-connection']);
 
-// 新增：用于跟踪每个连接测试状态的响应式对象
+// 用于跟踪每个连接测试状态的响应式对象
 const testingState = reactive<Record<number, boolean>>({});
 
 // 组件挂载时获取标签列表 (连接列表由父组件传入)
@@ -54,7 +54,7 @@ const getConnectionTagNames = (conn: ConnectionInfo): string[] => {
          .filter((name): name is string => !!name); // 过滤掉未找到的标签并确保类型为 string
  };
 
- // 新增：计算按标签分组的连接
+ // 计算按标签分组的连接
  const groupedConnections = computed(() => {
      const groups: { [key: string]: ConnectionInfo[] } = {};
      const untaggedKey = '_untagged_'; // 特殊键，用于未标记的连接
@@ -118,7 +118,7 @@ const formatTimestamp = (timestamp: number | null): string => {
   return new Date(timestamp * 1000).toLocaleString(); // 乘以 1000 转换为毫秒
 };
 
-// 新增：处理删除连接的方法
+// 处理删除连接的方法
 const handleDelete = async (conn: ConnectionInfo) => {
     // 在函数内部获取 store 实例
     const connectionsStore = useConnectionsStore();
@@ -135,7 +135,7 @@ const handleDelete = async (conn: ConnectionInfo) => {
      }
  };
 
- // 新增：处理测试连接的方法
+ // 处理测试连接的方法
  const handleTestConnection = async (connectionId: number) => {
      const connectionsStore = useConnectionsStore(); // 获取 store 实例
      testingState[connectionId] = true; // 设置为正在测试状态

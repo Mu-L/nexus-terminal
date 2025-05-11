@@ -8,7 +8,7 @@ interface UserInfo {
     id: number;
     username: string;
     isTwoFactorEnabled?: boolean; // 后端 /status 接口会返回这个
-    language?: 'en' | 'zh'; // 新增：用户偏好语言
+    language?: 'en' | 'zh'; // 用户偏好语言
 }
 
 // Passkey Information Interface
@@ -23,7 +23,7 @@ interface PasskeyInfo {
     // Add other relevant fields from your backend response
 }
 
-// 新增：登录请求的载荷接口
+// 登录请求的载荷接口
 interface LoginPayload {
     username: string;
     password: string;
@@ -56,12 +56,12 @@ interface AuthState {
     isLoading: boolean;
     error: string | null;
     loginRequires2FA: boolean; // 新增状态：标记登录是否需要 2FA
-    // 新增：存储 IP 黑名单数据 (虽然 actions 在这里，但 state 结构保持)
+    // 存储 IP 黑名单数据 (虽然 actions 在这里，但 state 结构保持)
     ipBlacklist: {
         entries: any[]; // TODO: Define a proper type for blacklist entries
         total: number;
     };
-    needsSetup: boolean; // 新增：是否需要初始设置
+    needsSetup: boolean; // 是否需要初始设置
     publicCaptchaConfig: PublicCaptchaConfig | null; // NEW: Public CAPTCHA config
     passkeys: PasskeyInfo[] | null; // NEW: Store for user's passkeys
     passkeysLoading: boolean; // NEW: Loading state for passkeys
@@ -87,11 +87,11 @@ export const useAuthStore = defineStore('auth', {
         loggedInUser: (state) => state.user?.username,
     },
     actions: {
-        // 新增：清除错误状态
+        // 清除错误状态
         clearError() {
             this.error = null;
         },
-        // 新增：设置错误状态
+        // 设置错误状态
         setError(errorMessage: string) {
             this.error = errorMessage;
         },
@@ -196,7 +196,7 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // 新增：检查并更新认证状态 Action
+        // 检查并更新认证状态 Action
         async checkAuthStatus() {
             this.isLoading = true;
             try {
@@ -306,7 +306,7 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // 新增：检查是否需要初始设置
+        // 检查是否需要初始设置
         async checkSetupStatus() {
             // 不需要设置 isLoading，这个检查应该在后台快速完成
             try {

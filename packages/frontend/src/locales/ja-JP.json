@@ -825,6 +825,7 @@
                 "telegramChatId": "チャット ID:",
                 "telegramMessagePlaceholder": "デフォルト: Markdown 形式。利用可能:",
                 "telegramMessageTemplate": "メッセージテンプレート (オプション)",
+                "telegramCustomDomain": "カスタム Telegram API ドメイン",
                 "telegramToken": "ボットトークン:",
                 "telegramTokenHelp": "安全に保管してください。環境変数の使用をお勧めします。",
                 "templateHelp": "利用可能なプレースホルダー:",

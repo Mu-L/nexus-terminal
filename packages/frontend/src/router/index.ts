@@ -16,7 +16,7 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Login',
     component: () => import('../views/LoginView.vue') // 指向实际的登录组件
   },
-  // 新增：代理管理页面
+  // 代理管理页面
   {
     path: '/proxies',
     name: 'Proxies',
@@ -35,25 +35,25 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/WorkspaceView.vue'),
     // props: true // 不再需要传递 props
   },
-  // 新增：设置页面
+  // 设置页面
   {
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/SettingsView.vue')
   },
-  // 新增：通知管理页面
+  // 通知管理页面
   {
     path: '/notifications',
     name: 'Notifications',
     component: () => import('../views/NotificationsView.vue')
   },
-  // 新增：审计日志页面
+  // 审计日志页面
   {
     path: '/audit-logs',
     name: 'AuditLogs',
     component: () => import('../views/AuditLogView.vue')
   },
-  // 新增：初始设置页面
+  // 初始设置页面
   {
     path: '/setup',
     name: 'Setup',

@@ -819,7 +819,7 @@ const blacklistSettingsForm = reactive({ // Renamed to avoid conflict with store
     loginBanDuration: '300', // 初始值将在 watcher 中被 store 值覆盖
 });
 const popupEditorEnabled = ref(true); // 本地状态，用于 v-model
-const workspaceSidebarPersistentEnabled = ref(false); // 新增：侧边栏固定设置的本地状态
+const workspaceSidebarPersistentEnabled = ref(false); // 侧边栏固定设置的本地状态
 const commandInputSyncTargetLocal = ref<'none' | 'quickCommands' | 'commandHistory'>('none'); // NEW: Local state for command input sync target
 const ipBlacklistEnabled = ref(true); // <-- Local state for IP Blacklist switch
 const showConnectionTagsLocal = ref(true); // NEW: Local state for connection tags switch
@@ -944,7 +944,7 @@ watch(settings, (newSettings, oldSettings) => {
   dockerInterval.value = parseInt(newSettings.dockerStatusIntervalSeconds || '2', 10); // 同步 Docker 间隔
   dockerExpandDefault.value = dockerDefaultExpandBoolean.value; // 同步 Docker 默认展开状态
   statusMonitorIntervalLocal.value = statusMonitorIntervalSecondsNumber.value; // 同步状态监控间隔
-  workspaceSidebarPersistentEnabled.value = workspaceSidebarPersistentBoolean.value; // 新增：同步侧边栏固定设置
+  workspaceSidebarPersistentEnabled.value = workspaceSidebarPersistentBoolean.value; // 同步侧边栏固定设置
   commandInputSyncTargetLocal.value = commandInputSyncTarget.value; // NEW: Sync command input sync target
   selectedTimezone.value = newSettings.timezone || 'UTC'; // 同步时区设置
   ipBlacklistEnabled.value = ipBlacklistEnabledBoolean.value; // <-- Sync IP Blacklist enabled state

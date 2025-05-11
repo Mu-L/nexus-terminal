@@ -609,7 +609,7 @@ export const useSettingsStore = defineStore('settings', () => {
       }
       console.log('[SettingsStore] CAPTCHA 设置更新成功。');
 
-      // --- 新增：强制 authStore 重新获取配置 ---
+      // --- 强制 authStore 重新获取配置 ---
       console.log('[SettingsStore] Triggering authStore to refetch CAPTCHA config...');
       authStore.publicCaptchaConfig = null; // 重置 authStore 的状态以允许重新获取
       await authStore.fetchCaptchaConfig(); // 让 authStore 立即获取最新的配置

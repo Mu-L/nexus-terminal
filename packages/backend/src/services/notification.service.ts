@@ -356,7 +356,17 @@ export class NotificationService {
     );
     console.log(`[通知测试 - Telegram] 渲染的消息文本:`, messageText);
 
-    const telegramApiUrl = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
+    let baseApiUrl = "https://api.telegram.org";
+    if (config.customDomain) {
+        try {
+            const url = new URL(config.customDomain);
+            baseApiUrl = `${url.protocol}//${url.host}`;
+            console.log(`[通知测试 - Telegram] 使用自定义域名: ${baseApiUrl}`);
+        } catch (e) {
+            console.warn(`[通知测试 - Telegram] 无效的自定义域名 URL: ${config.customDomain}。将回退到默认 Telegram API。`);
+        }
+    }
+    const telegramApiUrl = `${baseApiUrl}/bot${config.botToken}/sendMessage`;
 
     try {
       console.log(
@@ -802,7 +812,18 @@ export class NotificationService {
     }
     console.log(`[_sendTelegram] Final message text to send:`, messageText);
 
-    const telegramApiUrl = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
+    let baseApiUrlSend = "https://api.telegram.org";
+    if (config.customDomain) {
+        try {
+            const url = new URL(config.customDomain);
+            baseApiUrlSend = `${url.protocol}//${url.host}`;
+            console.log(`[_sendTelegram] 使用自定义域名: ${baseApiUrlSend} (事件: ${payload.event})`);
+        } catch (e) {
+            console.warn(`[_sendTelegram] 无效的自定义域名 URL: ${config.customDomain} (事件: ${payload.event})。将回退到默认 Telegram API。`);
+        }
+    }
+    const telegramApiUrl = `${baseApiUrlSend}/bot${config.botToken}/sendMessage`;
+
     try {
       console.log(
         `[通知] 发送 Telegram 消息到聊天 ID ${config.chatId} (事件: ${payload.event})`

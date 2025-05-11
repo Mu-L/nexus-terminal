@@ -85,7 +85,7 @@ onUnmounted(() => {
 });
 
 
-// *** 新增：计算属性，判断是否在 workspace 路由 ***
+// *** 计算属性，判断是否在 workspace 路由 ***
 const isWorkspaceRoute = computed(() => route.path === '/workspace');
 
 watch(route, () => {

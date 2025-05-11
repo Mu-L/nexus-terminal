@@ -31,7 +31,7 @@ import * as editorActions from './session/actions/editorActions';
 import * as sftpManagerActions from './session/actions/sftpManagerActions';
 import * as modalActions from './session/actions/modalActions';
 import * as commandInputActions from './session/actions/commandInputActions';
-import * as sshSuspendActions from './session/actions/sshSuspendActions'; // 新增：导入 SSH 挂起 Actions
+import * as sshSuspendActions from './session/actions/sshSuspendActions'; // 导入 SSH 挂起 Actions
 
 // 导入需要的类型 (例如 FileInfo 可能会在参数中使用)
 import type { FileInfo } from './fileEditor.store';

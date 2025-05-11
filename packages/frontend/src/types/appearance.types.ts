@@ -11,7 +11,7 @@ export interface AppearanceSettings {
   terminalBackgroundImage?: string;
   pageBackgroundImage?: string;
   editorFontSize?: number;
-  terminalBackgroundEnabled?: boolean; // 新增：终端背景是否启用
+  terminalBackgroundEnabled?: boolean; // 终端背景是否启用
 }
  
 // 前端用于更新外观设置的数据结构 (对应 API 请求体)

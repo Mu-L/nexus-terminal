@@ -52,6 +52,7 @@ export interface TelegramConfig {
   botToken: string; // Consider masking this in the UI
   chatId: string;
   messageTemplate?: string;
+  customDomain?: string; // 允许用户自定义 Telegram API 域名
 }
 
 export type NotificationChannelConfig = WebhookConfig | EmailConfig | TelegramConfig;

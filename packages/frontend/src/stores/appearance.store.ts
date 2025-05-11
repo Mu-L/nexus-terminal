@@ -22,7 +22,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
     // --- State ---
     const isLoading = ref(false);
     const error = ref<string | null>(null);
-    const isStyleCustomizerVisible = ref(false); // 新增：控制样式编辑器可见性
+    const isStyleCustomizerVisible = ref(false); // 控制样式编辑器可见性
 
     // Appearance Settings State
     const appearanceSettings = ref<Partial<AppearanceSettings>>({}); // 从 API 获取的原始设置

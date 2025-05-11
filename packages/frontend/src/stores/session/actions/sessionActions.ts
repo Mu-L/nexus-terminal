@@ -13,7 +13,7 @@ import { createWebSocketConnectionManager } from '../../../composables/useWebSoc
 import { createSshTerminalManager, type SshTerminalDependencies } from '../../../composables/useSshTerminal';
 import { createStatusMonitorManager, type StatusMonitorDependencies } from '../../../composables/useStatusMonitor';
 import { createDockerManager, type DockerManagerDependencies } from '../../../composables/useDockerManager';
-import { registerSshSuspendHandlers } from './sshSuspendActions'; // 新增：导入 SSH 挂起处理器注册函数
+import { registerSshSuspendHandlers } from './sshSuspendActions'; // 导入 SSH 挂起处理器注册函数
 // getOrCreateSftpManager 将在 sftpManagerActions.ts 中定义，并在主 store 中协调
 
 // --- 辅助函数 (特定于此模块的 actions) ---
@@ -28,7 +28,7 @@ export const openNewSession = (
         connectionsStore: ReturnType<typeof useConnectionsStore>;
         t: ReturnType<typeof useI18n>['t'];
     },
-    existingSessionId?: string // 新增：可选的预定义会话 ID
+    existingSessionId?: string // 可选的预定义会话 ID
 ) => {
   const { connectionsStore, t } = dependencies;
   let connInfo: ConnectionInfo | undefined;

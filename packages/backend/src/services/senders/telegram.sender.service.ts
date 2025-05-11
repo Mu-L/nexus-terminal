@@ -6,7 +6,7 @@ import { TelegramConfig } from "../../types/notification.types";
 class TelegramSenderService implements INotificationSender {
   async send(notification: ProcessedNotification): Promise<void> {
     const config = notification.config as TelegramConfig;
-    const { botToken, chatId } = config;
+    const { botToken, chatId, customDomain } = config; // Destructure customDomain
     const messageBody = notification.body;
 
     if (!botToken || !chatId) {
@@ -18,7 +18,19 @@ class TelegramSenderService implements INotificationSender {
       );
     }
 
-    const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    let baseApiUrl = "https://api.telegram.org";
+    if (customDomain) {
+        try {
+            const url = new URL(customDomain); // Validate and parse the custom domain
+            baseApiUrl = `${url.protocol}//${url.host}`; // Use protocol and host from customDomain
+            console.log(`[TelegramSender] Using custom domain: ${baseApiUrl}`);
+        } catch (e) {
+            console.warn(`[TelegramSender] Invalid customDomain URL: ${customDomain}. Falling back to default Telegram API.`);
+            // Optionally, you could throw an error here or decide to proceed with the default
+        }
+    }
+
+    const apiUrl = `${baseApiUrl}/bot${botToken}/sendMessage`;
 
     try {
       console.log(

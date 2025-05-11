@@ -121,7 +121,7 @@ export const uploadTerminalBackgroundController = async (req: Request, res: Resp
 };
 
 /**
- * 新增：获取背景图片文件
+ * 获取背景图片文件
  */
 export const getBackgroundFileController = async (req: Request, res: Response): Promise<void> => {
     const filename = req.params.filename;

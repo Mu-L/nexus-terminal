@@ -20,10 +20,10 @@ export interface ClientState { // 导出以便 Service 可以导入
     statusIntervalId?: NodeJS.Timeout; // 添加状态轮询 ID (由 StatusMonitorService 管理)
     dockerStatusIntervalId?: NodeJS.Timeout; // NEW: Docker 状态轮询 ID
     ipAddress?: string; // 添加 IP 地址字段
-    isShellReady?: boolean; // 新增：标记 Shell 是否已准备好处理输入和调整大小
-    isSuspendedByService?: boolean; // 新增：标记此会话是否已被 SshSuspendService 接管
-    isMarkedForSuspend?: boolean; // 新增：标记此会话是否已被用户请求挂起（等待断开连接）
-    suspendLogPath?: string;      // 新增：如果标记挂起，则存储日志路径 (基于原始 sessionId)
+    isShellReady?: boolean; // 标记 Shell 是否已准备好处理输入和调整大小
+    isSuspendedByService?: boolean; // 标记此会话是否已被 SshSuspendService 接管
+    isMarkedForSuspend?: boolean; // 标记此会话是否已被用户请求挂起（等待断开连接）
+    suspendLogPath?: string;      // 如果标记挂起，则存储日志路径 (基于原始 sessionId)
     // suspendLogWritableStream?: NodeJS.WritableStream; // 移除，将直接使用 temporaryLogStorageService.writeToLog
 }
 

@@ -134,6 +134,11 @@
                  class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
         </div>
         <div>
+          <label for="telegram-custom-domain" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramCustomDomain') }}</label>
+          <input type="url" id="telegram-custom-domain" v-model="telegramConfig.customDomain" placeholder="https://api.example.com"
+                 class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
+        </div>
+        <div>
           <label for="telegram-message" class="block text-sm font-medium text-text-secondary mb-1">{{ $t('settings.notifications.form.telegramMessageTemplate') }}</label>
           <textarea id="telegram-message" v-model="telegramConfig.messageTemplate" rows="3" :placeholder="`${$t('settings.notifications.form.telegramMessagePlaceholder')} {event}, {timestamp}, {details}.`"
                     class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-sm"></textarea>
@@ -211,7 +216,8 @@ import {
     NotificationEvent,
     WebhookConfig,
     EmailConfig,
-    TelegramConfig
+    TelegramConfig,
+    NotificationChannelType
 } from '../types/server.types';
 import { useI18n } from 'vue-i18n';
 
@@ -305,7 +311,7 @@ const emailConfig = ref<SmtpEmailConfig>({ // Use extended type
     smtpPass: '',
     from: ''
 });
-const telegramConfig = ref<TelegramConfig>({ botToken: '', chatId: '', messageTemplate: '' });
+const telegramConfig = ref<TelegramConfig>({ botToken: '', chatId: '', messageTemplate: '', customDomain: '' });
 const webhookHeadersString = ref('{}'); // For textarea binding
 
 // Watch for initialData changes (when editing)
@@ -331,7 +337,13 @@ watch(() => props.initialData, (newData) => {
             from: savedConfig.from || ''
         };
     } else if (newData.channel_type === 'telegram') {
-        telegramConfig.value = { ...(newData.config as TelegramConfig) };
+        const savedConfig = newData.config as TelegramConfig;
+        telegramConfig.value = {
+            botToken: savedConfig.botToken || '',
+            chatId: savedConfig.chatId || '',
+            messageTemplate: savedConfig.messageTemplate || '',
+            customDomain: savedConfig.customDomain || '' // Add customDomain
+        };
     }
   } else {
     // Reset form if initialData becomes null (e.g., switching from edit to add)
@@ -341,7 +353,7 @@ watch(() => props.initialData, (newData) => {
     emailConfig.value = {
         to: '', bodyTemplate: '', smtpHost: '', smtpPort: 587, smtpSecure: true, smtpUser: '', smtpPass: '', from: '' // Changed from subjectTemplate
     };
-    telegramConfig.value = { botToken: '', chatId: '', messageTemplate: '' };
+    telegramConfig.value = { botToken: '', chatId: '', messageTemplate: '', customDomain: '' }; // Add customDomain
     webhookHeadersString.value = '{}';
   }
    headerError.value = null; // Reset header error on data change
@@ -359,9 +371,9 @@ watch(() => formData.channel_type, (newType, oldType) => {
         emailConfig.value = {
              to: '', bodyTemplate: '', smtpHost: '', smtpPort: 587, smtpSecure: true, smtpUser: '', smtpPass: '', from: '' // Changed from subjectTemplate
         };
-        telegramConfig.value = { botToken: '', chatId: '', messageTemplate: '' };
-        webhookHeadersString.value = '{}';
-        headerError.value = null;
+       telegramConfig.value = { botToken: '', chatId: '', messageTemplate: '', customDomain: '' }; // Add customDomain
+       webhookHeadersString.value = '{}';
+       headerError.value = null;
         testError.value = null;
         testResult.value = null;
         testingNotification.value = false;

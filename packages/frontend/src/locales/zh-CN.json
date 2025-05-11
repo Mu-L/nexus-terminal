@@ -600,6 +600,7 @@
         "telegramChatId": "聊天 ID:",
         "telegramMessageTemplate": "消息模板 (可选)",
         "telegramMessagePlaceholder": "默认: Markdown 格式。可使用",
+        "telegramCustomDomain": "自定义 Telegram API 域名",
         "enabledEvents": "启用的事件:",
         "templateHelp": "可用占位符:",
         "invalidJson": "无效的 JSON 格式"

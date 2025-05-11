@@ -18,7 +18,7 @@ const credentials = reactive({
   password: '',
 });
 const twoFactorToken = ref(''); // 用于存储 2FA 验证码
-const rememberMe = ref(false); // 新增：记住我状态，默认为 false
+const rememberMe = ref(false); // 记住我状态，默认为 false
 const captchaToken = ref<string | null>(null); // NEW: Store CAPTCHA token
 const captchaError = ref<string | null>(null); // NEW: Store CAPTCHA specific error
 const hcaptchaWidget = ref<InstanceType<typeof VueHcaptcha> | null>(null); // NEW: Ref for hCaptcha component instance

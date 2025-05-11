@@ -16,7 +16,7 @@ export function handleRdpProxyConnection(
     const rdpWidthStr = (request as any).rdpWidth; // Get as string first
     const rdpHeightStr = (request as any).rdpHeight; // Get as string first
 
-    // --- 新增：参数验证和 DPI 计算 ---
+    // --- 参数验证和 DPI 计算 ---
     if (!rdpToken || !rdpWidthStr || !rdpHeightStr) { // Check string presence
         console.error(`WebSocket: RDP Proxy connection for ${ws.username} missing required parameters (token, width, height).`);
         ws.send(JSON.stringify({ type: 'rdp:error', payload: 'Missing RDP connection parameters (token, width, height).' }));

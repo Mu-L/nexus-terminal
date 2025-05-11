@@ -30,7 +30,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
 
   // --- 拖放状态 Refs ---
   // const isDraggingOver = ref(false); // 不再使用，由 showExternalDropOverlay 替代外部拖拽状态
-  const showExternalDropOverlay = ref(false); // 新增：控制外部文件拖拽蒙版的显示
+  const showExternalDropOverlay = ref(false); // 控制外部文件拖拽蒙版的显示
   const draggedItem = ref<FileListItem | null>(null); // 内部拖拽时，被拖拽的项
   const dragOverTarget = ref<string | null>(null); // 内部拖拽时，悬停的目标文件夹名称 (用于行高亮)
   const scrollIntervalId = ref<number | null>(null); // 自动滚动计时器 ID
@@ -163,7 +163,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
      }
   };
 
-  // --- 新增：递归遍历文件树的辅助函数 ---
+  // --- 递归遍历文件树的辅助函数 ---
   const traverseFileTree = (item: FileSystemEntry, path = '') => {
     path = path || '';
     if (item.isFile) {
@@ -192,7 +192,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
   // --- 结束新增 ---
 
 
-  // 新增：处理蒙版上的 Drop 事件
+  // 处理蒙版上的 Drop 事件
   const handleOverlayDrop = (event: DragEvent) => {
     event.preventDefault(); // 必须阻止，以防浏览器打开文件
     // console.log("[DragDrop] Drop event on overlay.");

@@ -753,7 +753,7 @@ export class SftpService {
                  }
 
                 try {
-                    // --- 新增：移动前检查目标是否存在 ---
+                    // --- 移动前检查目标是否存在 ---
                     let targetExists = false;
                     try {
                         await this.getStats(sftp, newPath);
@@ -1011,7 +1011,7 @@ export class SftpService {
         console.log(`[SFTP Upload ${uploadId}] Starting upload for ${remotePath} (${totalSize} bytes) in session ${sessionId}`);
 
         try {
-            // --- 新增：在创建流之前确保目录存在 ---
+            // --- 在创建流之前确保目录存在 ---
             if (relativePath) {
                 const targetDirectory = pathModule.dirname(remotePath).replace(/\\/g, '/');
                 console.log(`[SFTP Upload ${uploadId}] Ensuring directory exists: ${targetDirectory}`);
@@ -1029,7 +1029,7 @@ export class SftpService {
             }
             // --- 结束新增 ---
 
-            // --- 新增：预检查文件是否可写 ---
+            // --- 预检查文件是否可写 ---
             console.log(`[SFTP Upload ${uploadId}] Pre-checking writability for: ${remotePath}`);
             try {
                 // 确保 state.sftp 存在

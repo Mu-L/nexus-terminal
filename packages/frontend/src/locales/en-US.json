@@ -602,6 +602,7 @@
         "telegramChatId": "Chat ID:",
         "telegramMessageTemplate": "Message Template (Optional)",
         "telegramMessagePlaceholder": "Default: Markdown format. Use",
+        "telegramCustomDomain": "Custom Telegram API Domain",
         "enabledEvents": "Enabled Events:",
         "templateHelp": "Placeholders:",
         "invalidJson": "Invalid JSON"

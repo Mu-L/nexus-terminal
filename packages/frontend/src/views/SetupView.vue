@@ -88,11 +88,11 @@ import { ref } from 'vue';
 import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useAuthStore } from '../stores/auth.store'; // *** 新增：导入 Auth Store ***
+import { useAuthStore } from '../stores/auth.store'; // *** 导入 Auth Store ***
 
 const { t } = useI18n();
 const router = useRouter();
-const authStore = useAuthStore(); // *** 新增：获取 Auth Store 实例 ***
+const authStore = useAuthStore(); // *** 获取 Auth Store 实例 ***
 
 const username = ref('');
 const password = ref('');
@@ -125,9 +125,9 @@ const handleSetup = async () => {
       confirmPassword: confirmPassword.value
     });
     successMessage.value = t('setup.success');
-    // *** 新增：手动更新 needsSetup 状态 ***
+    // *** 手动更新 needsSetup 状态 ***
     authStore.needsSetup = false;
-    // *** 新增：重置认证状态，因为设置完成后需要重新登录 ***
+    // *** 重置认证状态，因为设置完成后需要重新登录 ***
     authStore.isAuthenticated = false;
     authStore.user = null;
     // 禁用表单或按钮，防止重复提交

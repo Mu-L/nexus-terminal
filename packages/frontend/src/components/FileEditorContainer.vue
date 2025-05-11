@@ -207,10 +207,10 @@ const handleEncodingChange = (event: Event) => {
 // const handleCloseContainer = () => { ... };
 // const handleMinimizeContainer = () => { ... };
 
-// 新增：Monaco Editor 组件的引用
+// Monaco Editor 组件的引用
 const monacoEditorRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 
-// 新增：聚焦活动编辑器的方法
+// 聚焦活动编辑器的方法
 const focusActiveEditor = (): boolean => {
   if (monacoEditorRef.value) {
     monacoEditorRef.value.focus();
@@ -219,7 +219,7 @@ const focusActiveEditor = (): boolean => {
   return false; // 聚焦失败
 };
 
-// 新增：暴露聚焦方法
+// 暴露聚焦方法
 defineExpose({ focusActiveEditor });
 
 // +++ 注册/注销自定义聚焦动作 +++
@@ -296,7 +296,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <span v-if="currentTabIsModified" class="modified-indicator">*</span>
         </span>
         <div class="editor-actions">
-          <!-- +++ 新增：编码选择下拉菜单 +++ -->
+          <!-- +++ 编码选择下拉菜单 +++ -->
           <div class="encoding-select-wrapper" v-if="activeTab && !currentTabIsLoading">
             <select
               ref="encodingSelectRef"

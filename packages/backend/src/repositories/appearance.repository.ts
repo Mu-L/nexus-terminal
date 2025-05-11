@@ -18,7 +18,7 @@ interface DbAppearanceSettingsRow {
 const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): AppearanceSettings => {
     const settings: Partial<AppearanceSettings> = {};
     let latestUpdatedAt = 0;
-    let terminalBackgroundEnabledFound = false; // 新增：标记是否在数据库中找到该设置
+    let terminalBackgroundEnabledFound = false; // 标记是否在数据库中找到该设置
  
     for (const row of rows) {
         // 更新 latestUpdatedAt
@@ -85,7 +85,7 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         editorFontSize: 14,
         terminalBackgroundImage: undefined,
         pageBackgroundImage: undefined,
-        terminalBackgroundEnabled: true, // 新增：默认启用
+        terminalBackgroundEnabled: true, // 默认启用
         updatedAt: Date.now(), // 提供默认时间戳
     };
 };
@@ -249,7 +249,7 @@ const updateAppearanceSettingsInternal = async (db: sqlite3.Database, settingsDt
                dbValue = key === 'activeTerminalThemeId' ? 'null' : ''; // 主题 ID 特殊存储为 'null'
           } else if (typeof value === 'object') {
                dbValue = JSON.stringify(value);
-          } else if (typeof value === 'boolean') { // 新增：处理布尔值
+          } else if (typeof value === 'boolean') { // 处理布尔值
                dbValue = value ? 'true' : 'false';
           } else {
                dbValue = String(value);

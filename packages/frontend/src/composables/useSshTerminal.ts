@@ -30,7 +30,7 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
     // const searchResultCount = ref(0);
     // const currentSearchResultIndex = ref(-1);
     const terminalOutputBuffer = ref<string[]>([]); // 缓冲 WebSocket 消息直到终端准备好
-    const isSshConnected = ref(false); // 新增：跟踪 SSH 连接状态
+    const isSshConnected = ref(false); // 跟踪 SSH 连接状态
 
     // 辅助函数：获取终端消息文本
     const getTerminalText = (key: string, params?: Record<string, any>): string => {
@@ -399,7 +399,7 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
         handleTerminalReady,
         handleTerminalData, // 这个处理来自 xterm.js 的输入
         handleTerminalResize,
-        sendData, // 新增：允许外部直接发送数据
+        sendData, // 允许外部直接发送数据
         cleanup,
         // --- 搜索方法 ---
         searchNext,

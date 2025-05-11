@@ -19,7 +19,7 @@ import {
   // 新的 Passkey 管理处理器
   listUserPasskeysHandler,
   deleteUserPasskeyHandler,
-  updateUserPasskeyNameHandler, // 新增：更新 Passkey 名称的处理器
+  updateUserPasskeyNameHandler, // 更新 Passkey 名称的处理器
   checkHasPasskeys
 } from './auth.controller';
 import { isAuthenticated } from './auth.middleware';

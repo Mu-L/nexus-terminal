@@ -193,7 +193,7 @@ const handleCommandInputKeydown = (event: KeyboardEvent) => {
      event.preventDefault(); // Prevent default if needed, e.g., form submission
      sendCommand(); // Call the existing sendCommand function
  } else {
-   // --- 新增：处理其他按键，取消列表选中状态 ---
+   // --- 处理其他按键，取消列表选中状态 ---
    // 检查按下的键是否是普通输入键或删除键等，而不是导航键或修饰键
    if (!['ArrowUp', 'ArrowDown', 'Enter', 'Shift', 'Control', 'Alt', 'Meta', 'Tab', 'Escape'].includes(event.key)) {
        const target = commandInputSyncTarget.value;

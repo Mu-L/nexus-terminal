@@ -19,7 +19,7 @@ const props = defineProps({
     type: Object as PropType<LayoutNode>,
     required: true,
   },
-  // 新增：标识是否为顶层渲染器
+  // 标识是否为顶层渲染器
   isRootRenderer: {
     type: Boolean,
     default: false,
@@ -30,7 +30,7 @@ const props = defineProps({
     required: false, // 改为非必需
     default: null,   // 提供默认值 null
   },
-  // *** 新增：接收编辑器相关 props ***
+  // *** 接收编辑器相关 props ***
   editorTabs: {
     type: Array as PropType<any[]>, // 使用 any[] 简化，或导入具体类型
     default: () => [],

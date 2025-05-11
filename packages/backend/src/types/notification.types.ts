@@ -40,6 +40,7 @@ export interface TelegramConfig {
   botToken: string; // Consider storing this securely, maybe encrypted or via env vars
   chatId: string; // Target chat ID
   messageTemplate?: string; // Optional message template
+  customDomain?: string; // 允许用户自定义 Telegram API 域名
 }
 
 export type NotificationChannelConfig = WebhookConfig | EmailConfig | TelegramConfig;
