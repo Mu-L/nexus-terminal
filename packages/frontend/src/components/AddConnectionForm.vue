@@ -15,7 +15,11 @@ const props = defineProps<{
   connectionToEdit: ConnectionInfo | null;
 }>();
 
-const { t } = useI18n();
+import { getTranslation } from '../utils/languageUtils';
+
+
+const { t, locale } = useI18n();
+const scriptModeFormatInfo = ref(getTranslation('connections.form.scriptModeFormatInfo', locale.value));
 
 const {
   formData,
@@ -143,7 +147,7 @@ const handleHostIconMouseLeave = () => {
              :placeholder="t('connections.form.scriptModePlaceholder')"
            ></textarea>
            <p class="mt-1 text-xs text-text-secondary whitespace-pre-line">
-             {{ t('connections.form.scriptModeFormatInfo') }}
+             {{ scriptModeFormatInfo }}
            </p>
          </div>
        </div>
