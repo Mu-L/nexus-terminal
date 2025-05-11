@@ -59,77 +59,9 @@ export function useCaptchaSettings() {
         captchaMessage.value = '';
         captchaSuccess.value = false;
         try {
-            let needsVerification = false;
-            let providerForVerification: CaptchaProvider | null = null;
-            let siteKeyForVerification: string | undefined = undefined;
-            let secretKeyForVerification: string | undefined = undefined;
+            // Verification steps removed
 
-            // Step 1: Determine if verification is needed
-            if (captchaForm.enabled && captchaForm.provider && captchaForm.provider !== 'none') {
-                const originalSettings = captchaSettings.value; // Persisted settings from store
-
-                if (captchaForm.provider === 'hcaptcha') {
-                    const originalSiteKeyValue = originalSettings?.hcaptchaSiteKey || '';
-                    const currentSiteKeyValue = captchaForm.hcaptchaSiteKey || '';
-                    const currentSecretKeyValue = captchaForm.hcaptchaSecretKey || '';
-
-                    if (currentSiteKeyValue !== originalSiteKeyValue) {
-                        if (!currentSiteKeyValue || !currentSecretKeyValue) {
-                            throw new Error(t('settings.captcha.error.hcaptchaKeysRequired'));
-                        }
-                        needsVerification = true;
-                        providerForVerification = 'hcaptcha';
-                        siteKeyForVerification = currentSiteKeyValue;
-                        secretKeyForVerification = currentSecretKeyValue;
-                    } else if (currentSecretKeyValue) {
-                         if (!currentSiteKeyValue) {
-                            throw new Error(t('settings.captcha.error.hcaptchaKeysRequired'));
-                        }
-                        needsVerification = true;
-                        providerForVerification = 'hcaptcha';
-                        siteKeyForVerification = currentSiteKeyValue;
-                        secretKeyForVerification = currentSecretKeyValue;
-                    }
-                } else if (captchaForm.provider === 'recaptcha') {
-                    const originalSiteKeyValue = originalSettings?.recaptchaSiteKey || '';
-                    const currentSiteKeyValue = captchaForm.recaptchaSiteKey || '';
-                    const currentSecretKeyValue = captchaForm.recaptchaSecretKey || '';
-
-                    if (currentSiteKeyValue !== originalSiteKeyValue) {
-                        if (!currentSiteKeyValue || !currentSecretKeyValue) {
-                            throw new Error(t('settings.captcha.error.recaptchaKeysRequired'));
-                        }
-                        needsVerification = true;
-                        providerForVerification = 'recaptcha';
-                        siteKeyForVerification = currentSiteKeyValue;
-                        secretKeyForVerification = currentSecretKeyValue;
-                    } else if (currentSecretKeyValue) {
-                        if (!currentSiteKeyValue) {
-                            throw new Error(t('settings.captcha.error.recaptchaKeysRequired'));
-                        }
-                        needsVerification = true;
-                        providerForVerification = 'recaptcha';
-                        siteKeyForVerification = currentSiteKeyValue;
-                        secretKeyForVerification = currentSecretKeyValue;
-                    }
-                }
-            }
-
-            // Step 2: Perform verification if needed
-            if (needsVerification && providerForVerification && siteKeyForVerification && secretKeyForVerification) {
-                try {
-                    await apiClient.post('/settings/captcha/verify', {
-                        provider: providerForVerification,
-                        siteKey: siteKeyForVerification,
-                        secretKey: secretKeyForVerification,
-                    });
-                } catch (verifyError: any) {
-                    console.error('CAPTCHA verification failed:', verifyError);
-                    throw new Error(verifyError.response?.data?.message || verifyError.message || t('settings.captcha.error.verificationFailed'));
-                }
-            }
-
-            // Step 3: Prepare DTO for saving
+            // Prepare DTO for saving
             const dtoToSave: UpdateCaptchaSettingsDto = {
                 enabled: captchaForm.enabled,
                 provider: captchaForm.provider,
