@@ -133,19 +133,19 @@ sudo systemctl restart docker
 ### 2️⃣ 启动服务
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3️⃣ 更新
 注意：docker-compose 运行不需要拉取仓库源码，除非你打算自己build，否则只需要在项目目录执行以下命令即可更新。
 ```bash
-docker-compose down
+docker compose down
 ```
 ```bash
-docker-compose pull
+docker compose pull
 ```
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 ## 📚 使用指南
 
