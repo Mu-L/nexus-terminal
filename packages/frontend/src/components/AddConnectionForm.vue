@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onMounted } from 'vue';
+import { ref, reactive, watch, computed, onMounted, nextTick, Teleport } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
-import apiClient from '../utils/apiClient'; 
+import apiClient from '../utils/apiClient';
 import { useConnectionsStore, ConnectionInfo } from '../stores/connections.store';
-import { useProxiesStore } from '../stores/proxies.store'; 
+import { useProxiesStore } from '../stores/proxies.store';
 import { useTagsStore } from '../stores/tags.store';
 import { useSshKeysStore } from '../stores/sshKeys.store'; // +++ Import SSH Key store +++
+import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // +++ Import UI Notifications store +++
 import TagInput from './TagInput.vue';
 import SshKeySelector from './SshKeySelector.vue'; // +++ Import SSH Key Selector +++
 
@@ -22,6 +23,7 @@ const { t } = useI18n();
 const connectionsStore = useConnectionsStore();
 const proxiesStore = useProxiesStore(); // 获取代理 store 实例
 const tagsStore = useTagsStore(); // 获取标签 store 实例
+const uiNotificationsStore = useUiNotificationsStore(); // +++ Get UI Notifications store instance +++
 const { isLoading: isConnLoading, error: connStoreError } = storeToRefs(connectionsStore);
 const { proxies, isLoading: isProxyLoading, error: proxyStoreError } = storeToRefs(proxiesStore); // 获取代理列表和状态
 const { tags, isLoading: isTagLoading, error: tagStoreError } = storeToRefs(tagsStore); // 获取标签列表和状态
@@ -57,6 +59,12 @@ const storeError = computed(() => connStoreError.value || proxyStoreError.value 
 const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
 const testResult = ref<string | number | null>(null); // 存储延迟或错误信息
 const testLatency = ref<number | null>(null); // 单独存储延迟用于颜色计算
+
+// Tooltip state and refs
+const showHostTooltip = ref(false);
+const hostTooltipStyle = ref({});
+const hostIconRef = ref<HTMLElement | null>(null);
+const hostTooltipContentRef = ref<HTMLElement | null>(null);
 
 // 计算属性判断是否为编辑模式
 const isEditMode = computed(() => !!props.connectionToEdit);
@@ -146,171 +154,263 @@ watch(() => formData.type, (newType) => {
     }
 });
 
+// Helper function to parse IP range
+// Placed inside script setup to access 't'
+const parseIpRange = (ipRangeStr: string): string[] | { error: string } => {
+    if (!ipRangeStr.includes('~')) {
+        return { error: 'not_a_range' }; // Not an error for the function, indicates not a range
+    }
+    const parts = ipRangeStr.split('~');
+    if (parts.length !== 2) {
+        return { error: t('connections.form.errorInvalidIpRangeFormat', 'IP 范围格式应为 start_ip~end_ip') };
+    }
+
+    const [startIpStr, endIpStr] = parts.map(p => p.trim());
+
+    const ipRegex = /^((\d{1,3}\.){3})\d{1,3}$/;
+    if (!ipRegex.test(startIpStr) || !ipRegex.test(endIpStr)) {
+        return { error: t('connections.form.errorInvalidIpFormat', '起始或结束 IP 地址格式无效') };
+    }
+
+    const startIpParts = startIpStr.split('.');
+    const endIpParts = endIpStr.split('.');
+
+    if (startIpParts.slice(0, 3).join('.') !== endIpParts.slice(0, 3).join('.')) {
+        return { error: t('connections.form.errorIpRangeNotSameSubnet', 'IP 范围必须在同一个C段子网中 (例如 1.2.3.x ~ 1.2.3.y)') };
+    }
+
+    const startSuffix = parseInt(startIpParts[3], 10);
+    const endSuffix = parseInt(endIpParts[3], 10);
+
+    if (isNaN(startSuffix) || isNaN(endSuffix) || startSuffix < 0 || startSuffix > 255 || endSuffix < 0 || endSuffix > 255) {
+        return { error: t('connections.form.errorInvalidIpSuffix', 'IP 地址最后一段必须是 0-255 之间的数字') };
+    }
+
+    if (startSuffix > endSuffix) {
+        return { error: t('connections.form.errorIpRangeStartAfterEnd', 'IP 范围的起始 IP 不能大于结束 IP') };
+    }
+
+    const numIps = endSuffix - startSuffix + 1;
+    if (numIps <= 0) {
+         return { error: t('connections.form.errorIpRangeEmpty', 'IP 范围不能为空。') };
+    }
+    // Removed maxRange check
+
+    const baseIp = startIpParts.slice(0, 3).join('.');
+    const ips: string[] = [];
+    for (let i = startSuffix; i <= endSuffix; i++) {
+        ips.push(`${baseIp}.${i}`);
+    }
+    return ips;
+};
+
 // 处理表单提交
 const handleSubmit = async () => {
   formError.value = null;
   connectionsStore.error = null;
   proxiesStore.error = null; // 同时清除代理 store 的错误
 
+  // Filter formData.tag_ids to ensure all IDs are valid before proceeding
+  const availableTagIds = tags.value.map(t => t.id);
+  const currentSelectedValidTagIds = formData.tag_ids.filter(id => availableTagIds.includes(id));
+
   // 基础前端验证 (移除名称验证)
   if (!formData.host || !formData.username) { // 移除 !formData.name
-    formError.value = t('connections.form.errorRequiredFields'); // 保持通用错误消息，或可以细化
+    uiNotificationsStore.showError(t('connections.form.errorRequiredFields'));
     return;
   }
   if (formData.port <= 0 || formData.port > 65535) {
-      formError.value = t('connections.form.errorPort');
+      uiNotificationsStore.showError(t('connections.form.errorPort'));
       return;
   }
 
   // --- 更新后的验证逻辑 (区分 SSH 和 RDP) ---
-  // Use uppercase for comparison
+  // Note: This validation block is for single add/edit. Batch add has its own pre-checks.
   if (formData.type === 'SSH') {
-      // SSH Validation
-      // 1. 添加模式下，密码/密钥是必填的
-      if (!isEditMode.value) {
-          if (formData.auth_method === 'password' && !formData.password) {
-              formError.value = t('connections.form.errorPasswordRequired');
+      if (!isEditMode.value) { // Add mode specific checks
+          if (formData.auth_method === 'password' && !formData.password && !formData.host.includes('~')) { // Password required if not batch and password auth
+              uiNotificationsStore.showError(t('connections.form.errorPasswordRequired'));
               return;
           }
-          // 当认证方式为 key 时，必须选择一个已保存的密钥
-          if (formData.auth_method === 'key' && !formData.selected_ssh_key_id) {
-              formError.value = t('connections.form.errorSshKeyRequired'); // 需要添加新的翻译键
+          if (formData.auth_method === 'key' && !formData.selected_ssh_key_id && !formData.host.includes('~')) { // Key required if not batch and key auth
+              uiNotificationsStore.showError(t('connections.form.errorSshKeyRequired'));
               return;
           }
-      }
-      // 2. 编辑模式下，如果切换到密码认证，则密码必填
-      else if (isEditMode.value && formData.auth_method === 'password' && !formData.password) {
-          // 检查原始连接的认证方式，如果原始不是密码，则切换时必须提供密码
-          // 注意: props.connectionToEdit 可能没有 type 字段，需要后端配合或前端自行判断
-          if (props.connectionToEdit?.auth_method !== 'password') {
-              formError.value = t('connections.form.errorPasswordRequiredOnSwitch');
+      } else { // Edit mode specific checks
+          if (formData.auth_method === 'password' && !formData.password && props.connectionToEdit?.auth_method !== 'password') {
+              uiNotificationsStore.showError(t('connections.form.errorPasswordRequiredOnSwitch'));
               return;
           }
-          // 如果原始就是密码，编辑时密码可以不填（表示不修改）
-      }
-      // 3. 编辑模式下，如果切换到密钥认证，必须选择一个密钥
-      else if (isEditMode.value && formData.auth_method === 'key' && !formData.selected_ssh_key_id) {
-           // 检查原始连接的认证方式，如果原始不是密钥，则切换时必须选择一个密钥
-           if (props.connectionToEdit?.auth_method !== 'key') {
-               formError.value = t('connections.form.errorSshKeyRequiredOnSwitch'); // 需要添加新的翻译键
+          if (formData.auth_method === 'key' && !formData.selected_ssh_key_id && props.connectionToEdit?.auth_method !== 'key') {
+               uiNotificationsStore.showError(t('connections.form.errorSshKeyRequiredOnSwitch'));
                return;
            }
-           // 如果原始就是密钥，编辑时可以不选择新的密钥（表示不修改关联的密钥）
-           // 但如果用户清除了选择，则需要提示
-           // 注意：当前逻辑下，如果 selected_ssh_key_id 为 null，则会触发此验证
       }
-  // Use uppercase for comparison
   } else if (formData.type === 'RDP') {
-      // RDP Validation
-      // 1. 添加模式下，密码是必填的
-      if (!isEditMode.value && !formData.password) {
-          formError.value = t('connections.form.errorPasswordRequired');
+      if (!isEditMode.value && !formData.password && !formData.host.includes('~')) {
+          uiNotificationsStore.showError(t('connections.form.errorPasswordRequired'));
           return;
       }
-      // 2. 编辑模式下，密码可以不填（表示不修改）
   } else if (formData.type === 'VNC') {
-      // VNC Validation
-      // 1. 添加模式下，VNC密码是必填的
-      if (!isEditMode.value && !formData.vncPassword) {
-          formError.value = t('connections.form.errorVncPasswordRequired', 'VNC 密码是必填项。'); // Add new translation key
+      if (!isEditMode.value && !formData.vncPassword && !formData.host.includes('~')) {
+          uiNotificationsStore.showError(t('connections.form.errorVncPasswordRequired', 'VNC 密码是必填项。'));
           return;
       }
-      // 2. 编辑模式下，VNC密码可以不填（表示不修改）
   }
   // --- 验证逻辑结束 ---
 
+  // --- 处理连续 IP ---
+  if (!isEditMode.value && formData.host.includes('~')) {
+      const parsedIpsResult = parseIpRange(formData.host); // Removed maxRange argument
 
-  // 构建要发送的数据 (区分添加和编辑)
+      if (Array.isArray(parsedIpsResult)) {
+          const ips = parsedIpsResult;
+          // Pre-flight checks for batch add using UI notifications for errors
+          if (formData.type === 'SSH' && formData.auth_method === 'key' && !formData.selected_ssh_key_id) {
+              uiNotificationsStore.showError(t('connections.form.errorSshKeyRequiredForBatch', '批量添加 SSH (密钥认证) 连接时，必须选择一个 SSH 密钥。'));
+              return;
+          }
+          if (formData.type === 'SSH' && formData.auth_method === 'password' && !formData.password) {
+              uiNotificationsStore.showError(t('connections.form.errorPasswordRequiredForBatchSSH', '批量添加 SSH (密码认证) 连接时，必须提供密码。'));
+              return;
+          }
+          if (formData.type === 'RDP' && !formData.password) {
+              uiNotificationsStore.showError(t('connections.form.errorPasswordRequiredForBatchRDP', '批量添加 RDP 连接时，必须提供密码。'));
+              return;
+          }
+          if (formData.type === 'VNC' && !formData.vncPassword) {
+              uiNotificationsStore.showError(t('connections.form.errorPasswordRequiredForBatchVNC', '批量添加 VNC 连接时，必须提供 VNC 密码。'));
+              return;
+          }
+
+          let successCount = 0;
+          let errorCount = 0;
+          let firstErrorEncountered: string | null = null;
+
+          for (let i = 0; i < ips.length; i++) {
+              const currentIp = ips[i];
+              const ipSuffix = currentIp.split('.').pop() || `${i + 1}`;
+              
+              const dataForThisIp: any = {
+                  type: formData.type,
+                  name: formData.name ? `${formData.name}-${ipSuffix}` : currentIp,
+                  host: currentIp,
+                  port: formData.port,
+                  username: formData.username,
+                  notes: formData.notes,
+                  proxy_id: formData.proxy_id || null,
+                  tag_ids: currentSelectedValidTagIds, // Use filtered list
+              };
+
+              if (formData.type === 'SSH') {
+                  dataForThisIp.auth_method = formData.auth_method;
+                  if (formData.auth_method === 'password') {
+                      dataForThisIp.password = formData.password;
+                  } else if (formData.auth_method === 'key') {
+                      dataForThisIp.ssh_key_id = formData.selected_ssh_key_id;
+                  }
+              } else if (formData.type === 'RDP') {
+                  dataForThisIp.password = formData.password;
+                  delete dataForThisIp.auth_method;
+              } else if (formData.type === 'VNC') {
+                  dataForThisIp.password = formData.vncPassword;
+                  delete dataForThisIp.auth_method;
+              }
+              
+              if (dataForThisIp.type !== 'SSH' || dataForThisIp.auth_method !== 'key') delete dataForThisIp.ssh_key_id;
+              if (dataForThisIp.type === 'SSH' && dataForThisIp.auth_method === 'key') delete dataForThisIp.password;
+              if (dataForThisIp.type !== 'SSH') delete dataForThisIp.auth_method;
+
+              const success = await connectionsStore.addConnection(dataForThisIp);
+              if (success) {
+                  successCount++;
+              } else {
+                  errorCount++;
+                  if (!firstErrorEncountered) {
+                      firstErrorEncountered = connectionsStore.error || t('errors.unknown', '未知错误');
+                  }
+              }
+          }
+
+          if (errorCount > 0) {
+              const message = t('connections.form.errorBatchAddResult', { successCount, errorCount, firstErrorEncountered: firstErrorEncountered || t('errors.unknown', '未知错误') });
+              if (successCount > 0) {
+                uiNotificationsStore.showWarning(message);
+              } else {
+                uiNotificationsStore.showError(message);
+              }
+          } else if (successCount > 0) {
+              uiNotificationsStore.showSuccess(t('connections.form.successBatchAddResult', { successCount }));
+              emit('connection-added');
+          }
+          // Clear formError if it was set by single validation before batch
+          // formError.value = null; // No longer using formError for this
+          return; // Batch processing complete
+      } else if (parsedIpsResult.error && parsedIpsResult.error !== 'not_a_range') {
+          uiNotificationsStore.showError(parsedIpsResult.error);
+          return;
+      }
+      // If 'not_a_range', fall through to single connection logic
+  }
+  
+  if (isEditMode.value && formData.host.includes('~')) {
+      uiNotificationsStore.showError(t('connections.form.errorIpRangeNotAllowedInEditMode', '编辑模式下不支持 IP 范围。请使用单个 IP 地址。'));
+      return;
+  }
+
+  // --- Default single connection add/edit logic ---
   const dataToSend: any = {
-      type: formData.type, // 发送连接类型
+      type: formData.type,
       name: formData.name,
       host: formData.host,
       port: formData.port,
-notes: formData.notes, // 添加备注
+      notes: formData.notes,
       username: formData.username,
       proxy_id: formData.proxy_id || null,
-      tag_ids: formData.tag_ids || [], // 发送 tag_ids
-      // domain: formData.domain, // 如果添加了 domain 字段
+      tag_ids: currentSelectedValidTagIds, // Use filtered list
   };
 
-  // 处理认证相关字段 (根据类型)
-  // Use uppercase for comparison
   if (formData.type === 'SSH') {
       dataToSend.auth_method = formData.auth_method;
       if (formData.auth_method === 'password') {
-          // SSH 密码处理
-          if (formData.password) {
-              dataToSend.password = formData.password;
-          } else if (isEditMode.value && formData.password === '') {
-              // 编辑模式下，空密码字符串可能表示清空或不修改，取决于后端实现
-              // 假设发送 null 表示清空 (如果后端支持)
-              // dataToSend.password = null;
-              // 或者不发送 password 字段表示不修改
-          }
+          if (formData.password) dataToSend.password = formData.password;
+          // For edit mode, not sending password means "do not change"
       } else if (formData.auth_method === 'key') {
-          // +++ SSH 密钥处理 (只处理 selected_ssh_key_id) +++
           if (formData.selected_ssh_key_id) {
-              // 如果选择了已保存的密钥，只发送 ID
               dataToSend.ssh_key_id = formData.selected_ssh_key_id;
-          } else if (isEditMode.value && props.connectionToEdit?.auth_method === 'key') {
-              // 编辑模式下，如果原始是密钥认证且未选择新密钥，则不发送 ssh_key_id (表示不更改)
-              // 如果原始不是密钥认证，切换到密钥时必须选择一个 (已在验证逻辑中处理)
-          } else {
-               // 添加模式下，如果 auth_method 是 key 但没有选择 key，验证逻辑会阻止提交
-               // 因此这里不需要特殊处理，可以安全地将 ssh_key_id 设为 null 或不设置
-               dataToSend.ssh_key_id = null; // 或者 delete dataToSend.ssh_key_id;
           }
-          // 确保不发送直接输入的密钥信息
-          delete dataToSend.private_key;
-          delete dataToSend.passphrase;
+          // For edit mode, if selected_ssh_key_id is null but original was key,
+          // it might mean "remove key association" or "do not change", depending on backend.
+          // Current validation handles "must select if switching to key"
       }
-  // Use uppercase for comparison
   } else if (formData.type === 'RDP') {
-      // RDP 密码处理 (通常 RDP 没有 auth_method 选择)
-      if (formData.password) {
-          dataToSend.password = formData.password;
-      } else if (isEditMode.value && formData.password === '') {
-          // 编辑 RDP 时，空密码字符串处理逻辑同上
-          // dataToSend.password = null;
-      }
-      // RDP 不发送 SSH 特有的字段
+      if (formData.password) dataToSend.password = formData.password;
       delete dataToSend.auth_method;
-      delete dataToSend.private_key;
-      delete dataToSend.passphrase;
-      delete dataToSend.vncPassword; // Ensure VNC password field for form doesn't go if RDP
   } else if (formData.type === 'VNC') {
-     // VNC data population
-     if (formData.vncPassword) {
-         dataToSend.password = formData.vncPassword; // Backend expects VNC password in 'password' field
-     } else if (isEditMode.value && formData.vncPassword === '') {
-         // Editing VNC, empty password means don't change
-     }
-     // VNC does not use SSH specific fields
-     delete dataToSend.auth_method;
-     delete dataToSend.private_key;
-     delete dataToSend.passphrase;
-     delete dataToSend.ssh_key_id;
-     // formData.vncPassword is used for the form, but backend might expect it as 'password'
-     // So, we don't send 'vncPassword' itself to backend.
+      if (formData.vncPassword) dataToSend.password = formData.vncPassword;
+      delete dataToSend.auth_method;
   }
+  
+  // Clean up fields not relevant to the current connection type / auth method for single add/edit
+  if (dataToSend.type !== 'SSH' || dataToSend.auth_method !== 'key') delete dataToSend.ssh_key_id;
+  if (dataToSend.type === 'SSH' && dataToSend.auth_method === 'key') delete dataToSend.password;
+  if (dataToSend.type !== 'SSH') delete dataToSend.auth_method;
 
 
   let success = false;
   if (isEditMode.value && props.connectionToEdit) {
-      // 调用更新 action
       success = await connectionsStore.updateConnection(props.connectionToEdit.id, dataToSend);
       if (success) {
-          emit('connection-updated'); // 发出更新成功事件
+          emit('connection-updated');
       } else {
-          formError.value = t('connections.form.errorUpdate', { error: connectionsStore.error || '未知错误' });
+          uiNotificationsStore.showError(t('connections.form.errorUpdate', { error: connectionsStore.error || '未知错误' }));
       }
   } else {
-      // 调用添加 action
       success = await connectionsStore.addConnection(dataToSend);
       if (success) {
-          emit('connection-added'); // 发出添加成功事件
+          emit('connection-added');
       } else {
-          formError.value = t('connections.form.errorAdd', { error: connectionsStore.error || '未知错误' });
+          uiNotificationsStore.showError(t('connections.form.errorAdd', { error: connectionsStore.error || '未知错误' }));
       }
   }
 };
@@ -334,7 +434,7 @@ const handleDeleteConnection = async () => {
     emit('connection-deleted'); // 发出删除成功事件
     emit('close'); // 删除成功后关闭表单
   } else {
-    formError.value = t('connections.form.errorDelete', { error: connectionsStore.error || t('errors.unknown', '未知错误') });
+    uiNotificationsStore.showError(t('connections.form.errorDelete', { error: connectionsStore.error || t('errors.unknown', '未知错误') }));
   }
 };
 
@@ -423,20 +523,25 @@ const handleTestConnection = async () => {
     } else {
       // 如果后端 API 返回 success: false (理论上不应发生，但作为保险)
       testStatus.value = 'error';
-      testResult.value = response.data.message || t('connections.test.errorUnknown');
+      const errorMessage = response.data.message || t('connections.test.errorUnknown');
+      testResult.value = errorMessage; // Still set for internal logic if needed, but UI will use notification
+      uiNotificationsStore.showError(errorMessage);
     }
 
   } catch (error: any) {
     // --- 统一处理错误 (前端验证错误或 API 调用错误) ---
     console.error('测试连接失败:', error);
     testStatus.value = 'error';
+    let errorMessageToShow: string;
     if (error.response && error.response.data && error.response.data.message) {
       // API 返回的错误信息
-      testResult.value = error.response.data.message;
+      errorMessageToShow = error.response.data.message;
     } else {
       // 前端验证错误 (error.message) 或 网络/其他错误
-      testResult.value = error.message || t('connections.test.errorNetwork');
+      errorMessageToShow = error.message || t('connections.test.errorNetwork');
     }
+    testResult.value = errorMessageToShow; // Still set for internal logic
+    uiNotificationsStore.showError(errorMessageToShow);
   }
 };
 
@@ -459,9 +564,53 @@ const testButtonText = computed(() => {
     return t('connections.form.testConnection'); // 新增翻译键
 });
 
+const handleHostIconMouseEnter = async () => {
+  showHostTooltip.value = true;
+  await nextTick(); // Wait for DOM update
+
+  if (hostIconRef.value && hostTooltipContentRef.value) {
+    const iconRect = hostIconRef.value.getBoundingClientRect();
+    const tooltipRect = hostTooltipContentRef.value.getBoundingClientRect();
+
+    let top = iconRect.top - tooltipRect.height - 8; // 8px offset
+    let left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2);
+
+    // Boundary checks (simple version)
+    if (top < 0) { // If not enough space on top, show below
+      top = iconRect.bottom + 8;
+    }
+    if (left < 0) {
+      left = 0;
+    }
+    if (left + tooltipRect.width > window.innerWidth) {
+      left = window.innerWidth - tooltipRect.width;
+    }
+
+    hostTooltipStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+    };
+  }
+};
+
+const handleHostIconMouseLeave = () => {
+  showHostTooltip.value = false;
+};
+
 </script>
 
 <template>
+  <Teleport to="body">
+    <div
+      v-if="showHostTooltip"
+      ref="hostTooltipContentRef"
+      :style="hostTooltipStyle"
+      class="fixed w-max max-w-xs p-2 text-xs text-white bg-gray-800 rounded shadow-lg z-[1000] whitespace-pre-wrap pointer-events-none"
+      role="tooltip"
+    >
+      {{ t('connections.form.hostTooltip', '支持 IP 范围, 例如 192.168.1.10~192.168.1.15 (仅限添加模式)') }}
+    </div>
+  </Teleport>
   <div class="fixed inset-0 bg-overlay flex justify-center items-center z-50 p-4"> <!-- Overlay -->
     <div class="bg-background text-foreground p-6 rounded-lg shadow-xl border border-border w-full max-w-2xl max-h-[90vh] flex flex-col"> <!-- Form Panel -->
       <h3 class="text-xl font-semibold text-center mb-6 flex-shrink-0">{{ formTitle }}</h3> <!-- Title -->
@@ -504,7 +653,13 @@ const testButtonText = computed(() => {
           <!-- Host and Port Row -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
-              <label for="conn-host" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.host') }}</label>
+              <label for="conn-host" class="block text-sm font-medium text-text-secondary mb-1">
+                {{ t('connections.form.host') }}
+                <span class="relative ml-1" @mouseenter="handleHostIconMouseEnter" @mouseleave="handleHostIconMouseLeave">
+                  <i ref="hostIconRef" class="fas fa-info-circle text-text-secondary cursor-help"></i>
+                  <!-- Tooltip is now handled by Teleport -->
+                </span>
+              </label>
               <input type="text" id="conn-host" v-model="formData.host" required
                      class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
             </div>
@@ -634,13 +789,10 @@ const testButtonText = computed(() => {
                        :placeholder="t('connections.form.notesPlaceholder', '输入连接备注...')"></textarea>
            </div>
          </div>
-
-        <!-- Error message -->
-        <div v-if="formError || storeError" class="text-error bg-error/10 border border-error/30 rounded-md p-3 text-sm text-center font-medium">
-          {{ formError || storeError }}
-        </div>
-
-      </form> <!-- End Form -->
+ 
+         <!-- Error message DIV removed -->
+ 
+       </form> <!-- End Form -->
 
       <!-- Form Actions -->
       <div class="flex justify-between items-center pt-5 mt-6 flex-shrink-0">
@@ -671,7 +823,9 @@ const testButtonText = computed(() => {
                    {{ testResult }}
                  </div>
                  <div v-else-if="testStatus === 'error'" class="text-error font-medium">
-                   {{ t('connections.test.errorPrefix', '错误:') }} {{ testResult }}
+                   <!-- Error message is now shown via uiNotificationsStore -->
+                   <!-- Display a generic message or icon here if needed, or leave empty -->
+                    {{ t('connections.test.errorPrefix', '错误:') }} {{ testResult }} <!-- Or simply 'Error' -->
                  </div>
              </div>
          </div>
