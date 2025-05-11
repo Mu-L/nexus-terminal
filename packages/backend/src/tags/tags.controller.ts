@@ -130,3 +130,40 @@ export const deleteTag = async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ message: error.message || '删除标签时发生内部服务器错误。' });
     }
 };
+
+/**
+ * 更新标签与连接的关联关系 (PUT /api/v1/tags/:id/connections)
+ */
+export const updateTagConnections = async (req: Request, res: Response): Promise<void> => {
+    const tagId = parseInt(req.params.id, 10);
+    const { connection_ids } = req.body; // 前端发送的是 connection_ids
+
+    if (isNaN(tagId)) {
+        res.status(400).json({ message: '无效的标签 ID。' });
+        return;
+    }
+
+    if (!Array.isArray(connection_ids)) {
+        res.status(400).json({ message: 'connection_ids 必须是一个数组。' });
+        return;
+    }
+
+    // 可选：验证 connection_ids 中的每个 ID 是否为数字
+    if (!connection_ids.every(id => typeof id === 'number')) {
+        res.status(400).json({ message: 'connection_ids 数组中的所有元素必须是数字。' });
+        return;
+    }
+
+    try {
+        await TagService.updateTagConnections(tagId, connection_ids);
+        res.status(200).json({ message: '标签的连接关联更新成功。' });
+    } catch (error: any) {
+        console.error(`Controller: 更新标签 ${tagId} 的连接关联时发生错误:`, error);
+        // 可以根据 TagService 抛出的错误类型来返回更具体的错误码和消息
+        if (error.message.includes('标签未找到')) { // 假设服务层或仓库层会检查标签是否存在
+            res.status(404).json({ message: '标签未找到。' });
+        } else {
+            res.status(500).json({ message: error.message || '更新标签连接关联时发生内部服务器错误。' });
+        }
+    }
+};

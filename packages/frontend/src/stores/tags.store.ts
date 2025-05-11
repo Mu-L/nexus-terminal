@@ -123,6 +123,36 @@ export const useTagsStore = defineStore('tags', () => {
         }
     }
 
+    // 更新标签关联的连接
+    async function updateTagConnections(tagId: number, connectionIds: number[]): Promise<boolean> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            // 假设后端 API 端点是 PUT /api/tags/:tagId/connections
+            await apiClient.put(`/tags/${tagId}/connections`, { connection_ids: connectionIds });
+            // 更新成功后，清除相关缓存并重新获取数据以确保一致性
+            localStorage.removeItem('tagsCache'); // 清除标签缓存
+            localStorage.removeItem('connectionsCache'); // 清除连接缓存，因为连接的 tag_ids 可能已更改
+
+            await fetchTags(); // 重新获取标签
+            // 可能还需要通知 connectionsStore 重新获取连接，或者在这里直接调用
+            // (这取决于您希望如何管理 store 间的依赖和数据同步)
+            // 例如: const connectionsStore = useConnectionsStore(); await connectionsStore.fetchConnections();
+            // 为简单起见，这里假设调用者会处理连接列表的刷新，或者依赖于后续的自动刷新机制。
+            // 或者，更健壮的做法是在此 action 成功后，让 connectionsStore 也刷新。
+            // 但为了减少此处的直接依赖，暂时只刷新 tagsStore。
+            // WorkspaceConnectionList 在模态框保存成功后会重新 fetchConnections。
+
+            return true;
+        } catch (err: any) {
+            console.error(`Failed to update connections for tag ${tagId}:`, err);
+            error.value = err.response?.data?.message || err.message || '更新标签连接失败';
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     return {
         tags,
         isLoading,
@@ -131,5 +161,6 @@ export const useTagsStore = defineStore('tags', () => {
         addTag,
         updateTag,
         deleteTag,
+        updateTagConnections, // 暴露新的 action
     };
 });

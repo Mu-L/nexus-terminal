@@ -47,7 +47,7 @@ export interface SshSuspendEditNameReqPayload {
 
 export interface SshMarkForSuspendReqPayload {
   sessionId: string;
-  initialBuffer?: string; // +++ 新增：可选的初始屏幕缓冲区内容 +++
+  initialBuffer?: string; // +++ 可选的初始屏幕缓冲区内容 +++
 }
 
 export interface SshUnmarkForSuspendReqPayload {
@@ -61,7 +61,7 @@ export interface SshMarkedForSuspendAckPayload {
   error?: string;
 }
 
-export interface SshUnmarkedForSuspendAckPayload { // +++ 新增 +++
+export interface SshUnmarkedForSuspendAckPayload { 
   sessionId: string;
   success: boolean;
   error?: string;
@@ -151,7 +151,7 @@ export interface SshMarkForSuspendReqMessage extends WebSocketMessage {
   payload: SshMarkForSuspendReqPayload;
 }
 
-export interface SshUnmarkForSuspendReqMessage extends WebSocketMessage { // +++ 新增 +++
+export interface SshUnmarkForSuspendReqMessage extends WebSocketMessage { 
   type: 'SSH_UNMARK_FOR_SUSPEND';
   payload: SshUnmarkForSuspendReqPayload;
 }
@@ -162,7 +162,7 @@ export interface SshMarkedForSuspendAckMessage extends WebSocketMessage {
   payload: SshMarkedForSuspendAckPayload;
 }
 
-export interface SshUnmarkedForSuspendAckMessage extends WebSocketMessage { // +++ 新增 +++
+export interface SshUnmarkedForSuspendAckMessage extends WebSocketMessage {
   type: 'SSH_UNMARKED_FOR_SUSPEND_ACK';
   payload: SshUnmarkedForSuspendAckPayload;
 }
@@ -216,11 +216,11 @@ export type SshSuspendC2SMessage =
   | SshSuspendRemoveEntryReqMessage
   | SshSuspendEditNameReqMessage
   | SshMarkForSuspendReqMessage
-  | SshUnmarkForSuspendReqMessage; // +++ 新增 +++
+  | SshUnmarkForSuspendReqMessage; 
 
 export type SshSuspendS2CMessage =
   | SshMarkedForSuspendAckMessage
-  | SshUnmarkedForSuspendAckMessage // +++ 新增 +++
+  | SshUnmarkedForSuspendAckMessage 
   | SshSuspendStartedRespMessage
   | SshSuspendListResponseMessage
   | SshSuspendResumedNotifMessage

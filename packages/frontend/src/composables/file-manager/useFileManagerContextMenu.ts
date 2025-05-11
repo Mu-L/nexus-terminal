@@ -25,21 +25,21 @@ export interface UseFileManagerContextMenuOptions {
   currentPath: Ref<string>;
   isConnected: Ref<boolean>;
   isSftpReady: Ref<boolean>;
-  clipboardState: Ref<Readonly<ClipboardState>>; // +++ 新增：剪贴板状态 +++
+  clipboardState: Ref<Readonly<ClipboardState>>; // +++ 剪贴板状态 +++
   t: ReturnType<typeof useI18n>['t']; // 使用 useI18n 获取 t 的类型
   // --- 回调函数 ---
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: (items: FileListItem[]) => void; // 文件下载回调
-  onDownloadDirectory: (item: FileListItem) => void; // +++ 新增：文件夹下载回调 +++
+  onDownloadDirectory: (item: FileListItem) => void; // +++ 文件夹下载回调 +++
   onDelete: () => void; // 删除操作现在由外部处理
   onRename: (item: FileListItem) => void;
   onChangePermissions: (item: FileListItem) => void;
   onNewFolder: () => void;
   onNewFile: () => void;
-  onCopy: () => void; // +++ 新增：复制回调 +++
-  onCut: () => void; // +++ 新增：剪切回调 +++
-  onPaste: () => void; // +++ 新增：粘贴回调 +++
+  onCopy: () => void; // +++ 复制回调 +++
+  onCut: () => void; // +++ 剪切回调 +++
+  onPaste: () => void; // +++ 粘贴回调 +++
 }
 
 export function useFileManagerContextMenu(options: UseFileManagerContextMenuOptions) {
@@ -111,7 +111,7 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
             { label: t('fileManager.actions.copy'), action: onCopy, disabled: !canPerformActions },
         ];
 
-        // --- 新增：多选下载 ---
+        // --- 多选下载 ---
         // 多选时暂时禁用文件夹下载，只允许下载文件
         // 如果需要支持多选文件夹下载或混合下载，需要更复杂的逻辑和后端支持（例如打包成 zip）
         // 目前仅在 allFilesSelected 为 true 时启用多文件下载

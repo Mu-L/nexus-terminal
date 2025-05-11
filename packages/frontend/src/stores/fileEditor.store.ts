@@ -22,7 +22,7 @@ export interface FileTab {
     filename: string;
     content: string; // 当前解码后的内容 (前端解码)
     originalContent: string; // 初始加载或上次保存时解码后的内容 (前端解码)
-    rawContentBase64: string | null; // +++ 新增：存储原始 Base64 数据 +++
+    rawContentBase64: string | null; // +++ 存储原始 Base64 数据 +++
     language: string;
     selectedEncoding: string; // 当前选择或自动检测到的编码
     isLoading: boolean;
@@ -70,7 +70,7 @@ export const getFilenameFromPath = (filePath: string): string => {
     return filePath.split('/').pop() || filePath;
 };
 
-// +++ 新增：前端解码辅助函数 +++
+// +++ 前端解码辅助函数 +++
 const decodeRawContent = (rawContentBase64: string, encoding: string): string => {
     try {
         const buffer = Buffer.from(rawContentBase64, 'base64');
@@ -106,8 +106,8 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
     const tabs = ref(new Map<string, FileTab>()); // 存储所有打开的标签页 (使用 FileTab)
     const activeTabId = ref<string | null>(null); // 当前激活的标签页 ID
     // const editorVisibleState = ref<'visible' | 'minimized' | 'closed'>('closed'); // 移除，面板可见性由布局控制
-    const popupTrigger = ref(0); // 新增：用于触发弹窗显示的信号
-    const popupFileInfo = ref<{ filePath: string; sessionId: string } | null>(null); // 新增：存储弹窗文件信息
+    const popupTrigger = ref(0); // 用于触发弹窗显示的信号
+    const popupFileInfo = ref<{ filePath: string; sessionId: string } | null>(null); // 存储弹窗文件信息
 
     // --- 计算属性 ---
     const orderedTabs = computed(() => Array.from(tabs.value.values())); // 获取标签页数组，用于渲染
@@ -413,7 +413,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
          // setEditorVisibility('closed'); // 移除：容器可见性由外部控制
      };
 
-   // +++ 新增：关闭其他标签页 +++
+   // +++ 关闭其他标签页 +++
    const closeOtherTabs = (targetTabId: string) => {
        console.log(`[文件编辑器 Store] closeOtherTabs: Action called. Current keys in tabs map:`, Array.from(tabs.value.keys())); // ++ Log current keys at start
        if (!tabs.value.has(targetTabId)) {
@@ -429,7 +429,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
        });
    };
 
-   // +++ 新增：关闭右侧标签页 +++
+   // +++ 关闭右侧标签页 +++
    const closeTabsToTheRight = (targetTabId: string) => {
        const tabsArray = Array.from(tabs.value.values());
        const targetIndex = tabsArray.findIndex(tab => tab.id === targetTabId);
@@ -447,7 +447,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
        });
    };
 
-   // +++ 新增：关闭左侧标签页 +++
+   // +++ 关闭左侧标签页 +++
    const closeTabsToTheLeft = (targetTabId: string) => {
        const tabsArray = Array.from(tabs.value.values());
        const targetIndex = tabsArray.findIndex(tab => tab.id === targetTabId);

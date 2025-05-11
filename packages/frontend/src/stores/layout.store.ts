@@ -168,9 +168,9 @@ export const useLayoutStore = defineStore('layout', () => {
     'editor', 'statusMonitor', 'commandHistory', 'quickCommands',
     'dockerManager', 'suspendedSshSessions' // <-- 添加新的挂起 SSH 会话视图
   ]);
-  // 新增：控制布局（Header/Footer）可见性的状态
+  // 控制布局（Header/Footer）可见性的状态
   const isLayoutVisible: Ref<boolean> = ref(true); // 控制整体布局（Header/Footer）可见性
-  // 新增：控制主导航栏（Header）可见性的状态
+  // 控制主导航栏（Header）可见性的状态
   const isHeaderVisible: Ref<boolean> = ref(true); // 默认可见
 
   // --- 计算属性 ---
@@ -183,7 +183,7 @@ export const useLayoutStore = defineStore('layout', () => {
     return allPossiblePanes.value.filter(pane => !used.has(pane));
   });
 
-// +++ 新增：递归确保节点及其子节点都有 ID +++
+// +++ 递归确保节点及其子节点都有 ID +++
 function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
     if (!node) return null;
 
@@ -366,7 +366,7 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
     }
   }
 
-  // 新增：更新侧栏配置
+  // 更新侧栏配置
   async function updateSidebarPanes(newPanes: { left: PaneName[], right: PaneName[] }) { // Make async
     // --- Add Validation ---
     if (newPanes &&

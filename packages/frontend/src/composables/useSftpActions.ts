@@ -31,7 +31,7 @@ const sortFiles = (a: FileListItem, b: FileListItem): number => {
     return a.filename.localeCompare(b.filename);
 };
 
-// *** 新增：文件树节点接口 ***
+// *** 文件树节点接口 ***
 export interface FileTreeNode {
     filename: string;
     longname: string; // 保留 longname 以便显示
@@ -61,16 +61,16 @@ export function createSftpActionsManager(
 
     // const fileList = ref<FileListItem[]>([]); // 不再直接使用 fileList ref
     const isLoading = ref<boolean>(false);
-    const loadingRequestId = ref<string | null>(null); // 新增：跟踪当前加载请求 ID
+    const loadingRequestId = ref<string | null>(null); // 跟踪当前加载请求 ID
     // const error = ref<string | null>(null); // 不再使用本地 error ref
     const instanceSessionId = sessionId; // 保存会话 ID 用于日志
     const uiNotificationsStore = useUiNotificationsStore(); // 初始化 UI 通知 store
-    const initialLoadDone = ref<boolean>(false); // +++ 新增：跟踪此实例是否已完成初始加载 +++
+    const initialLoadDone = ref<boolean>(false); // +++ 跟踪此实例是否已完成初始加载 +++
 
     // 用于存储注销函数的数组
     const unregisterCallbacks: (() => void)[] = [];
 
-    // *** 新增：响应式文件树 ***
+    // *** 响应式文件树 ***
     const fileTree = reactive<FileTreeNode>({
         filename: '/', // 根节点代表根目录
         longname: '/',
@@ -223,7 +223,7 @@ export function createSftpActionsManager(
             console.warn(`[SFTP ${instanceSessionId}] 尝试加载目录 ${path} 但 SFTP 未就绪。`); // 日志改为中文
             return;
         }
-        // *** 新增：如果已经在加载，则阻止新的加载请求 ***
+        // *** 如果已经在加载，则阻止新的加载请求 ***
         if (isLoading.value) {
             console.warn(`[SFTP ${instanceSessionId}] 尝试加载目录 ${path} 但已在加载中。`);
             return;
@@ -415,7 +415,7 @@ export function createSftpActionsManager(
         });
     };
 
-    // +++ 新增：复制项目 +++
+    // +++ 复制项目 +++
     const copyItems = (sourcePaths: string[], destinationDir: string) => {
         if (!isSftpReady.value) {
             uiNotificationsStore.showError(t('fileManager.errors.sftpNotReady'));
@@ -433,7 +433,7 @@ export function createSftpActionsManager(
         // 可选：显示一个“正在复制...”的通知
     };
 
-    // +++ 新增：移动项目 +++
+    // +++ 移动项目 +++
     const moveItems = (sourcePaths: string[], destinationDir: string) => {
         if (!isSftpReady.value) {
             uiNotificationsStore.showError(t('fileManager.errors.sftpNotReady'));
@@ -579,12 +579,12 @@ export function createSftpActionsManager(
 
     // 移除通用的 onActionSuccessRefresh
 
-    // *** 新增：具体操作成功后的处理函数 ***
+    // *** 具体操作成功后的处理函数 ***
 
     // *** 移除旧的 invalidateCache ***
     // const invalidateCache = (path: string) => { ... };
 
-    // *** 新增：辅助函数 - 从文件树中移除节点 ***
+    // *** 辅助函数 - 从文件树中移除节点 ***
     const removeNodeFromTree = (parentPath: string, filename: string): boolean => {
         const parentNode = findNodeByPath(fileTree, parentPath);
         if (parentNode && parentNode.children) {
@@ -787,7 +787,7 @@ export function createSftpActionsManager(
         }
     };
 
-    // +++ 新增：处理复制成功 +++
+    // +++ 处理复制成功 +++
     const onCopySuccess = (payload: MessagePayload, message: WebSocketMessage) => {
         // 后端应发送 { destination: string, items: FileListItem[] | null }
         const copyPayload = payload as { destination: string, items: FileListItem[] | null };
@@ -825,7 +825,7 @@ export function createSftpActionsManager(
         }
     };
 
-    // +++ 新增：处理移动成功 +++
+    // +++ 处理移动成功 +++
     const onMoveSuccess = (payload: MessagePayload, message: WebSocketMessage) => {
          // 后端应发送 { sources: string[], destination: string, items: FileListItem[] | null }
         const movePayload = payload as { sources: string[], destination: string, items: FileListItem[] | null };
@@ -867,7 +867,7 @@ export function createSftpActionsManager(
     };
 
 
-    // *** 新增：处理上传成功 ***
+    // *** 处理上传成功 ***
     const onUploadSuccess = (payload: MessagePayload, message: WebSocketMessage) => {
         const newItem = payload as FileListItem | null; // 后端应发送 FileListItem 或 null
         const fullPath = message.path; // 后端现在应该在 message 中包含完整的上传路径
@@ -944,14 +944,14 @@ export function createSftpActionsManager(
     unregisterCallbacks.push(onMessage('sftp:rename:success', onRenameSuccess));
     unregisterCallbacks.push(onMessage('sftp:chmod:success', onChmodSuccess));
     unregisterCallbacks.push(onMessage('sftp:writefile:success', onWriteFileSuccess)); // 使用 onWriteFileSuccess
-    unregisterCallbacks.push(onMessage('sftp:upload:success', onUploadSuccess)); // *** 新增：监听上传成功 ***
+    unregisterCallbacks.push(onMessage('sftp:upload:success', onUploadSuccess)); // *** 监听上传成功 ***
     unregisterCallbacks.push(onMessage('sftp:mkdir:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:rmdir:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:unlink:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:rename:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:chmod:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:writefile:error', onActionError));
-    // +++ 新增：监听复制/移动错误 +++
+    // +++ 监听复制/移动错误 +++
     unregisterCallbacks.push(onMessage('sftp:copy:success', onCopySuccess));
     unregisterCallbacks.push(onMessage('sftp:copy:error', onActionError));
     unregisterCallbacks.push(onMessage('sftp:move:success', onMoveSuccess));
@@ -959,7 +959,7 @@ export function createSftpActionsManager(
 
     // 移除 onUnmounted 块
 
-    // *** 新增：计算属性 fileList ***
+    // *** 计算属性 fileList ***
     const fileList = computed<FileListItem[]>(() => {
         const node = findNodeByPath(fileTree, currentPathRef.value);
         if (node && node.childrenLoaded && node.children) {

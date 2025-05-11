@@ -4,14 +4,14 @@ import { sessions, suspendedSshSessions, isLoadingSuspendedSessions, activeSessi
 import type {
   MessagePayload,
   SshMarkForSuspendReqMessage,
-  SshUnmarkForSuspendReqMessage, // +++ 新增导入 +++
+  SshUnmarkForSuspendReqMessage, 
   SshSuspendResumeReqMessage,
   SshSuspendTerminateReqMessage,
   SshSuspendRemoveEntryReqMessage,
   // SshSuspendEditNameReqMessage, // Removed, using HTTP API
   // S2C Payloads
   SshMarkedForSuspendAckPayload,
-  SshUnmarkedForSuspendAckPayload, // +++ 新增导入 +++
+  SshUnmarkedForSuspendAckPayload, 
   SshSuspendListResponsePayload,
   SshSuspendResumedNotifPayload,
   SshOutputCachedChunkPayload,
@@ -27,7 +27,7 @@ import { useUiNotificationsStore } from '../../uiNotifications.store'; // 用于
 import type { SuspendedSshSession } from '../../../types/ssh-suspend.types'; // 路径: packages/frontend/src/types/ssh-suspend.types.ts
 import i18n from '../../../i18n'; // 直接导入 i18n 实例
 import type { ComposerTranslation } from 'vue-i18n'; // 导入 ComposerTranslation 类型
-import apiClient from '../../../utils/apiClient'; // +++ 新增：导入 apiClient +++
+import apiClient from '../../../utils/apiClient'; // +++ 导入 apiClient +++
 
 const t: ComposerTranslation = i18n.global.t; // 从全局 i18n 实例获取 t 函数并显式注解类型
 
@@ -721,7 +721,7 @@ export const registerSshSuspendHandlers = (wsManager: WsManagerInstance): void =
   // 但通常这些处理器会随 wsManager 实例的生命周期一起存在。
   // wsManager.onMessage('SSH_SUSPEND_STARTED_RESP', (p: MessagePayload) => handleSshSuspendStartedResp(p as SshSuspendStartedRespPayload));
   wsManager.onMessage('SSH_MARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshMarkedForSuspendAck(p as SshMarkedForSuspendAckPayload));
-  wsManager.onMessage('SSH_UNMARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshUnmarkedForSuspendAck(p as SshUnmarkedForSuspendAckPayload)); // +++ 新增处理器 +++
+  wsManager.onMessage('SSH_UNMARKED_FOR_SUSPEND_ACK', (p: MessagePayload) => handleSshUnmarkedForSuspendAck(p as SshUnmarkedForSuspendAckPayload)); 
   wsManager.onMessage('SSH_SUSPEND_LIST_RESPONSE', (p: MessagePayload) => handleSshSuspendListResponse(p as SshSuspendListResponsePayload));
   wsManager.onMessage('SSH_SUSPEND_RESUMED_NOTIF', (p: MessagePayload) => handleSshSuspendResumedNotif(p as SshSuspendResumedNotifPayload));
   wsManager.onMessage('SSH_OUTPUT_CACHED_CHUNK', (p: MessagePayload) => handleSshOutputCachedChunk(p as SshOutputCachedChunkPayload));

@@ -280,7 +280,7 @@ watch(editingTagId, async (newId) => {
     }
 });
 
-// 新增：监听显示模式变化，重置选择
+// 监听显示模式变化，重置选择
 watch(showQuickCommandTagsBoolean, () => {
     quickCommandsStore.resetSelection();
 });
@@ -432,7 +432,7 @@ const executeCommand = (command: QuickCommandFE) => {
   // selectedIndex.value = -1; // REMOVED: Store handles index
 };
 
-// +++ 新增：聚焦搜索框的方法 +++
+// +++ 聚焦搜索框的方法 +++
 const focusSearchInput = (): boolean => {
   if (searchInputRef.value) {
     searchInputRef.value.focus();

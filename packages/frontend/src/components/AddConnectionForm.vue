@@ -679,7 +679,7 @@ const testButtonText = computed(() => {
          <div v-else class="flex-1"></div> <!-- This div ensures the main action buttons are pushed to the right when test area is hidden -->
          <div class="flex space-x-3"> <!-- Main Actions -->
              <button v-if="isEditMode" type="button" @click="handleDeleteConnection" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"
-                     class="px-4 py-2 bg-transparent text-red-600 border border-red-500 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
+                     class="px-4 py-2 bg-transparent text-red-600 border border-red-500 rounded-md shadow-sm hover:bg-red-500/10 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out">
                {{ t('connections.actions.delete') }}
              </button>
              <button type="submit" @click="handleSubmit" :disabled="isLoading || (formData.type === 'SSH' && testStatus === 'testing')"

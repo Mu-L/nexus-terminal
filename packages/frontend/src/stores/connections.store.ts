@@ -10,9 +10,9 @@ export interface ConnectionInfo {
     port: number;
     username: string;
     auth_method: 'password' | 'key';
-    proxy_id?: number | null; // 新增：关联的代理 ID (可选)
-    tag_ids?: number[]; // 新增：关联的标签 ID 数组 (可选)
-    ssh_key_id?: number | null; // +++ 新增：关联的 SSH 密钥 ID (可选) +++
+    proxy_id?: number | null; // 关联的代理 ID (可选)
+    tag_ids?: number[]; // 关联的标签 ID 数组 (可选)
+    ssh_key_id?: number | null; // +++ 关联的 SSH 密钥 ID (可选) +++
     created_at: number;
     updated_at: number;
     last_connected_at: number | null;
@@ -98,7 +98,7 @@ export const useConnectionsStore = defineStore('connections', {
             passphrase?: string; // SSH specific
             vncPassword?: string; // VNC specific password
             proxy_id?: number | null;
-            tag_ids?: number[]; // 新增：允许传入 tag_ids
+            tag_ids?: number[]; // 允许传入 tag_ids
         }) {
             this.isLoading = true;
             this.error = null;
@@ -190,7 +190,7 @@ export const useConnectionsStore = defineStore('connections', {
             }
         },
 
-        // 新增：测试连接 Action
+        // 测试连接 Action
         async testConnection(connectionId: number): Promise<{ success: boolean; message?: string }> {
             // 注意：这里不改变 isLoading 状态，或者可以引入单独的 testing 状态
             // this.isLoading = true;
@@ -211,7 +211,7 @@ export const useConnectionsStore = defineStore('connections', {
             }
         },
 
-        // 新增：克隆连接 Action (调用后端克隆接口)
+        // 克隆连接 Action (调用后端克隆接口)
         async cloneConnection(originalId: number, newName: string): Promise<boolean> {
             this.isLoading = true; // 可以考虑为克隆操作设置单独的加载状态
             this.error = null;
@@ -237,7 +237,7 @@ export const useConnectionsStore = defineStore('connections', {
             }
         },
 
-        // +++ 新增：为多个连接添加一个标签 (调用新的后端 API) +++
+        // +++ 为多个连接添加一个标签 (调用新的后端 API) +++
         async addTagToConnectionsAction(connectionIds: number[], tagId: number): Promise<boolean> {
              if (connectionIds.length === 0) return true; // 没有连接需要更新，直接返回成功
 
@@ -285,7 +285,7 @@ export const useConnectionsStore = defineStore('connections', {
             }
         },
 
-        // +++ 新增：获取 VNC 会话令牌 +++
+        // +++ 获取 VNC 会话令牌 +++
         async getVncSessionToken(connectionId: number, width?: number, height?: number): Promise<string | null> {
             // this.isLoading = true; // 考虑是否需要独立的加载状态，或者由调用方处理
             // this.error = null;

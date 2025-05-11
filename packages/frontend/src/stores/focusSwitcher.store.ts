@@ -34,7 +34,7 @@ interface FocusSwitcherState {
   isConfiguratorVisible: boolean;
   activateFileManagerSearchTrigger: number;
   activateTerminalSearchTrigger: number;
-  // 新增：存储注册的聚焦动作
+  // 存储注册的聚焦动作
   registeredActions: Map<string, Array<() => boolean | Promise<boolean | undefined>>>;
 }
 
@@ -56,13 +56,13 @@ export const useFocusSwitcherStore = defineStore('focusSwitcher', () => {
     { id: 'fileEditorActive', label: t('focusSwitcher.input.fileEditorActive', '文件编辑器') },
     { id: 'fileManagerPathInput', label: t('focusSwitcher.input.fileManagerPathInput', '文件管理器路径编辑') },
   ]);
-  const sequenceOrder = ref<string[]>([]); // +++ 新增：存储顺序 +++
-  const itemConfigs = ref<Record<string, FocusItemConfig>>({}); // +++ 新增：存储所有配置 +++
+  const sequenceOrder = ref<string[]>([]); // +++ 存储顺序 +++
+  const itemConfigs = ref<Record<string, FocusItemConfig>>({}); // +++ 存储所有配置 +++
   const isConfiguratorVisible = ref(false);
   const activateFileManagerSearchTrigger = ref(0);
   const activateTerminalSearchTrigger = ref(0);
 
-  // 新增：存储注册的聚焦动作 (Map: id -> Array of actions)
+  // 存储注册的聚焦动作 (Map: id -> Array of actions)
   const registeredActions = ref<Map<string, Array<() => boolean | Promise<boolean | undefined>>>>(new Map());
 
   // --- Actions ---
@@ -378,7 +378,7 @@ export const useFocusSwitcherStore = defineStore('focusSwitcher', () => {
     return order[nextIndex]; // 返回序列中的下一个 ID
   }
 
-  // +++ 新增：根据快捷键获取目标 ID +++
+  // +++ 根据快捷键获取目标 ID +++
   // +++ 修改：根据 itemConfigs 获取快捷键对应的目标 ID +++
   function getFocusTargetIdByShortcut(shortcut: string): string | null {
       for (const id in itemConfigs.value) {

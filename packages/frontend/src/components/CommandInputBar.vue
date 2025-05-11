@@ -9,7 +9,7 @@ import { useQuickCommandsStore } from '../stores/quickCommands.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import QuickCommandsModal from './QuickCommandsModal.vue'; // +++ Import the modal component +++
 import SuspendedSshSessionsModal from './SuspendedSshSessionsModal.vue'; // +++ Import the new modal +++
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
 
 // Disable attribute inheritance as this component has multiple root nodes (div + modal)
 defineOptions({ inheritAttrs: false });

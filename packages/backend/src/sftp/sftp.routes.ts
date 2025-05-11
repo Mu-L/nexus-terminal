@@ -10,7 +10,7 @@ router.use(isAuthenticated);
 // GET /api/v1/sftp/download?connectionId=...&remotePath=...
 router.get('/download', downloadFile);
 
-// +++ 新增：GET /api/v1/sftp/download-directory?connectionId=...&remotePath=... +++
+// +++ GET /api/v1/sftp/download-directory?connectionId=...&remotePath=... +++
 router.get('/download-directory', downloadDirectory);
 
 

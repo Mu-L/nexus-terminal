@@ -417,7 +417,9 @@
     "removeSelection": "移除此标签选择",
     "deleteTagGlobally": "全局删除此标签",
     "createSuccess": "标签创建成功。",
-    "updateSuccess": "标签更新成功。"
+    "updateSuccess": "标签更新成功。",
+    "deleteSuccess": "标签 \"{name}\" 删除成功。",
+    "deleteFailed": "标签 \"{name}\" 删除失败: {error}"
   },
   "settings": {
     "title": "设置",
@@ -930,7 +932,19 @@
     "connectingAllSshInGroup": "正在连接组 '{groupName}' 中的 {count} 个 SSH 连接...",
     "noSshConnectionsInGroup": "组 '{groupName}' 中没有 SSH 类型的连接可供连接。",
     "connectAllSshInGroupMenu": "连接全部",
-    "noSshConnectionsToConnectMenu": "无 SSH 连接"
+    "noSshConnectionsToConnectMenu": "无 SSH 连接",
+    "manageTags": {
+      "title": "管理标签连接",
+      "searchPlaceholder": "搜索连接...",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "noConnectionsFound": "未找到连接。",
+      "saveSuccess": "标签连接更新成功。",
+      "saveFailed": "更新标签连接失败。",
+      "menuItem": "管理标签",
+      "cannotManageUntagged": "无法管理“未标记”分组的连接。",
+      "invertSelection": "反选"
+    }
   },
   "remoteDesktopModal": {
     "title": "远程桌面",

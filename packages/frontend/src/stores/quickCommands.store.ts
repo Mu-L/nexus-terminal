@@ -155,7 +155,7 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
         return result;
     });
 
-    // +++ 新增 Getter: 获取当前可见的扁平指令列表 (用于键盘导航) +++
+    // +++ Getter: 获取当前可见的扁平指令列表 (用于键盘导航) +++
     const flatVisibleCommands = computed((): QuickCommandFE[] => {
         const flatList: QuickCommandFE[] = [];
         filteredAndGroupedCommands.value.forEach(group => {

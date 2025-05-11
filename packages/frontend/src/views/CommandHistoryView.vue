@@ -230,14 +230,14 @@ const deleteSingleCommand = (id: number) => {
   commandHistoryStore.deleteCommand(id);
 };
 
-// 新增：执行命令 (发出事件)
+// 执行命令 (发出事件)
 const executeCommand = (command: string) => {
   emitWorkspaceEvent('terminal:sendCommand', { command });
   // Optionally reset selection after execution
   // selectedIndex.value = -1; // REMOVED: Store handles index
 };
 
-// +++ 新增：聚焦搜索框的方法 +++
+// +++ 聚焦搜索框的方法 +++
 const focusSearchInput = (): boolean => {
   if (searchInputRef.value) {
     searchInputRef.value.focus();

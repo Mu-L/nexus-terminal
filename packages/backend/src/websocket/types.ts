@@ -110,7 +110,7 @@ export interface SshMarkForSuspendRequest {
   type: "SSH_MARK_FOR_SUSPEND";
   payload: {
     sessionId: string; // The ID of the active SSH session to be marked
-    initialBuffer?: string; // +++ 新增：可选的初始屏幕缓冲区内容 +++
+    initialBuffer?: string; // +++ 可选的初始屏幕缓冲区内容 +++
   };
 }
 
@@ -205,7 +205,7 @@ export interface SshMarkedForSuspendAck {
   };
 }
 
-export interface SshUnmarkedForSuspendAck { // +++ 新增 S2C 类型 +++
+export interface SshUnmarkedForSuspendAck { // +++  S2C 类型 +++
   type: "SSH_UNMARKED_FOR_SUSPEND_ACK";
   payload: {
     sessionId: string; // The ID of the session that was unmarked
@@ -231,7 +231,7 @@ export type SshSuspendClientToServerMessages =
   | SshSuspendRemoveEntryRequest
   | SshSuspendEditNameRequest
   | SshMarkForSuspendRequest
-  | SshUnmarkForSuspendRequest; // +++ 新增到联合类型 +++
+  | SshUnmarkForSuspendRequest; 
 
 // Union type for all server-to-client messages for SSH Suspend
 export type SshSuspendServerToClientMessages =
@@ -244,7 +244,7 @@ export type SshSuspendServerToClientMessages =
   | SshSuspendNameEditedResponse
   | SshSuspendAutoTerminatedNotification
   | SshMarkedForSuspendAck
-  | SshUnmarkedForSuspendAck; // +++ 新增到联合类型 +++
+  | SshUnmarkedForSuspendAck; 
 
 // It might be useful to have a general type for incoming messages if not already present
 // For example, if you have a main message handler:

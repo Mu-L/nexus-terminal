@@ -15,7 +15,7 @@ import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileMa
 import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation'; 
 import FileUploadPopup from './FileUploadPopup.vue';
 import FileManagerContextMenu from './FileManagerContextMenu.vue';
-import FileManagerActionModal from './FileManagerActionModal.vue'; // +++ 新增导入 +++
+import FileManagerActionModal from './FileManagerActionModal.vue'; 
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
 
@@ -29,7 +29,7 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  // 新增：文件管理器实例 ID
+  // 文件管理器实例 ID
   instanceId: {
     type: String,
     required: true,
@@ -117,28 +117,28 @@ const sortDirection = ref<'asc' | 'desc'>('asc');
 // const initialLoadDone = ref(false); // 状态移至 SFTP Manager
 // const isFetchingInitialPath = ref(false); // 通过 isLoading 和 !initialLoadDone 推断
 const isEditingPath = ref(false);
-const searchQuery = ref(''); // 新增：搜索查询 ref
-const isSearchActive = ref(false); // 新增：控制搜索框激活状态
-const searchInputRef = ref<HTMLInputElement | null>(null); // 新增：搜索输入框 ref
+const searchQuery = ref(''); // 搜索查询 ref
+const isSearchActive = ref(false); // 控制搜索框激活状态
+const searchInputRef = ref<HTMLInputElement | null>(null); // 搜索输入框 ref
 const pathInputRef = ref<HTMLInputElement | null>(null);
 const editablePath = ref('');
 const fileListContainerRef = ref<HTMLDivElement | null>(null); // 文件列表容器引用
-const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 新增：拖拽蒙版引用 +++
+const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 拖拽蒙版引用 +++
 // const scrollIntervalId = ref<number | null>(null); // 已移至 useFileManagerDragAndDrop
 
-// +++ 新增：操作模态框状态 +++
+// +++ 操作模态框状态 +++
 const isActionModalVisible = ref(false);
 const currentActionType = ref<'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder' | null>(null);
 const actionItem = ref<FileListItem | null>(null); // For single item operations
 const actionItems = ref<FileListItem[]>([]); // For multi-item operations (e.g., delete)
 const actionInitialValue = ref(''); // For pre-filling input in modal
 
-// +++ 新增：剪贴板状态 +++
+// +++ 剪贴板状态 +++
 const clipboardState = ref<ClipboardState>({ hasContent: false });
 const clipboardSourcePaths = ref<string[]>([]); // 存储源完整路径
 const clipboardSourceBaseDir = ref<string>(''); // 存储源目录
 
-const rowSizeMultiplier = ref(1.0); // 新增：行大小（字体）乘数, 默认值会被 store 覆盖
+const rowSizeMultiplier = ref(1.0); // 行大小（字体）乘数, 默认值会被 store 覆盖
 // --- 键盘导航状态 (移至 useFileManagerKeyboardNavigation) ---
 // const selectedIndex = ref<number>(-1);
 
@@ -416,7 +416,7 @@ const handleNewFileContextMenuClick = () => {
     openActionModal('newFile');
 };
 
-// +++ 新增：复制、剪切、粘贴处理函数 +++
+// +++ 复制、剪切、粘贴处理函数 +++
 const handleCopy = () => {
     if (!currentSftpManager.value || selectedItems.value.size === 0) return;
     const manager = currentSftpManager.value;
@@ -526,7 +526,7 @@ const triggerDownload = (items: FileListItem[]) => { // 修改：接受 FileList
 };
 
 
-// +++ 新增：文件夹下载触发器 +++
+// +++ 文件夹下载触发器 +++
 const triggerDownloadDirectory = (item: FileListItem) => {
     if (!props.wsDeps.isConnected.value) {
         alert(t('fileManager.errors.notConnected'));
@@ -659,7 +659,7 @@ const {
 // --- 拖放逻辑 (使用 Composable) ---
 const {
   // isDraggingOver, // 不再直接使用容器的悬停状态
-  showExternalDropOverlay, // 新增：控制蒙版显示
+  showExternalDropOverlay, // 控制蒙版显示
   dragOverTarget, // 行拖拽悬停目标 (内部)
   // draggedItem, // 内部状态，不需要在 FileManager 中直接使用
   // --- 事件处理器 ---
@@ -667,7 +667,7 @@ const {
   handleDragOver, // 容器的 dragover (主要处理内部滚动)
   handleDragLeave,
   handleDrop, // 容器的 drop (主要用于清理)
-  handleOverlayDrop, // 新增：蒙版的 drop
+  handleOverlayDrop, // 蒙版的 drop
   handleDragStart,
   handleDragEnd,
   handleDragOverRow,
@@ -899,7 +899,7 @@ watch(() => focusSwitcherStore.activateFileManagerSearchTrigger, (newValue, oldV
 }, { immediate: false }); // 添加 immediate: false 避免初始值为 0 时触发
 
 
-// --- 新增：监听 sessionId prop 的变化 ---
+// --- 监听 sessionId prop 的变化 ---
 watch(() => props.sessionId, (newSessionId, oldSessionId) => {
     if (newSessionId && newSessionId !== oldSessionId) {
         console.log(`[FileManager ${newSessionId}-${props.instanceId}] Session ID changed from ${oldSessionId} to ${newSessionId}. Re-initializing.`);
@@ -981,7 +981,7 @@ onBeforeUnmount(() => {
   sessionStore.removeSftpManager(props.sessionId, props.instanceId);
 });
 
-// +++ 新增：监听蒙版可见性，动态调整高度 +++
+// +++ 监听蒙版可见性，动态调整高度 +++
 watch(showExternalDropOverlay, (isVisible) => {
   if (isVisible) {
     nextTick(() => { // 确保 refs 可用且 scrollHeight 已计算
@@ -1112,7 +1112,7 @@ const cancelSearch = () => {
     isSearchActive.value = false;
 };
 
-// --- 新增：发送 CD 命令到终端的方法 ---
+// --- 发送 CD 命令到终端的方法 ---
 const sendCdCommandToTerminal = () => {
   if (!currentSftpManager.value || !props.wsDeps.isConnected.value) {
     console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot send CD command: SFTP manager not ready or not connected.`);
@@ -1160,7 +1160,7 @@ const sendCdCommandToTerminal = () => {
 };
 
 
-// --- 新增：打开弹窗编辑器的方法 ---
+// --- 打开弹窗编辑器的方法 ---
 const openPopupEditor = () => {
   if (!props.sessionId) {
     console.error('[FileManager] Cannot open popup editor: Missing session ID.');
@@ -1189,7 +1189,7 @@ const handleWheel = (event: WheelEvent) => {
     }
 };
 
-// +++ 新增：聚焦搜索框的方法 +++
+// +++ 聚焦搜索框的方法 +++
 const focusSearchInput = (): boolean => {
   // 检查当前会话是否激活，防止后台实例响应
   if (props.sessionId !== sessionStore.activeSessionId) {
@@ -1219,7 +1219,7 @@ const focusSearchInput = (): boolean => {
 };
 defineExpose({ focusSearchInput, startPathEdit });
 
-// --- 新增：处理“打开编辑器”按钮点击 ---
+// --- 处理“打开编辑器”按钮点击 ---
 const handleOpenEditorClick = () => {
   if (!props.sessionId) {
     console.error(`[FileManager ${props.instanceId}] Cannot open editor: Missing session ID.`);
@@ -1240,7 +1240,7 @@ const handleOpenEditorClick = () => {
         <div class="flex items-center gap-2 flex-shrink"> <!-- Added gap-2 -->
             <!-- Path Actions -->
             <div class="flex items-center flex-shrink-0"> <!-- Removed mr-auto -->
-              <!-- 新增：CD 到终端按钮 -->
+              <!-- CD 到终端按钮 -->
               <button
                 class="flex items-center justify-center w-7 h-7 text-text-secondary rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:bg-black/10 hover:enabled:text-foreground"
                 @click.stop="sendCdCommandToTerminal"
@@ -1329,7 +1329,7 @@ const handleOpenEditorClick = () => {
        <!-- Main Actions Bar -->
        <div class="flex items-center gap-2 flex-shrink-0">
             <input type="file" ref="fileInputRef" @change="handleFileSelected" multiple class="hidden" />
-            <!-- 新增：打开编辑器按钮 -->
+            <!-- 打开编辑器按钮 -->
             <button
               v-if="showPopupFileEditorBoolean"
               @click="openPopupEditor"
@@ -1387,7 +1387,7 @@ const handleOpenEditorClick = () => {
       tabindex="0"
       :style="{ '--row-size-multiplier': rowSizeMultiplier }"
     >
-        <!-- 新增：外部文件拖拽蒙版 -->
+        <!-- 外部文件拖拽蒙版 -->
         <div
           v-if="showExternalDropOverlay"
           ref="dropOverlayRef"

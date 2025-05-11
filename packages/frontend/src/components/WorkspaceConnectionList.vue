@@ -9,8 +9,9 @@ import { useTagsStore, TagInfo } from '../stores/tags.store'; // 确保 TagInfo 
 import { useSessionStore } from '../stores/session.store';
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // +++ 修正导入大小写 +++
-import { useSettingsStore } from '../stores/settings.store'; // 新增：导入设置 store
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useSettingsStore } from '../stores/settings.store'; 
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
+import ManageTagConnectionsModal from './ManageTagConnectionsModal.vue'; 
 
 // 定义事件
 
@@ -23,15 +24,15 @@ const tagsStore = useTagsStore();
 const sessionStore = useSessionStore(); // 获取 session store 实例
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const uiNotificationsStore = useUiNotificationsStore(); // +++ 修正实例化大小写 +++
-const settingsStore = useSettingsStore(); // 新增：实例化设置 store
+const settingsStore = useSettingsStore(); // 实例化设置 store
 
 const { connections, isLoading: connectionsLoading, error: connectionsError } = storeToRefs(connectionsStore);
 const { tags, isLoading: tagsLoading, error: tagsError } = storeToRefs(tagsStore);
-const { showConnectionTagsBoolean } = storeToRefs(settingsStore); // 新增：获取设置项
+const { showConnectionTagsBoolean } = storeToRefs(settingsStore); // 获取设置项
 
 // 搜索词
 const searchTerm = ref('');
-const searchInputRef = ref<HTMLInputElement | null>(null); // 新增：搜索输入框的 ref
+const searchInputRef = ref<HTMLInputElement | null>(null); // 搜索输入框的 ref
 
 // 右键菜单状态
 const contextMenuVisible = ref(false);
@@ -42,6 +43,10 @@ const contextTargetConnection = ref<ConnectionInfo | null>(null);
 const tagContextMenuVisible = ref(false);
 const tagContextMenuPosition = ref({ x: 0, y: 0 });
 const contextTargetTagGroup = ref<(typeof filteredAndGroupedConnections.value)[0] | null>(null);
+
+// +++ 管理标签模态框状态 +++
+const showManageTagModal = ref(false);
+const tagToManage = ref<TagInfo | null>(null);
 
 // +++ 本地存储键名 +++
 const EXPANDED_GROUPS_STORAGE_KEY = 'workspaceConnectionListExpandedGroups';
@@ -213,7 +218,7 @@ const filteredAndGroupedConnections = computed(() => {
   return result;
 });
 
-// 新增：计算属性，仅过滤，不分组 (用于 showConnectionTagsBoolean 为 false 时)
+// 计算属性，仅过滤，不分组 (用于 showConnectionTagsBoolean 为 false 时)
 const flatFilteredConnections = computed(() => {
   const lowerSearchTerm = searchTerm.value.toLowerCase();
   const tagMap = new Map(tags.value.map(tag => [tag.id, tag.name])); // 创建 tagMap 用于搜索
@@ -405,8 +410,9 @@ const closeTagContextMenu = () => {
 };
 
 // 处理标签右键菜单操作
-const handleTagMenuAction = (action: 'connectAll') => {
-  const group = contextTargetTagGroup.value;
+// 修改：允许直接传递 groupData，用于新的行内编辑按钮
+const handleTagMenuAction = (action: 'connectAll' | 'manageTag', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
+  const group = directGroupData || contextTargetTagGroup.value; // 优先使用直接传递的 groupData
   closeTagContextMenu(); // 先关闭菜单
 
   if (group && action === 'connectAll') {
@@ -426,7 +432,27 @@ const handleTagMenuAction = (action: 'connectAll') => {
         type: 'info',
       });
     }
+  } else if (group && action === 'manageTag') {
+    if (group.tagId !== null) { // 确保不是 "未标记" 分组
+      tagToManage.value = {
+        id: group.tagId,
+        name: group.groupName,
+        created_at: tags.value.find(t => t.id === group.tagId)?.created_at || Date.now() / 1000, // 尝试获取真实时间，否则用当前
+        updated_at: tags.value.find(t => t.id === group.tagId)?.updated_at || Date.now() / 1000,
+      };
+      showManageTagModal.value = true;
+    } else {
+      uiNotificationsStore.addNotification({
+        message: t('workspaceConnectionList.manageTags.cannotManageUntagged'), // 需要添加这个翻译
+        type: 'warning',
+      });
+    }
   }
+};
+
+const handleManageTagModalSaved = () => {
+  connectionsStore.fetchConnections(); // 刷新连接列表
+  tagsStore.fetchTags(); // 刷新标签列表，以防标签名称等有变动（虽然此模态框不直接改名）
 };
 
  // 稍微延迟一下重置，以防是点击列表项导致的失焦
@@ -715,8 +741,17 @@ const cancelEditingTag = () => {
               </span>
               <!-- 占位符，占据剩余空间 -->
               <div class="flex-grow min-w-0"></div>
-            </div>
-            <!-- Connection Items List -->
+              <!-- 标签栏右侧的编辑按钮 -->
+              <button
+                v-if="groupData.tagId !== null && editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId)"
+                @click.stop="handleTagMenuAction('manageTag', groupData)"
+                class="ml-2 px-1 h-6 flex items-center justify-center rounded text-text-secondary hover:text-primary hover:bg-black/10 opacity-0 group-hover:opacity-100 transition-all duration-150 focus:outline-none"
+                :title="t('workspaceConnectionList.manageTags.menuItem')"
+              >
+                <i class="fas fa-edit fa-xs"></i>
+              </button>
+           </div>
+           <!-- Connection Items List -->
             <ul v-show="expandedGroups[groupData.groupName]" class="list-none p-0 m-0 pl-3">
               <!-- ... li v-for="conn in groupData.connections" ... -->
                <li
@@ -809,6 +844,15 @@ const cancelEditingTag = () => {
           <i class="fas fa-ban mr-3 w-4 text-center text-text-disabled"></i>
           <span>{{ t('workspaceConnectionList.noSshConnectionsToConnectMenu') }}</span>
         </li>
+        <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"></li>
+        <li
+          v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"
+          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+          @click="handleTagMenuAction('manageTag')"
+        >
+          <i class="fas fa-tags mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+          <span>{{ t('workspaceConnectionList.manageTags.menuItem') }}</span>
+        </li>
         <!-- Future: Add "Rename Tag" or "Delete Tag (if empty)" options here -->
       </ul>
     </div>
@@ -819,7 +863,12 @@ const cancelEditingTag = () => {
       :connection="selectedRdpConnection"
       @close="closeRdpModal"
     /> -->
-  </div>
+   <ManageTagConnectionsModal
+     :tag-info="tagToManage"
+     v-model:visible="showManageTagModal"
+     @saved="handleManageTagModalSaved"
+   />
+ </div>
 </template>
 
 <!-- Scoped styles removed, now using Tailwind utility classes -->

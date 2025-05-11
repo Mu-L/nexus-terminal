@@ -44,7 +44,7 @@ const getInitialSelectedTagId = (): number | null => {
   return storedValue && storedValue !== 'null' ? parseInt(storedValue, 10) : null;
 };
 const selectedTagId = ref<number | null>(getInitialSelectedTagId());
-const searchQuery = ref(''); // +++ 新增搜索查询状态 +++
+const searchQuery = ref('');
 
 // +++ 控制添加/编辑表单的显示状态 +++
 const showAddEditConnectionForm = ref(false);

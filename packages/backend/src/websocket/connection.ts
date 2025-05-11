@@ -18,15 +18,15 @@ import {
     SshSuspendAutoTerminatedNotification,
     SshMarkForSuspendRequest,
     SshMarkedForSuspendAck,
-    SshUnmarkForSuspendRequest,    // +++ 新增导入 +++
-    SshUnmarkedForSuspendAck,      // +++ 新增导入 +++
+    SshUnmarkForSuspendRequest,    
+    SshUnmarkedForSuspendAck,      
     ClientState
 } from './types';
 import { SshSuspendService } from '../services/ssh-suspend.service';
 import { SftpService } from '../services/sftp.service';
 import { cleanupClientConnection } from './utils';
 import { clientStates } from './state';
-import { temporaryLogStorageService } from '../services/temporary-log-storage.service'; // +++ 新增导入
+import { temporaryLogStorageService } from '../services/temporary-log-storage.service'; 
 
 // Handlers
 import { handleRdpProxyConnection } from './handlers/rdp.handler';
@@ -233,7 +233,7 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                         // console.warn(`[WebSocket Handler][${type}] WebSocket 在发送 SSH_OUTPUT_CACHED_CHUNK 前已关闭 (会话 ${newFrontendSessionId})。`);
                                     }
 
-                                    // +++ 新增：发送 ssh:connected 消息 +++
+                                    // +++ 发送 ssh:connected 消息 +++
                                     if (ws.readyState === WebSocket.OPEN) {
                                         ws.send(JSON.stringify({
                                             type: 'ssh:connected',

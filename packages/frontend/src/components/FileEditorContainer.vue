@@ -10,7 +10,7 @@ import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ �
 import { useSessionStore } from '../stores/session.store'; // +++ 导入会话 Store +++
 import { useSettingsStore } from '../stores/settings.store'; // +++ 导入设置 Store +++
 import { storeToRefs } from 'pinia'; // +++ 导入 storeToRefs +++
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
 
 const { t } = useI18n();
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
@@ -120,13 +120,11 @@ const currentTabSaveError = computed(() => activeTab.value?.saveError ?? null);
 const currentTabLanguage = computed(() => activeTab.value?.language ?? 'plaintext');
 const currentTabFilePath = computed(() => activeTab.value?.filePath ?? '');
 const currentTabIsModified = computed(() => activeTab.value?.isModified ?? false); // 用于显示修改状态
-// +++ 新增：计算当前选择的编码 +++
 const currentSelectedEncoding = computed(() => activeTab.value?.selectedEncoding ?? 'utf-8');
-// +++ 新增：计算当前活动标签的会话名称 +++
 const currentTabSessionName = computed(() => {
   const sessionId = activeTab.value?.sessionId;
   if (!sessionId) return null;
-  return sessionStore.sessions.get(sessionId)?.connectionName ?? null; // 修正：使用 connectionName
+  return sessionStore.sessions.get(sessionId)?.connectionName ?? null;
 });
 
 // Watch for changes in the selected encoding to update width
@@ -134,7 +132,7 @@ watch(currentSelectedEncoding, () => {
   updateSelectWidth();
 });
 
-// +++ 新增：编码选项 +++
+// +++ 编码选项 +++
 // 注意：这里的 value 需要与 iconv-lite 支持的标签匹配 (后端使用)
 // 扩展编码列表以包含更多常用选项
 const encodingOptions = ref([
@@ -194,7 +192,7 @@ const handleSaveRequest = () => {
   }
 };
 
-// +++ 新增：处理编码更改事件 +++
+// +++ 处理编码更改事件 +++
 const handleEncodingChange = (event: Event) => {
   const target = event.target as HTMLSelectElement;
   const newEncoding = target.value;
@@ -243,7 +241,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown);
 });
 
-// +++ 新增：处理键盘事件以切换标签 +++
+// +++ 处理键盘事件以切换标签 +++
 const handleKeyDown = (event: KeyboardEvent) => {
   // 检查是否在编辑器内部或其容器内触发（避免全局冲突）
   // 这里简化处理，假设只要此组件挂载就监听，更精确的判断可能需要检查 event.target

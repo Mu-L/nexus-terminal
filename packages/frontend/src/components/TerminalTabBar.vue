@@ -9,7 +9,7 @@ import TabBarContextMenu from './TabBarContextMenu.vue';
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
-import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber } from '../composables/workspaceEvents';
 
 import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
@@ -99,14 +99,14 @@ const handlePopupConnect = (connectionId: number) => {
   showConnectionListPopup.value = false; // 关闭弹出窗口
 };
 
-// 新增：处理从弹窗内部发出的添加连接请求
+// 处理从弹窗内部发出的添加连接请求
 const handleRequestAddFromPopup = () => {
   console.log('[TabBar] Received request-add-connection from popup component.');
   showConnectionListPopup.value = false; // 关闭弹窗
   emitWorkspaceEvent('connection:requestAdd'); // 向上发出事件
 };
 
-// 新增：处理从弹窗内部发出的编辑连接请求
+// 处理从弹窗内部发出的编辑连接请求
 const handleRequestEditFromPopup = (connection: ConnectionInfo) => { // 假设 WorkspaceConnectionList 传递了连接对象
   console.log('[TabBar] Received request-edit-connection from popup component for connection:', connection);
   showConnectionListPopup.value = false; // 关闭弹窗
@@ -180,7 +180,7 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
         console.warn(`[TabBar] 'mark-for-suspend' action called with invalid targetId:`, targetId);
       }
       break;
-    case 'unmark-for-suspend': // +++ 新增 case +++
+    case 'unmark-for-suspend': 
       if (typeof targetId === 'string') {
         console.log(`[TabBar] Context menu action 'unmark-for-suspend' requested for session ID: ${targetId}`);
         sessionStore.requestUnmarkSshSuspend(targetId);
@@ -250,7 +250,7 @@ const contextMenuItems = computed(() => {
 });
 
 
-// 新增：处理打开布局配置器的事件
+// 处理打开布局配置器的事件
 const openLayoutConfigurator = () => {
   console.log('[TabBar] Emitting open-layout-configurator event');
   emitWorkspaceEvent('ui:openLayoutConfigurator'); // 发出事件
@@ -328,7 +328,7 @@ const handleDragStart = (event: DragEvent) => {
   }
 };
 
-// 新增：处理长按事件以在手机模式下触发挂起和取消挂起
+// 处理长按事件以在手机模式下触发挂起和取消挂起
 let touchTimeout: number | null = null;
 const touchDuration = 800; // 长按时间阈值，单位毫秒
 let touchedSessionId: string | null = null;

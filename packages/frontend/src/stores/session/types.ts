@@ -36,15 +36,15 @@ export interface SessionState {
   terminalManager: SshTerminalInstance;
   statusMonitorManager: StatusMonitorInstance;
   dockerManager: DockerManagerInstance; // 现在应该可以找到 DockerManagerInstance
-  // --- 新增：独立编辑器状态 ---
+  // --- 独立编辑器状态 ---
   editorTabs: Ref<FileTab[]>; // 编辑器标签页列表
   activeEditorTabId: Ref<string | null>; // 当前活动的编辑器标签页 ID
-  // --- 新增：命令输入框内容 ---
+  // --- 命令输入框内容 ---
   commandInputContent: Ref<string>; // 当前会话的命令输入框内容
-  isResuming?: boolean; // 新增：标记会话是否正在从挂起状态恢复
-  isMarkedForSuspend?: boolean; // +++ 新增：标记会话是否已被用户请求标记为待挂起 +++
-  disposables?: (() => void)[]; // 新增：用于存储清理函数，例如取消注册消息处理器
-  pendingOutput?: string[]; // 新增：用于暂存恢复会话时，在终端实例准备好之前收到的输出
+  isResuming?: boolean; // 标记会话是否正在从挂起状态恢复
+  isMarkedForSuspend?: boolean; // +++ 标记会话是否已被用户请求标记为待挂起 +++
+  disposables?: (() => void)[]; // 用于存储清理函数，例如取消注册消息处理器
+  pendingOutput?: string[]; // 用于暂存恢复会话时，在终端实例准备好之前收到的输出
 }
 
 // 为标签栏定义包含状态的类型
@@ -52,5 +52,5 @@ export interface SessionTabInfoWithStatus {
   sessionId: string;
   connectionName: string;
   status: WsConnectionStatus; // 添加状态字段
-  isMarkedForSuspend?: boolean; // +++ 新增：用于UI指示会话是否已标记待挂起 +++
+  isMarkedForSuspend?: boolean; // +++ 用于UI指示会话是否已标记待挂起 +++
 }

@@ -201,9 +201,9 @@ const currentTabSaveError = computed(() => activeTab.value?.saveError ?? null);
 const currentTabLanguage = computed(() => activeTab.value?.language ?? 'plaintext');
 const currentTabFilePath = computed(() => activeTab.value?.filePath ?? '');
 const currentTabIsModified = computed(() => activeTab.value?.isModified ?? false);
-// +++ 新增：计算当前选择的编码 (与 Container 逻辑一致) +++
+// +++ 计算当前选择的编码 (与 Container 逻辑一致) +++
 const currentSelectedEncoding = computed(() => activeTab.value?.selectedEncoding ?? 'utf-8');
-// +++ 新增：计算当前活动标签的会话名称 (与 Container 逻辑一致) +++
+// +++ 计算当前活动标签的会话名称 (与 Container 逻辑一致) +++
 const currentTabSessionName = computed(() => {
   const sessionId = activeTab.value?.sessionId;
   if (!sessionId) return null;
@@ -213,7 +213,7 @@ const currentTabSessionName = computed(() => {
 
 // --- 事件处理 (根据模式调用不同 action) ---
 
-// +++ 新增：编码选项 (copied from FileEditorContainer) +++
+// +++ 编码选项 (copied from FileEditorContainer) +++
 // 注意：这里的 value 需要与 iconv-lite 支持的标签匹配 (后端使用)
 const encodingOptions = ref([
   // Unicode
@@ -352,7 +352,7 @@ const handleCloseLeftTabs = (targetTabId: string) => {
     }
 };
 
-// +++ 新增：处理编码更改事件 +++
+// +++ 处理编码更改事件 +++
 const handleEncodingChange = (event: Event) => {
   const target = event.target as HTMLSelectElement;
   const newEncoding = target.value;
@@ -488,7 +488,7 @@ onBeforeUnmount(() => {
           <span v-if="currentTabIsModified" class="modified-indicator">*</span>
         </span>
         <div class="editor-actions">
-          <!-- +++ 新增：编码选择下拉菜单 +++ -->
+          <!-- +++ 编码选择下拉菜单 +++ -->
           <div class="encoding-select-wrapper" v-if="activeTab && !currentTabIsLoading">
             <select
               ref="encodingSelectRef"
@@ -725,7 +725,7 @@ onBeforeUnmount(() => {
 }
 */
 
-/* +++ 新增：编码选择器样式 (copied from FileEditorContainer) +++ */
+/* +++ 编码选择器样式 (copied from FileEditorContainer) +++ */
 .encoding-select-wrapper {
   display: inline-block; /* 让 wrapper 包裹内容 */
   vertical-align: middle; /* 垂直居中对齐 */

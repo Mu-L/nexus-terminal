@@ -20,7 +20,7 @@ import {
   listUserPasskeysHandler,
   deleteUserPasskeyHandler,
   updateUserPasskeyNameHandler, // 新增：更新 Passkey 名称的处理器
-  checkHasPasskeys // +++ 新增：检查是否有 Passkey 配置的处理器
+  checkHasPasskeys
 } from './auth.controller';
 import { isAuthenticated } from './auth.middleware';
 import { ipBlacklistCheckMiddleware } from './ipBlacklistCheck.middleware';

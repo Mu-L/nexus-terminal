@@ -1123,7 +1123,9 @@
         "removeSelection": "このタグの選択を解除",
         "title": "タグ管理",
         "createSuccess": "タグが正常に作成されました。",
-        "updateSuccess": "タグが正常に更新されました。"
+        "updateSuccess": "タグが正常に更新されました。",
+        "deleteSuccess": "タグ「{name}」が正常に削除されました。",
+        "deleteFailed": "タグ「{name}」の削除に失敗しました: {error}"
       },
       "terminalTabBar": {
         "selectServerTitle": "接続するサーバーを選択"
@@ -1147,7 +1149,19 @@
         "connectingAllSshInGroup": "グループ '{groupName}' 内の {count} 個の SSH 接続に接続しています...",
         "noSshConnectionsInGroup": "グループ '{groupName}' 内に接続可能な SSH 接続がありません。",
         "connectAllSshInGroupMenu": "すべて接続",
-        "noSshConnectionsToConnectMenu": "SSH 接続なし"
+        "noSshConnectionsToConnectMenu": "SSH 接続なし",
+        "manageTags": {
+          "title": "タグ接続の管理",
+          "searchPlaceholder": "接続を検索...",
+          "selectAll": "すべて選択",
+          "deselectAll": "すべて選択解除",
+          "noConnectionsFound": "接続が見つかりません。",
+          "saveSuccess": "タグ接続が正常に更新されました。",
+          "saveFailed": "タグ接続の更新に失敗しました。",
+          "menuItem": "タグを管理",
+          "cannotManageUntagged": "「タグなし」グループの接続は管理できません。",
+          "invertSelection": "選択を反転"
+        }
       },
       "sshKeys": {
         "selector": {

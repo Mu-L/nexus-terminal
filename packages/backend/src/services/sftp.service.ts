@@ -54,7 +54,7 @@ interface ActiveUpload {
     bytesWritten: number;
     stream: WriteStream;
     sessionId: string; // Link back to the session for cleanup
-    relativePath?: string; // +++ 新增：存储相对路径 +++
+    relativePath?: string;
 }
 
 export class SftpService {
@@ -646,7 +646,7 @@ export class SftpService {
         }
     }
 
-    // +++ 新增：复制文件或目录 +++
+    // +++ 复制文件或目录 +++
     async copy(sessionId: string, sources: string[], destinationDir: string, requestId: string): Promise<void> {
         const state = this.clientStates.get(sessionId);
         if (!state || !state.sftp) {
@@ -720,7 +720,7 @@ export class SftpService {
         }
     }
 
-    // +++ 新增：移动文件或目录 +++
+    // +++ 移动文件或目录 +++
     async move(sessionId: string, sources: string[], destinationDir: string, requestId: string): Promise<void> {
         const state = this.clientStates.get(sessionId);
         if (!state || !state.sftp) {
@@ -803,7 +803,7 @@ export class SftpService {
         }
     }
 
-    // +++ 新增：辅助方法 - 复制文件 +++
+    // +++ 辅助方法 - 复制文件 +++
     private copyFile(sftp: SFTPWrapper, sourcePath: string, destPath: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const readStream = sftp.createReadStream(sourcePath);
@@ -833,7 +833,7 @@ export class SftpService {
         });
     }
 
-    // +++ 新增：辅助方法 - 递归复制目录 +++
+    // +++ 辅助方法 - 递归复制目录 +++
     private async copyDirectoryRecursive(sftp: SFTPWrapper, sourcePath: string, destPath: string): Promise<void> {
         try {
             // Create destination directory
@@ -861,7 +861,7 @@ export class SftpService {
         }
     }
 
-     // +++ 新增：辅助方法 - 获取 Stats (Promise wrapper) +++
+     // +++ 辅助方法 - 获取 Stats (Promise wrapper) +++
     private getStats(sftp: SFTPWrapper, path: string): Promise<Stats> {
         return new Promise((resolve, reject) => {
             sftp.lstat(path, (err, stats) => {
@@ -951,7 +951,7 @@ export class SftpService {
         }
     }
 
-     // +++ 新增：辅助方法 - 列出目录内容 (Promise wrapper) +++
+     // +++ 辅助方法 - 列出目录内容 (Promise wrapper) +++
     private listDirectory(sftp: SFTPWrapper, path: string): Promise<SftpDirEntry[]> { // 使用本地接口 SftpDirEntry
         return new Promise((resolve, reject) => {
             sftp.readdir(path, (err, list) => { // list 的类型现在是 SftpDirEntry[]
@@ -964,7 +964,7 @@ export class SftpService {
         });
     }
 
-     // +++ 新增：辅助方法 - 执行重命名 (Promise wrapper) +++
+     // +++ 辅助方法 - 执行重命名 (Promise wrapper) +++
     private performRename(sftp: SFTPWrapper, oldPath: string, newPath: string): Promise<void> {
         return new Promise((resolve, reject) => {
             sftp.rename(oldPath, newPath, (err) => {
@@ -977,7 +977,7 @@ export class SftpService {
         });
     }
 
-    // +++ 新增：辅助方法 - 格式化 Stats 为 FileListItem +++
+    // +++ 辅助方法 - 格式化 Stats 为 FileListItem +++
     private formatStatsToFileListItem(itemPath: string, stats: Stats): any {
          return {
             filename: pathModule.basename(itemPath),

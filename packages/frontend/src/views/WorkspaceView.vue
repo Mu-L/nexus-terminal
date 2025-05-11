@@ -75,7 +75,7 @@ const currentSearchTerm = ref(''); // 当前搜索的关键词
 const mobileTerminalRef = ref<InstanceType<typeof Terminal> | null>(null); // +++ 添加 mobileTerminalRef +++
 const isVirtualKeyboardVisible = ref(true); // +++ State for virtual keyboard visibility +++
 
-// --- 新增：处理全局键盘事件 ---
+// --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
   // 检查是否按下了 Alt 键以及上/下箭头键
   if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
@@ -422,7 +422,7 @@ const handleCloseSearch = () => { // +++ 修改 +++
   }
 };
 
-// +++ 新增：处理清空终端事件 +++
+// +++ 处理清空终端事件 +++
 const handleClearTerminal = () => { // +++ 修改 +++
   const currentSession = activeSession.value;
   if (!currentSession) {
@@ -511,7 +511,7 @@ const handleCloseEditorTab = (tabId: string) => {
    }
  };
 
- // +++ 新增：处理编辑器编码更改事件 +++
+ // +++ 处理编辑器编码更改事件 +++
  const handleChangeEncoding = (payload: { tabId: string; encoding: string }) => {
    const isShared = shareFileEditorTabsBoolean.value;
    console.log(`[WorkspaceView] handleChangeEncoding for tab ${payload.tabId} to ${payload.encoding}, Shared mode: ${isShared}`);
@@ -543,7 +543,7 @@ const handleCloseEditorTab = (tabId: string) => {
     sessionStore.handleOpenNewSession(id);
  };
 
-// +++ 新增：处理虚拟键盘按键事件 +++
+// +++ 处理虚拟键盘按键事件 +++
 const handleVirtualKeyPress = (keySequence: string) => {
  const currentSession = activeSession.value;
  if (!currentSession) {

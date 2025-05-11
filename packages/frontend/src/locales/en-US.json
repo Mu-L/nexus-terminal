@@ -418,7 +418,9 @@
     "removeSelection": "Remove this tag selection",
     "deleteTagGlobally": "Delete this tag globally",
     "createSuccess": "Tag created successfully.",
-    "updateSuccess": "Tag updated successfully."
+    "updateSuccess": "Tag updated successfully.",
+    "deleteSuccess": "Tag \"{name}\" deleted successfully.",
+    "deleteFailed": "Failed to delete tag \"{name}\": {error}"
   },
   "settings": {
     "title": "Settings",
@@ -928,9 +930,21 @@
     "connectingAllSshInGroup": "Connecting {count} SSH connections in group '{groupName}'...",
     "noSshConnectionsInGroup": "No SSH connections to connect in group '{groupName}'.",
     "connectAllSshInGroupMenu": "Connect All",
-    "noSshConnectionsToConnectMenu": "No SSH Connections"
+    "noSshConnectionsToConnectMenu": "No SSH Connections",
+    "manageTags": {
+      "title": "Manage Tag Connections",
+      "searchPlaceholder": "Search connections...",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "noConnectionsFound": "No connections found.",
+      "saveSuccess": "Tag connections updated successfully.",
+      "saveFailed": "Failed to update tag connections.",
+      "menuItem": "Manage Tag",
+      "cannotManageUntagged": "Cannot manage connections for 'Untagged' group.",
+      "invertSelection": "Invert Selection"
+    }
   },
-"remoteDesktopModal": {
+  "remoteDesktopModal": {
     "title": "Remote Desktop",
     "titlePlaceholder": "Remote Desktop Connection",
     "status": {

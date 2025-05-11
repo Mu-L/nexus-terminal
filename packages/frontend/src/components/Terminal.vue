@@ -8,13 +8,13 @@ import { FitAddon } from '@xterm/addon-fit'; // Updated import path
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon, type ISearchOptions } from '@xterm/addon-search';
 import 'xterm/css/xterm.css';
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 新增导入 +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
 
 
 // 定义 props 和 emits
 const props = defineProps<{
   sessionId: string; // 会话 ID
-  isActive: boolean; // 新增：标记此终端是否为活动标签页
+  isActive: boolean; // 标记此终端是否为活动标签页
   stream?: ReadableStream<string>; // 用于接收来自 WebSocket 的数据流 (可选)
   options?: object; // xterm 的配置选项
 }>();
@@ -39,7 +39,7 @@ const {
   currentTerminalFontFamily,
   terminalBackgroundImage,
   currentTerminalFontSize,
-  isTerminalBackgroundEnabled // <-- 新增：导入背景启用状态
+  isTerminalBackgroundEnabled 
 } = storeToRefs(appearanceStore);
  
 // --- Settings Store ---
@@ -69,7 +69,7 @@ const debouncedEmitResize = debounce((term: Terminal) => {
         const dimensions = { cols: term.cols, rows: term.rows };
         console.log(`[Terminal ${props.sessionId}] Debounced resize emit (from ResizeObserver):`, dimensions);
         emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
-        // *** 新增：尝试在发送 resize 后强制刷新终端显示 ***
+        // *** 尝试在发送 resize 后强制刷新终端显示 ***
         try {
             term.refresh(0, term.rows - 1); // Refresh entire viewport
             console.log(`[Terminal ${props.sessionId}] Terminal refreshed after debounced resize.`);
