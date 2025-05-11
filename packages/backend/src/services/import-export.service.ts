@@ -1,9 +1,10 @@
 
 import * as ConnectionRepository from '../repositories/connection.repository';
 import * as ProxyRepository from '../repositories/proxy.repository';
+import * as TagService from '../services/tag.service'; // +++ 导入标签服务 +++
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
 import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; // For decrypting connection details
-import { getAllDecryptedSshKeys } from '../services/ssh_key.service'; // 静态导入
+import { getAllDecryptedSshKeys, DecryptedSshKeyDetails } from '../services/ssh_key.service'; // 静态导入, SshKeyData -> DecryptedSshKeyDetails
 import archiver from 'archiver';
 archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
 
@@ -56,6 +57,7 @@ interface PlaintextExportConnectionData {
     password?: string | null; // Plaintext password
     private_key?: string | null; // Plaintext private key
     passphrase?: string | null; // Plaintext passphrase for key
+    ssh_key_id?: number | null; // +++ Add SSH Key ID +++
     tag_ids?: number[];
     proxy?: {
         name: string;
@@ -86,7 +88,7 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
         const db = await getDbInstance();
 
         // Ensure ExportRow reflects the updated FullConnectionData (which now includes 'type')
-        type ExportRow = ConnectionRepository.FullConnectionData & {
+        type ExportRow = ConnectionRepository.FullConnectionData & { // FullConnectionData 包含 ssh_key_id
              proxy_db_id: number | null;
              proxy_name: string | null;
              proxy_type: 'SOCKS5' | 'HTTP' | null; // Proxy type remains the same
@@ -155,6 +157,7 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
                 password: plainPassword,
                 private_key: plainPrivateKey,
                 passphrase: plainPassphrase,
+                ssh_key_id: (row.type === 'SSH' && row.auth_method === 'key') ? row.ssh_key_id : null, // +++ Populate SSH Key ID +++
                 tag_ids: tagsMap[row.id] || [],
                 proxy: null
             };
@@ -205,51 +208,152 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
  * @param includeSshKeys 是否包含 SSH 密钥
  * @returns Buffer 包含加密的 ZIP 文件内容 (IV + Ciphertext + AuthTag)。
  */
+
+// 辅助函数：安全地转义 CLI 参数，如果参数包含空格或引号，则用双引号括起来
+function escapeCliArgument(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || String(value).trim() === '') {
+        return '""'; // 返回空引号对，而不是空字符串，以保持参数位置
+    }
+    const strValue = String(value);
+    // 如果字符串包含空格，或者已经是引号括起来的，或者包含特殊字符，则需要处理
+    // 这里简化处理：如果包含空格或双引号，就用双引号包裹并转义内部双引号
+    if (strValue.includes(' ') || strValue.includes('"')) {
+        return `"${strValue.replace(/"/g, '\\"')}"`;
+    }
+    return strValue;
+}
+
+
 export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
     try {
-        const connections = await getPlaintextConnectionsData();
-        const connectionsJsonContent = JSON.stringify(connections, null, 2);
+        const connectionsData = await getPlaintextConnectionsData(); // This now returns PlaintextExportConnectionData[]
+        const allTags = await TagService.getAllTags();
+        const allSshKeys = includeSshKeys ? await getAllDecryptedSshKeys() : [];
+
+        const tagsMap = new Map(allTags.map(tag => [tag.id, tag.name]));
+        const sshKeysMap = new Map(allSshKeys.map(key => [key.id, key.name]));
+
+        const scriptLines: string[] = [];
+
+        for (const conn of connectionsData) {
+            let line = `${conn.username}@${conn.host}:${conn.port}`;
+
+            line += ` -type ${conn.type.toUpperCase()}`;
+            if (conn.name && conn.name !== `${conn.username}@${conn.host}`) {
+                 line += ` -name ${escapeCliArgument(conn.name)}`;
+            }
+
+            if (conn.type === 'SSH') {
+                if (conn.auth_method === 'password' && conn.password) {
+                    line += ` -p ${escapeCliArgument(conn.password)}`;
+                } else if (conn.auth_method === 'key') {
+                    // PlaintextExportConnectionData now includes ssh_key_id
+                    if (conn.ssh_key_id && sshKeysMap.has(conn.ssh_key_id)) {
+                        line += ` -k ${escapeCliArgument(sshKeysMap.get(conn.ssh_key_id)!)}`;
+                        // Passphrase for named key is not directly supported in simple script line.
+                        // It's assumed the key is usable or passphrase handled by agent.
+                    } else if (conn.private_key) {
+                        // This case (direct private key without a named ref) is not cleanly exportable to the simple script.
+                        console.warn(`Connection ${conn.name} uses an SSH key by content, which cannot be directly represented by '-k <keyname>' in script export.`);
+                    }
+                }
+            } else if ((conn.type === 'RDP' || conn.type === 'VNC') && conn.password) {
+                line += ` -p ${escapeCliArgument(conn.password)}`;
+            }
+
+            if (conn.tag_ids && conn.tag_ids.length > 0) {
+                const tagNames = conn.tag_ids.map(id => tagsMap.get(id)).filter(name => !!name) as string[];
+                if (tagNames.length > 0) {
+                    line += ` -tags ${tagNames.map(escapeCliArgument).join(' ')}`;
+                }
+            }
+            
+            const connWithNotes = conn as PlaintextExportConnectionData & { notes?: string };
+            if (connWithNotes.notes) { // notes is already part of PlaintextExportConnectionData
+                 line += ` -note ${escapeCliArgument(connWithNotes.notes)}`;
+            }
+            
+            scriptLines.push(line);
+        }
+
+        const connectionsScriptContent = scriptLines.join('\n');
 
         const zipPassword = process.env.ENCRYPTION_KEY;
         if (!zipPassword || zipPassword.trim() === '') {
             console.error('错误：ENCRYPTION_KEY 环境变量未设置或为空！无法为ZIP文件设置密码。');
             throw new Error('ENCRYPTION_KEY is not set or is empty, cannot password-protect the ZIP file.');
         }
+        
+        return new Promise<Buffer>((resolve, reject) => {
+            const archive = archiver.create('zip-encrypted', {
+                zlib: { level: 9 },
+                encryptionMethod: 'aes256',
+                password: zipPassword
+            });
 
-        const archive = archiver.create('zip-encrypted', {
-            zlib: { level: 9 }, // 设置压缩级别
-            encryptionMethod: 'aes256', // 使用 AES-256 加密
-            password: zipPassword // 设置密码
+            const buffers: Buffer[] = [];
+
+            archive.on('data', (chunk: Buffer) => {
+                buffers.push(chunk);
+            });
+
+            archive.on('warning', (err: Error) => {
+                console.warn('Archiver warning during export:', err);
+            });
+
+            // 'error' event should still be listened to for stream errors
+            archive.on('error', (err: Error) => {
+                console.error('Archiver stream error during export:', err);
+                reject(new Error(`Archiver stream failed during export: ${err.message}`));
+            });
+
+            // archive.finalize() returns a promise that resolves when the archive is fully written.
+            // No need to listen for 'finish' event separately if we await finalize().
+
+            archive.append(connectionsScriptContent, { name: 'connections.txt' });
+
+            if (includeSshKeys && allSshKeys.length > 0) {
+                const sshKeysJsonContent = JSON.stringify(allSshKeys, null, 2);
+                archive.append(sshKeysJsonContent, { name: 'ssh_keys.json' });
+            }
+
+            archive.finalize()
+                .then(() => {
+                    console.log('Archiver finalized successfully.');
+                    resolve(Buffer.concat(buffers));
+                })
+                .catch(err => {
+                    console.error('Error during archive.finalize():', err);
+                    reject(new Error(`Failed to finalize archive: ${err.message}`));
+                });
         });
-
-        const buffer: Buffer[] = [];
-        archive.on('data', (data) => {
-            buffer.push(data);
-        });
-
-        archive.on('error', (err) => {
-            console.error('Service: 使用 archiver 创建加密 ZIP buffer 时出错:', err);
-            throw new Error(`使用 archiver 创建加密 ZIP buffer 失败: ${err.message}`);
-        });
-
-        archive.append(connectionsJsonContent, { name: 'connections.json' });
-
-        if (includeSshKeys) {
-            const sshKeys = await getAllDecryptedSshKeys();
-            const sshKeysJsonContent = JSON.stringify(sshKeys, null, 2);
-            archive.append(sshKeysJsonContent, { name: 'ssh_keys.json' });
-        }
-
-        await archive.finalize();
-        return Buffer.concat(buffer);
 
     } catch (error: any) {
-        // This catch block might not be reached if errors are only within the Promise.
-        // The promise's reject will handle errors during zip.writeToBuffer.
-        console.error('Service: 导出连接 ZIP (archiver) 时发生意外错误:', error);
+        console.error('Service: 导出连接 ZIP (outer try-catch) 时发生意外错误:', error);
         throw new Error(`导出连接 ZIP (archiver) 失败: ${error.message}`);
     }
 };
+
+// Adjust PlaintextExportConnectionData to include ssh_key_id if it's relevant
+// This change should ideally be in the PlaintextExportConnectionData interface definition
+// and getPlaintextConnectionsData needs to populate it.
+
+// For the sake of this diff, we'll assume getPlaintextConnectionsData is modified
+// to include ssh_key_id on the objects in the `connectionsData` array
+// if conn.type === 'SSH' and conn.auth_method === 'key'.
+// A more robust solution would involve modifying `PlaintextExportConnectionData`
+// and `getPlaintextConnectionsData`.
+
+// Modify getPlaintextConnectionsData to include ssh_key_id
+// We need to adjust the interface and the mapping function.
+// The diff tool here has limitations, so I'll describe the change needed in getPlaintextConnectionsData:
+// 1. Add `ssh_key_id?: number | null;` to `PlaintextExportConnectionData` interface.
+// 2. In `getPlaintextConnectionsData`, when mapping `row` to `connection`, add:
+//    `ssh_key_id: (row.type === 'SSH' && row.auth_method === 'key') ? row.ssh_key_id : null,`
+
+// Since I cannot apply diff to two parts of the file simultaneously with this tool for the `getPlaintextConnectionsData` modification,
+// I will proceed with the current change and note that `getPlaintextConnectionsData` needs that adjustment for `-k <keyname>` to work correctly.
+// The `connAsAny.ssh_key_id` is a temporary access pattern.
 
 
 /**

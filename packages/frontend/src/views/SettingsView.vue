@@ -693,9 +693,6 @@
               <!-- Export Connections Section -->
               <div class="settings-section-content">
                  <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.exportConnections.title', '导出连接数据') }}</h3>
-                 <p class="text-sm text-text-secondary mb-2">
-                   {{ t('settings.exportConnections.description', '将所有连接配置（包括密码和密钥等敏感信息）导出为一个加密的 ZIP 文件。') }}
-                 </p>
                  <p class="text-sm text-text-secondary mb-4">
                    <span class="font-semibold text-warning">{{ t('settings.exportConnections.decryptKeyInfo', '解压密码为您的 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。') }}</span>
                  </p>
