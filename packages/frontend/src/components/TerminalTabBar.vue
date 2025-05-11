@@ -362,6 +362,32 @@ const handleTouchEnd = (event: TouchEvent) => {
   }
   touchedSessionId = null;
 };
+ // 处理鼠标滚轮事件以支持水平滚动
+const handleWheel: EventListener = (event: Event) => {
+  const wheelEvent = event as WheelEvent;
+  const container = wheelEvent.currentTarget as HTMLElement;
+  if (container) {
+    // 根据滚轮方向调整水平滚动位置
+    container.scrollLeft += wheelEvent.deltaY > 0 ? 50 : -50;
+    wheelEvent.preventDefault(); // 阻止默认的垂直滚动
+  }
+};
+
+// 在组件挂载时添加滚轮事件监听
+onMounted(() => {
+  const tabContainer = document.querySelector('.overflow-x-auto');
+  if (tabContainer) {
+    tabContainer.addEventListener('wheel', handleWheel as EventListener, { passive: false });
+  }
+});
+
+// 在组件卸载时移除滚轮事件监听
+onBeforeUnmount(() => {
+  const tabContainer = document.querySelector('.overflow-x-auto');
+  if (tabContainer) {
+    tabContainer.removeEventListener('wheel', handleWheel as EventListener);
+  }
+});
 
 </script>
 
