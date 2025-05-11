@@ -12,7 +12,7 @@ interface UserInfo {
 }
 
 // Passkey Information Interface
-interface PasskeyInfo {
+export interface PasskeyInfo { // + Export 接口
     credentialID: string;
     publicKey: string; // Or a more specific type if available
     counter: number;

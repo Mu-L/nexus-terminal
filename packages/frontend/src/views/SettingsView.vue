@@ -1654,32 +1654,125 @@ const handleUpdateCaptchaSettings = async () => {
     captchaMessage.value = '';
     captchaSuccess.value = false;
     try {
-        // Prepare DTO, only sending secret keys if they have been entered
-        const dto: UpdateCaptchaSettingsDto = {
+        let needsVerification = false;
+        let providerForVerification: CaptchaProvider | null = null;
+        let siteKeyForVerification: string | undefined = undefined;
+        let secretKeyForVerification: string | undefined = undefined;
+
+        // 步骤 1: 确定是否需要验证
+        if (captchaForm.enabled && captchaForm.provider && captchaForm.provider !== 'none') {
+            const originalSettings = captchaSettings.value; // 从 store 获取的持久化设置
+
+            if (captchaForm.provider === 'hcaptcha') {
+                const originalSiteKeyValue = originalSettings?.hcaptchaSiteKey || '';
+                const currentSiteKeyValue = captchaForm.hcaptchaSiteKey || '';
+                const currentSecretKeyValue = captchaForm.hcaptchaSecretKey || ''; // 用户在表单中输入的新 secret
+
+                if (currentSiteKeyValue !== originalSiteKeyValue) { // 情况 A: 站点密钥已更改
+                    if (!currentSiteKeyValue || !currentSecretKeyValue) {
+                        captchaMessage.value = t('settings.captcha.error.hcaptchaKeysRequired');
+                        captchaSuccess.value = false;
+                        captchaLoading.value = false;
+                        return;
+                    }
+                    needsVerification = true;
+                    providerForVerification = 'hcaptcha';
+                    siteKeyForVerification = currentSiteKeyValue;
+                    secretKeyForVerification = currentSecretKeyValue;
+                } else if (currentSecretKeyValue) { // 情况 B: 站点密钥未更改，但用户输入了新的秘密密钥
+                     if (!currentSiteKeyValue) { // 确保站点密钥本身不为空
+                        captchaMessage.value = t('settings.captcha.error.hcaptchaKeysRequired');
+                        captchaSuccess.value = false;
+                        captchaLoading.value = false;
+                        return;
+                    }
+                    needsVerification = true;
+                    providerForVerification = 'hcaptcha';
+                    siteKeyForVerification = currentSiteKeyValue; // 使用当前的 (也是原始的) 站点密钥
+                    secretKeyForVerification = currentSecretKeyValue;
+                }
+                // 情况 C: 站点密钥未更改，且用户未输入新的秘密密钥 (currentSecretKeyValue is empty) -> needsVerification 保持 false
+            } else if (captchaForm.provider === 'recaptcha') {
+                const originalSiteKeyValue = originalSettings?.recaptchaSiteKey || '';
+                const currentSiteKeyValue = captchaForm.recaptchaSiteKey || '';
+                const currentSecretKeyValue = captchaForm.recaptchaSecretKey || '';
+
+                if (currentSiteKeyValue !== originalSiteKeyValue) { // 情况 A: 站点密钥已更改
+                    if (!currentSiteKeyValue || !currentSecretKeyValue) {
+                        captchaMessage.value = t('settings.captcha.error.recaptchaKeysRequired');
+                        captchaSuccess.value = false;
+                        captchaLoading.value = false;
+                        return;
+                    }
+                    needsVerification = true;
+                    providerForVerification = 'recaptcha';
+                    siteKeyForVerification = currentSiteKeyValue;
+                    secretKeyForVerification = currentSecretKeyValue;
+                } else if (currentSecretKeyValue) { // 情况 B: 站点密钥未更改，但用户输入了新的秘密密钥
+                    if (!currentSiteKeyValue) { // 确保站点密钥本身不为空
+                        captchaMessage.value = t('settings.captcha.error.recaptchaKeysRequired');
+                        captchaSuccess.value = false;
+                        captchaLoading.value = false;
+                        return;
+                    }
+                    needsVerification = true;
+                    providerForVerification = 'recaptcha';
+                    siteKeyForVerification = currentSiteKeyValue;
+                    secretKeyForVerification = currentSecretKeyValue;
+                }
+                // 情况 C: 站点密钥未更改，且用户未输入新的秘密密钥 -> needsVerification 保持 false
+            }
+        }
+
+        // 步骤 2: 如果需要，执行验证
+        if (needsVerification && providerForVerification && siteKeyForVerification && secretKeyForVerification) {
+            try {
+                await apiClient.post('/settings/captcha/verify', {
+                    provider: providerForVerification,
+                    siteKey: siteKeyForVerification,
+                    secretKey: secretKeyForVerification,
+                });
+                // 验证成功，可以继续
+            } catch (verifyError: any) {
+                console.error('CAPTCHA 验证失败:', verifyError);
+                captchaMessage.value = verifyError.response?.data?.message || verifyError.message || t('settings.captcha.error.verificationFailed');
+                captchaSuccess.value = false;
+                captchaLoading.value = false;
+                return; // 验证失败，不继续保存
+            }
+        }
+
+        // 步骤 3: 准备用于保存的 DTO
+        const dtoToSave: UpdateCaptchaSettingsDto = {
             enabled: captchaForm.enabled,
             provider: captchaForm.provider,
-            // Site keys are not sensitive, send them if present
-            hcaptchaSiteKey: captchaForm.hcaptchaSiteKey || '',
-            recaptchaSiteKey: captchaForm.recaptchaSiteKey || '',
+            // Site keys 总是从表单获取
+            hcaptchaSiteKey: captchaForm.hcaptchaSiteKey || undefined,
+            recaptchaSiteKey: captchaForm.recaptchaSiteKey || undefined,
+            // Secret keys 仅在表单中提供时才包含
+            hcaptchaSecretKey: captchaForm.hcaptchaSecretKey || undefined,
+            recaptchaSecretKey: captchaForm.recaptchaSecretKey || undefined,
         };
+        // 如果 captchaForm.provider 为 'none' 或 captchaForm.enabled 为 false,
+        // 后端应负责清除所有相关的 site/secret key。
+        // 如果表单中的 secret key 为空字符串，则发送 undefined，后端不应更新该特定 secret key。
 
-        // Only include secret keys in the DTO if the user entered a value
-        if (captchaForm.hcaptchaSecretKey) {
-            dto.hcaptchaSecretKey = captchaForm.hcaptchaSecretKey;
-        }
-        if (captchaForm.recaptchaSecretKey) {
-            dto.recaptchaSecretKey = captchaForm.recaptchaSecretKey;
-        }
-
-        await settingsStore.updateCaptchaSettings(dto);
-        captchaMessage.value = t('settings.captcha.success.saved'); // Need translation
+        // 步骤 4: 调用保存操作
+        await settingsStore.updateCaptchaSettings(dtoToSave);
+        captchaMessage.value = t('settings.captcha.success.saved');
         captchaSuccess.value = true;
-        // Clear secret key fields in the form after successful save for security
+        // 成功保存后清除表单中的 secret key 字段，以确保下次编辑时它们是空的，除非用户再次输入
         captchaForm.hcaptchaSecretKey = '';
         captchaForm.recaptchaSecretKey = '';
+
     } catch (error: any) {
-        console.error('更新 CAPTCHA 设置失败:', error);
-        captchaMessage.value = error.message || t('settings.captcha.error.saveFailed'); // Need translation
+        // 此 catch 块处理来自 settingsStore.updateCaptchaSettings 的错误
+        // 或在 try 块中未被 'return' 语句捕获的其他错误。
+        console.error('更新 CAPTCHA 设置时捕获到错误:', error);
+        // 避免覆盖更具体的错误消息（例如，来自验证失败的消息）
+        if (!captchaMessage.value) {
+            captchaMessage.value = error.message || t('settings.captcha.error.saveFailed');
+        }
         captchaSuccess.value = false;
     } finally {
         captchaLoading.value = false;

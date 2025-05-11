@@ -808,7 +808,10 @@
             "saved": "CAPTCHA settings saved successfully."
         },
         "error": {
-            "saveFailed": "Failed to save CAPTCHA settings."
+            "saveFailed": "Failed to save CAPTCHA settings.",
+            "hcaptchaKeysRequired": "hCaptcha Site Key and Secret Key are required for verification.",
+            "recaptchaKeysRequired": "reCAPTCHA Site Key and Secret Key are required for verification.",
+            "verificationFailed": "CAPTCHA credential verification failed. Please check your Site Key and Secret Key."
         }
     },
     "commandInputSync": {

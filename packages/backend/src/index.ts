@@ -44,6 +44,7 @@ import sftpRouter from './sftp/sftp.routes';
 import proxyRoutes from './proxies/proxies.routes';
 import tagsRouter from './tags/tags.routes';
 import settingsRoutes from './settings/settings.routes';
+import captchaRoutes from './captcha/captcha.routes'; // +++ Import CAPTCHA routes +++
 import notificationRoutes from './notifications/notification.routes';
 import auditRoutes from './audit/audit.routes';
 import commandHistoryRoutes from './command-history/command-history.routes';
@@ -264,6 +265,7 @@ const startServer = () => {
     app.use('/api/v1/proxies', proxyRoutes);
     app.use('/api/v1/tags', tagsRouter);
     app.use('/api/v1/settings', settingsRoutes);
+    app.use('/api/v1/settings/captcha', captchaRoutes); // +++ Register CAPTCHA routes under settings +++
     app.use('/api/v1/notifications', notificationRoutes);
     app.use('/api/v1/audit-logs', auditRoutes);
     app.use('/api/v1/command-history', commandHistoryRoutes);

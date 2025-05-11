@@ -691,7 +691,10 @@
             "description": "自動化された攻撃を防ぐために、ログインページに CAPTCHA 検証を設定します。",
             "enableLabel": "ログインページで CAPTCHA を有効にする",
             "error": {
-                "saveFailed": "CAPTCHA 設定の保存に失敗しました。"
+                "saveFailed": "CAPTCHA 設定の保存に失敗しました。",
+                "hcaptchaKeysRequired": "hCaptcha サイトキーとシークレットキーは検証に必要です。",
+                "recaptchaKeysRequired": "reCAPTCHA サイトキーとシークレットキーは検証に必要です。",
+                "verificationFailed": "CAPTCHA 認証情報検証に失敗しました。サイトキーとシークレットキーを確認してください。"
             },
             "hcaptchaHint": "から",
             "providerLabel": "CAPTCHA プロバイダー:",
