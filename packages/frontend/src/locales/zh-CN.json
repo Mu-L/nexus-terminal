@@ -985,7 +985,13 @@
       "menuItem": "管理标签",
       "cannotManageUntagged": "无法管理“未标记”分组的连接。",
       "invertSelection": "反选"
-    }
+    },
+    "deleteAllConnectionsInGroupMenu": "删除分组内所有连接",
+    "noConnectionsToDeleteInGroup": "分组 '{groupName}' 中没有可删除的连接。",
+    "confirmDeleteAllConnectionsInGroup": "确定要删除分组 '{groupName}' 中的全部 {count} 个连接吗？此操作不可撤销。",
+    "allConnectionsInGroupDeletedSuccess": "已成功从分组 '{groupName}' 中删除 {count} 个连接。",
+    "cannotDeleteFromUntagged": "不能使用此选项从“未标记”分组中删除连接。",
+    "someConnectionsInGroupDeleteFailed": "分组 '{groupName}' 中的 {count} 个连接未能删除。"
   },
   "remoteDesktopModal": {
     "title": "远程桌面",

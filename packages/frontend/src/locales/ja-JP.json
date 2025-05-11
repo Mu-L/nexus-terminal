@@ -1203,7 +1203,13 @@
           "menuItem": "タグを管理",
           "cannotManageUntagged": "「タグなし」グループの接続は管理できません。",
           "invertSelection": "選択を反転"
-        }
+        },
+        "deleteAllConnectionsInGroupMenu": "グループ内の全接続を削除",
+        "noConnectionsToDeleteInGroup": "グループ '{groupName}' に削除可能な接続がありません。",
+        "confirmDeleteAllConnectionsInGroup": "グループ '{groupName}' 内の全 {count} 個の接続を削除してもよろしいですか？この操作は元に戻せません。",
+        "allConnectionsInGroupDeletedSuccess": "グループ '{groupName}' から {count} 個の接続を正常に削除しました。",
+        "cannotDeleteFromUntagged": "このオプションを使用して「未分類」グループから接続を削除することはできません。",
+        "someConnectionsInGroupDeleteFailed": "グループ '{groupName}' 内の {count} 個の接続の削除に失敗しました。"
       },
       "sshKeys": {
         "selector": {

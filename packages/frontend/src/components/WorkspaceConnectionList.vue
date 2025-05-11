@@ -411,7 +411,7 @@ const closeTagContextMenu = () => {
 
 // 处理标签右键菜单操作
 // 修改：允许直接传递 groupData，用于新的行内编辑按钮
-const handleTagMenuAction = (action: 'connectAll' | 'manageTag', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
+const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConnections', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
   const group = directGroupData || contextTargetTagGroup.value; // 优先使用直接传递的 groupData
   closeTagContextMenu(); // 先关闭菜单
 
@@ -446,6 +446,53 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag', directGroupData
         message: t('workspaceConnectionList.manageTags.cannotManageUntagged'), // 需要添加这个翻译
         type: 'warning',
       });
+    }
+  } else if (group && action === 'deleteAllConnections') {
+    // 确保是已标记的组
+    if (group.tagId === null) {
+        uiNotificationsStore.addNotification({
+            message: t('workspaceConnectionList.cannotDeleteFromUntagged'), // 新增i18n
+            type: 'warning',
+        });
+        return;
+    }
+    // 确保组内有连接
+    if (group.connections.length === 0) {
+      uiNotificationsStore.addNotification({
+        message: t('workspaceConnectionList.noConnectionsToDeleteInGroup', { groupName: group.groupName }), // 新增i18n
+        type: 'info',
+      });
+      return;
+    }
+
+    if (confirm(t('workspaceConnectionList.confirmDeleteAllConnectionsInGroup', { count: group.connections.length, groupName: group.groupName }))) { // 新增i18n
+      const connectionIdsToDelete = group.connections.map(conn => conn.id);
+      
+      const deletePromises = connectionIdsToDelete.map(connId =>
+        connectionsStore.deleteConnection(connId).catch(err => {
+          console.error(`[WkspConnList] Failed to delete connection ${connId} in group ${group.groupName}:`, err);
+          return Promise.reject({ connId, error: err });
+        })
+      );
+
+      Promise.allSettled(deletePromises)
+        .then(results => {
+          const successfulDeletes = results.filter(result => result.status === 'fulfilled').length;
+          const failedDeletes = results.filter(result => result.status === 'rejected').length;
+
+          if (successfulDeletes > 0) {
+            uiNotificationsStore.addNotification({
+              message: t('workspaceConnectionList.allConnectionsInGroupDeletedSuccess', { count: successfulDeletes, groupName: group.groupName }), // 新增i18n
+              type: 'success',
+            });
+          }
+          if (failedDeletes > 0) {
+             uiNotificationsStore.addNotification({
+              message: t('workspaceConnectionList.someConnectionsInGroupDeleteFailed', { count: failedDeletes, groupName: group.groupName }), // 新增i18n
+              type: 'error',
+            });
+          }
+        });
     }
   }
 };
@@ -852,6 +899,15 @@ const cancelEditingTag = () => {
         >
           <i class="fas fa-tags mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
           <span>{{ t('workspaceConnectionList.manageTags.menuItem') }}</span>
+        </li>
+        <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"></li>
+        <li
+          v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"
+          class="group px-4 py-1.5 cursor-pointer flex items-center text-error hover:bg-error/10 text-sm transition-colors duration-150 rounded-md mx-1"
+          @click="handleTagMenuAction('deleteAllConnections')"
+        >
+          <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
+          <span>{{ t('workspaceConnectionList.deleteAllConnectionsInGroupMenu') }}</span> <!-- 新增i18n -->
         </li>
         <!-- Future: Add "Rename Tag" or "Delete Tag (if empty)" options here -->
       </ul>

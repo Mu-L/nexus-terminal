@@ -983,7 +983,13 @@
       "menuItem": "Manage Tag",
       "cannotManageUntagged": "Cannot manage connections for 'Untagged' group.",
       "invertSelection": "Invert Selection"
-    }
+    },
+    "deleteAllConnectionsInGroupMenu": "Delete All Connections in Group",
+    "noConnectionsToDeleteInGroup": "No connections to delete in group '{groupName}'.",
+    "confirmDeleteAllConnectionsInGroup": "Are you sure you want to delete all {count} connections in group '{groupName}'? This cannot be undone.",
+    "allConnectionsInGroupDeletedSuccess": "{count} connections successfully deleted from group '{groupName}'.",
+    "cannotDeleteFromUntagged": "Cannot use this option to delete connections from the 'Untagged' group.",
+    "someConnectionsInGroupDeleteFailed": "{count} connections in group '{groupName}' failed to delete."
   },
   "remoteDesktopModal": {
     "title": "Remote Desktop",
