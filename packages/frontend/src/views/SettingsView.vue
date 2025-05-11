@@ -63,12 +63,12 @@
                 <!-- Display list of registered passkeys -->
                 <div class="mt-6">
                   <h4 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.passkey.registeredKeysTitle') }}</h4>
-                  <div v-if="authStore.passkeysLoading" class="p-4 text-center text-text-secondary italic">
+                  <div v-if="authStorePasskeysLoading" class="p-4 text-center text-text-secondary italic">
                     {{ $t('common.loading') }}
                   </div>
-                  <div v-else-if="authStore.passkeys && authStore.passkeys.length > 0">
+                  <div v-else-if="passkeys && passkeys.length > 0">
                     <ul class="space-y-3">
-                      <li v-for="key in authStore.passkeys" :key="key.credentialID" class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border border-border rounded-md bg-header/20 hover:bg-header/40 transition-colors duration-150">
+                      <li v-for="key in passkeys" :key="key.credentialID" class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border border-border rounded-md bg-header/20 hover:bg-header/40 transition-colors duration-150">
                         <div class="flex-grow mb-2 sm:mb-0">
                           <div class="flex items-center">
                             <span v-if="!editingPasskeyId || editingPasskeyId !== key.credentialID" class="block font-medium text-foreground text-sm">
@@ -727,53 +727,219 @@
                  </button>
               </div>
             </div>
-          </div> <!-- End Appearance Section -->
+          </div> 
 
         </div>
-      </div> <!-- End Settings Sections Grid -->
-    </div> <!-- End Inner container -->
-  </div> <!-- End Outer container -->
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-// Define necessary types locally if not shared
-type CaptchaProvider = 'hcaptcha' | 'recaptcha' | 'none';
-interface UpdateCaptchaSettingsDto {
-    enabled?: boolean;
-    provider?: CaptchaProvider;
-    hcaptchaSiteKey?: string;
-    hcaptchaSecretKey?: string;
-    recaptchaSiteKey?: string;
-    recaptchaSecretKey?: string;
-}
-import { ref, onMounted, computed, reactive, watch } from 'vue';
-import axios from 'axios'; // 导入 axios 用于 API 请求
-import pkg from '../../package.json'; // 导入 package.json
+import { onMounted } from 'vue'; // Simplified Vue imports
 import { useAuthStore } from '../stores/auth.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { useAppearanceStore } from '../stores/appearance.store'; // 导入外观 store
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-// setLocale is handled by the store now
-import { availableLocales } from '../i18n'; // 导入可用语言列表
-import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
-import { isAxiosError } from 'axios'; // 单独导入 isAxiosError
-import { startRegistration } from '@simplewebauthn/browser';
+import { useChangePassword } from '../composables/settings/useChangePassword';
+import { usePasskeyManagement } from '../composables/settings/usePasskeyManagement';
+import { useTwoFactorAuth } from '../composables/settings/useTwoFactorAuth';
+import { useCaptchaSettings, type CaptchaProvider, type UpdateCaptchaSettingsDto } from '../composables/settings/useCaptchaSettings'; // Import Captcha composable
+import { useIpWhitelist } from '../composables/settings/useIpWhitelist'; // Import IP Whitelist composable
+import { useIpBlacklist } from '../composables/settings/useIpBlacklist'; // Import IP Blacklist composable
+import { useVersionCheck } from '../composables/settings/useVersionCheck'; // Import Version Check composable
+import { useWorkspaceSettings } from '../composables/settings/useWorkspaceSettings'; // Import Workspace Settings composable
+import { useAppearanceSettings } from '../composables/settings/useAppearanceSettings'; // Import Appearance Settings composable
+import { useSystemSettings } from '../composables/settings/useSystemSettings'; // Import System Settings composable
+import { useExportConnections } from '../composables/settings/useExportConnections'; // Import Export Connections composable
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const appearanceStore = useAppearanceStore(); // 实例化外观 store
 const { t } = useI18n();
-const appVersion = ref(pkg.version); // 获取版本号
 
-// --- Version Check State ---
-const latestVersion = ref<string | null>(null);
-const isCheckingVersion = ref(false);
-const versionCheckError = ref<string | null>(null);
-const isUpdateAvailable = computed(() => {
-  // 简单的字符串比较，假设 tag 格式为 vX.Y.Z
-  return latestVersion.value && latestVersion.value !== `v${appVersion.value}`;
-});
+// --- Change Password (Refactored) ---
+const {
+  currentPassword,
+  newPassword,
+  confirmPassword,
+  changePasswordLoading,
+  changePasswordMessage,
+  changePasswordSuccess,
+  handleChangePassword,
+} = useChangePassword();
+
+// --- Passkey Management (Refactored) ---
+const {
+  passkeys, // from authStore, made reactive via usePasskeyManagement
+  passkeysLoading: authStorePasskeysLoading, // from authStore, alias to avoid conflict if template uses 'passkeysLoading' for registration
+  passkeyRegistrationLoading: passkeyLoading, // Aliased for template compatibility
+  passkeyMessage,
+  passkeySuccess,
+  passkeyDeleteLoadingStates,
+  passkeyDeleteError,
+  editingPasskeyId,
+  editingPasskeyName,
+  passkeyEditLoadingStates,
+  handleRegisterNewPasskey,
+  startEditPasskeyName,
+  cancelEditPasskeyName,
+  savePasskeyName,
+  handleDeletePasskey,
+  formatDate, // formatDate for passkeys section
+} = usePasskeyManagement();
+
+// --- 2FA (Refactored) ---
+const {
+  twoFactorEnabled,
+  twoFactorLoading,
+  twoFactorMessage,
+  twoFactorSuccess,
+  setupData,
+  verificationCode,
+  disablePassword,
+  isSettingUp2FA,
+  // checkTwoFactorStatus, // onMounted will call this
+  handleSetup2FA,
+  handleVerifyAndActivate2FA,
+  handleDisable2FA,
+  cancelSetup,
+} = useTwoFactorAuth();
+
+// --- CAPTCHA Settings (Refactored) ---
+const {
+  captchaForm,
+  captchaLoading,
+  captchaMessage,
+  captchaSuccess,
+  handleUpdateCaptchaSettings,
+} = useCaptchaSettings();
+
+// --- IP Whitelist (Refactored) ---
+const {
+  ipWhitelistInput,
+  ipWhitelistLoading,
+  ipWhitelistMessage,
+  ipWhitelistSuccess,
+  handleUpdateIpWhitelist,
+} = useIpWhitelist();
+
+// --- IP Blacklist (Refactored) ---
+const {
+  ipBlacklistEnabled,
+  handleUpdateIpBlacklistEnabled,
+  blacklistSettingsForm,
+  blacklistSettingsLoading,
+  blacklistSettingsMessage,
+  blacklistSettingsSuccess,
+  handleUpdateBlacklistSettings,
+  ipBlacklist,
+  blacklistToDeleteIp,
+  blacklistDeleteLoading,
+  blacklistDeleteError,
+  handleDeleteIp, // Exposed as it's used in the template
+} = useIpBlacklist();
+
+// --- Version Check (Refactored) ---
+const {
+  appVersion, // Now from useVersionCheck
+  latestVersion,
+  isCheckingVersion,
+  versionCheckError,
+  isUpdateAvailable,
+  checkLatestVersion, // Function to check version
+} = useVersionCheck();
+
+// --- Workspace Settings (Refactored) ---
+const {
+  popupEditorEnabled,
+  popupEditorLoading,
+  popupEditorMessage,
+  popupEditorSuccess,
+  handleUpdatePopupEditorSetting,
+  shareTabsEnabled,
+  shareTabsLoading,
+  shareTabsMessage,
+  shareTabsSuccess,
+  handleUpdateShareTabsSetting,
+  autoCopyEnabled,
+  autoCopyLoading,
+  autoCopyMessage,
+  autoCopySuccess,
+  handleUpdateAutoCopySetting,
+  workspaceSidebarPersistentEnabled,
+  workspaceSidebarPersistentLoading,
+  workspaceSidebarPersistentMessage,
+  workspaceSidebarPersistentSuccess,
+  handleUpdateWorkspaceSidebarSetting,
+  commandInputSyncTargetLocal,
+  commandInputSyncLoading,
+  commandInputSyncMessage,
+  commandInputSyncSuccess,
+  handleUpdateCommandInputSyncTarget,
+  showConnectionTagsLocal,
+  showConnectionTagsLoading,
+  showConnectionTagsMessage,
+  showConnectionTagsSuccess,
+  handleUpdateShowConnectionTags,
+  showQuickCommandTagsLocal,
+  showQuickCommandTagsLoading,
+  showQuickCommandTagsMessage,
+  showQuickCommandTagsSuccess,
+  handleUpdateShowQuickCommandTags,
+  terminalScrollbackLimitLocal,
+  terminalScrollbackLimitLoading,
+  terminalScrollbackLimitMessage,
+  terminalScrollbackLimitSuccess,
+  handleUpdateTerminalScrollbackLimit,
+  fileManagerShowDeleteConfirmationLocal,
+  fileManagerShowDeleteConfirmationLoading,
+  fileManagerShowDeleteConfirmationMessage,
+  fileManagerShowDeleteConfirmationSuccess,
+  handleUpdateFileManagerDeleteConfirmation,
+} = useWorkspaceSettings();
+
+// --- Appearance Settings (Refactored) ---
+const {
+  openStyleCustomizer,
+} = useAppearanceSettings();
+
+// --- System Settings (Refactored) ---
+const {
+  selectedLanguage,
+  languageLoading,
+  languageMessage,
+  languageSuccess,
+  languageNames,
+  availableLocales,
+  handleUpdateLanguage,
+  selectedTimezone,
+  timezoneLoading,
+  timezoneMessage,
+  timezoneSuccess,
+  commonTimezones,
+  handleUpdateTimezone,
+  statusMonitorIntervalLocal,
+  statusMonitorLoading,
+  statusMonitorMessage,
+  statusMonitorSuccess,
+  handleUpdateStatusMonitorInterval,
+  dockerInterval,
+  dockerExpandDefault,
+  dockerSettingsLoading,
+  dockerSettingsMessage,
+  dockerSettingsSuccess,
+  handleUpdateDockerSettings,
+} = useSystemSettings();
+
+// --- Export Connections (Refactored) ---
+const {
+  exportConnectionsLoading,
+  exportConnectionsMessage,
+  exportConnectionsSuccess,
+  handleExportConnections,
+} = useExportConnections();
 
 // --- Reactive state from store ---
 // 使用 storeToRefs 获取响应式 getter，包括 language
@@ -781,1043 +947,16 @@ const {
     settings,
     isLoading: settingsLoading,
     error: settingsError,
-    showPopupFileEditorBoolean,
-    shareFileEditorTabsBoolean,
-    autoCopyOnSelectBoolean,
-    dockerDefaultExpandBoolean,
-    statusMonitorIntervalSecondsNumber,
     language: storeLanguage,
-    workspaceSidebarPersistentBoolean,
     captchaSettings, // <-- Import CAPTCHA settings state
-    commandInputSyncTarget, // NEW: Import command input sync target getter
-    ipBlacklistEnabledBoolean, // <-- Import IP Blacklist enabled getter
-    showConnectionTagsBoolean, // NEW: Import connection tag visibility getter
-    showQuickCommandTagsBoolean, // NEW: Import quick command tag visibility getter
-    terminalScrollbackLimitNumber, // NEW: Import terminal scrollback limit getter
-    fileManagerShowDeleteConfirmationBoolean, // NEW: Import file manager delete confirmation getter
 } = storeToRefs(settingsStore);
 
-const { passkeys, passkeysLoading } = storeToRefs(authStore); // Import passkey state
 
 
-// --- Local state for forms ---
-const ipWhitelistInput = ref('');
-// 使用 store 的 language getter 初始化 selectedLanguage
-const selectedLanguage = ref<string>(storeLanguage.value); // 改为 string 类型以支持动态语言
-// 可选：创建一个语言名称映射
-const languageNames: Record<string, string> = {
-  'en-US': 'English', // 更新为 en-US
-  'zh-CN': '中文',
-  'ja-JP': '日本語', // 更新为 ja-JP (如果您的文件名是 ja-JP.json)
-  // Add more languages here as needed
-};
-const blacklistSettingsForm = reactive({ // Renamed to avoid conflict with store state name
-    maxLoginAttempts: '5', // 初始值将在 watcher 中被 store 值覆盖
-    loginBanDuration: '300', // 初始值将在 watcher 中被 store 值覆盖
-});
-const popupEditorEnabled = ref(true); // 本地状态，用于 v-model
-const workspaceSidebarPersistentEnabled = ref(false); // 侧边栏固定设置的本地状态
-const commandInputSyncTargetLocal = ref<'none' | 'quickCommands' | 'commandHistory'>('none'); // NEW: Local state for command input sync target
-const ipBlacklistEnabled = ref(true); // <-- Local state for IP Blacklist switch
-const showConnectionTagsLocal = ref(true); // NEW: Local state for connection tags switch
-const showQuickCommandTagsLocal = ref(true); // NEW: Local state for quick command tags switch
-const terminalScrollbackLimitLocal = ref<number | null>(null); // NEW: Local state for terminal scrollback limit input (allow null for empty input)
-const fileManagerShowDeleteConfirmationLocal = ref(true); // NEW: Local state for file manager delete confirmation
- 
- // --- Local UI feedback state ---
-const ipWhitelistLoading = ref(false);
-const ipWhitelistMessage = ref('');
-const ipWhitelistSuccess = ref(false);
-const languageLoading = ref(false);
-const languageMessage = ref('');
-const languageSuccess = ref(false);
-const blacklistSettingsLoading = ref(false);
-const blacklistSettingsMessage = ref('');
-const blacklistSettingsSuccess = ref(false);
-// Removed ipBlacklistEnabledLoading, ipBlacklistEnabledMessage, ipBlacklistEnabledSuccess refs
-
-
-const popupEditorLoading = ref(false);
-const popupEditorMessage = ref('');
-const popupEditorSuccess = ref(false);
-const shareTabsEnabled = ref(true); // 本地状态，用于共享标签页 v-model
-const shareTabsLoading = ref(false);
-const shareTabsMessage = ref('');
-const shareTabsSuccess = ref(false);
-const autoCopyEnabled = ref(false); // 本地状态，用于选中即复制 v-model
-const autoCopyLoading = ref(false);
-const autoCopyMessage = ref('');
-const autoCopySuccess = ref(false);
-const dockerInterval = ref(2); // 本地状态，用于 Docker 刷新间隔 v-model
-const dockerExpandDefault = ref(false); // 本地状态，用于 Docker 默认展开 v-model
-const dockerSettingsLoading = ref(false);
-const dockerSettingsMessage = ref('');
-const dockerSettingsSuccess = ref(false);
-const statusMonitorIntervalLocal = ref(3); // 本地状态，用于状态监控间隔 v-model
-const statusMonitorLoading = ref(false);
-const statusMonitorMessage = ref('');
-const statusMonitorSuccess = ref(false);
-const workspaceSidebarPersistentLoading = ref(false); // 新增
-const workspaceSidebarPersistentMessage = ref(''); // 新增
-const workspaceSidebarPersistentSuccess = ref(false); // 新增
-const commandInputSyncLoading = ref(false); // NEW
-const commandInputSyncMessage = ref(''); // NEW
-const commandInputSyncSuccess = ref(false); // NEW
-const selectedTimezone = ref('UTC'); // 本地状态，用于时区 v-model
-const timezoneLoading = ref(false);
-const timezoneMessage = ref('');
-const timezoneSuccess = ref(false);
-const showConnectionTagsLoading = ref(false); // NEW
-const showConnectionTagsMessage = ref(''); // NEW
-const showConnectionTagsSuccess = ref(false); // NEW
-const showQuickCommandTagsLoading = ref(false); // NEW
-const showQuickCommandTagsMessage = ref(''); // NEW
-const showQuickCommandTagsSuccess = ref(false); // NEW
-const terminalScrollbackLimitLoading = ref(false); // NEW
-const terminalScrollbackLimitMessage = ref(''); // NEW
-const terminalScrollbackLimitSuccess = ref(false); // NEW
-const fileManagerShowDeleteConfirmationLoading = ref(false); // NEW
-const fileManagerShowDeleteConfirmationMessage = ref(''); // NEW
-const fileManagerShowDeleteConfirmationSuccess = ref(false); // NEW
-
-// CAPTCHA Form State
-const captchaForm = reactive<UpdateCaptchaSettingsDto>({ // Use reactive for the form object
-    enabled: false,
-    provider: 'none',
-    hcaptchaSiteKey: '',
-    hcaptchaSecretKey: '',
-    recaptchaSiteKey: '',
-    recaptchaSecretKey: '',
-});
-const captchaLoading = ref(false);
-const captchaMessage = ref('');
-const captchaSuccess = ref(false);
-
-// --- Export Connections State ---
-const exportConnectionsLoading = ref(false);
-const exportConnectionsMessage = ref('');
-const exportConnectionsSuccess = ref(false);
-
-// --- Passkey State ---
-const passkeyLoading = ref(false); // For registering new passkey
-const passkeyMessage = ref(''); // General messages for passkey operations (register, delete, edit name)
-const passkeySuccess = ref(false); // Success status for general passkey operations
-const passkeyDeleteLoadingStates = reactive<Record<string, boolean>>({});
-const passkeyDeleteError = ref<string | null>(null); // Specific error for delete operation
-
-// State for editing passkey name
-const editingPasskeyId = ref<string | null>(null);
-const editingPasskeyName = ref('');
-const passkeyEditLoadingStates = reactive<Record<string, boolean>>({});
-// passkeyMessage and passkeySuccess can be reused for edit name feedback.
-// const passkeyEditError = ref<string | null>(null); // Or use a specific error ref if needed
-
-// 提供一些常用的时区供选择
-const commonTimezones = ref([
-  'UTC',
-  'Etc/GMT+12', 'Pacific/Midway', 'Pacific/Honolulu', 'America/Anchorage',
-  'America/Los_Angeles', 'America/Denver', 'America/Chicago', 'America/New_York',
-  'America/Caracas', 'America/Halifax', 'America/Sao_Paulo', 'Atlantic/Azores',
-  'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
-  'Asia/Dubai', 'Asia/Karachi', 'Asia/Dhaka', 'Asia/Bangkok',
-  'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
-  'Etc/GMT-14'
-]);
-
-// --- Watcher to sync local form state with store state ---
-watch(settings, (newSettings, oldSettings) => {
-  // Initialize only if settings were previously null or undefined
-  const isInitialLoad = !oldSettings;
-
-  ipWhitelistInput.value = newSettings.ipWhitelist || '';
-  // selectedLanguage.value = newSettings.language || 'en'; // <-- 移除这一行，selectedLanguage 现在由 v-model 更新
-  blacklistSettingsForm.maxLoginAttempts = newSettings.maxLoginAttempts || '5';
-  blacklistSettingsForm.loginBanDuration = newSettings.loginBanDuration || '300';
-
-  // 始终将本地布尔状态与 store 的布尔 getter 同步 (除了 language)
-  popupEditorEnabled.value = showPopupFileEditorBoolean.value;
-  shareTabsEnabled.value = shareFileEditorTabsBoolean.value;
-  autoCopyEnabled.value = autoCopyOnSelectBoolean.value; // 同步选中即复制状态
-  dockerInterval.value = parseInt(newSettings.dockerStatusIntervalSeconds || '2', 10); // 同步 Docker 间隔
-  dockerExpandDefault.value = dockerDefaultExpandBoolean.value; // 同步 Docker 默认展开状态
-  statusMonitorIntervalLocal.value = statusMonitorIntervalSecondsNumber.value; // 同步状态监控间隔
-  workspaceSidebarPersistentEnabled.value = workspaceSidebarPersistentBoolean.value; // 同步侧边栏固定设置
-  commandInputSyncTargetLocal.value = commandInputSyncTarget.value; // NEW: Sync command input sync target
-  selectedTimezone.value = newSettings.timezone || 'UTC'; // 同步时区设置
-  ipBlacklistEnabled.value = ipBlacklistEnabledBoolean.value; // <-- Sync IP Blacklist enabled state
-  showConnectionTagsLocal.value = showConnectionTagsBoolean.value; // NEW: Sync connection tags state
-  showQuickCommandTagsLocal.value = showQuickCommandTagsBoolean.value; // NEW: Sync quick command tags state
-  // NEW: Directly sync terminal scrollback limit from store getter to local state
-  terminalScrollbackLimitLocal.value = terminalScrollbackLimitNumber.value;
-  // NEW: Sync file manager delete confirmation
-  fileManagerShowDeleteConfirmationLocal.value = fileManagerShowDeleteConfirmationBoolean.value;
- 
-}, { deep: true, immediate: true }); // immediate: true to run on initial load
-
-// Watcher for CAPTCHA settings
-watch(captchaSettings, (newCaptchaSettings) => {
-    if (newCaptchaSettings) {
-        captchaForm.enabled = newCaptchaSettings.enabled;
-        captchaForm.provider = newCaptchaSettings.provider;
-        captchaForm.hcaptchaSiteKey = newCaptchaSettings.hcaptchaSiteKey || '';
-        captchaForm.hcaptchaSecretKey = newCaptchaSettings.hcaptchaSecretKey || ''; // Keep secret keys local
-        captchaForm.recaptchaSiteKey = newCaptchaSettings.recaptchaSiteKey || '';
-        captchaForm.recaptchaSecretKey = newCaptchaSettings.recaptchaSecretKey || ''; // Keep secret keys local
-    } else {
-        // Reset form if settings are null (e.g., on error)
-        captchaForm.enabled = false;
-        captchaForm.provider = 'none';
-        captchaForm.hcaptchaSiteKey = '';
-        captchaForm.hcaptchaSecretKey = '';
-        captchaForm.recaptchaSiteKey = '';
-        captchaForm.recaptchaSecretKey = '';
-    }
-}, { immediate: true }); // immediate: true to run on initial load
-
-
-// Watcher specifically for terminalScrollbackLimitNumber is redundant if the main settings watcher handles it.
-// Let's remove the specific watcher for simplicity, the main one should suffice.
-
-// --- Popup Editor setting method ---
-const handleUpdatePopupEditorSetting = async () => {
-    popupEditorLoading.value = true;
-    popupEditorMessage.value = '';
-    popupEditorSuccess.value = false;
-    try {
-        // 将布尔值转换为字符串 'true' 或 'false' 来存储
-        const valueToSave = popupEditorEnabled.value ? 'true' : 'false';
-        await settingsStore.updateSetting('showPopupFileEditor', valueToSave);
-        popupEditorMessage.value = t('settings.popupEditor.success.saved'); // 需要添加翻译
-        popupEditorSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新弹窗编辑器设置失败:', error);
-        popupEditorMessage.value = error.message || t('settings.popupEditor.error.saveFailed'); // 需要添加翻译
-        popupEditorSuccess.value = false;
-        // 保存失败时，不需要手动恢复，v-model 应该保持用户最后的操作状态
-        // popupEditorEnabled.value = showPopupFileEditorBoolean.value; // <-- 移除恢复逻辑
-    } finally {
-        popupEditorLoading.value = false;
-    }
-};
-
-// --- Share Editor Tabs setting method ---
-const handleUpdateShareTabsSetting = async () => {
-    shareTabsLoading.value = true;
-    shareTabsMessage.value = '';
-    shareTabsSuccess.value = false;
-    try {
-        const valueToSave = shareTabsEnabled.value ? 'true' : 'false';
-        await settingsStore.updateSetting('shareFileEditorTabs', valueToSave);
-        shareTabsMessage.value = t('settings.shareEditorTabs.success.saved'); // 需要添加翻译
-        shareTabsSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新共享编辑器标签页设置失败:', error);
-        shareTabsMessage.value = error.message || t('settings.shareEditorTabs.error.saveFailed'); // 需要添加翻译
-        shareTabsSuccess.value = false;
-        // 保存失败时，不需要手动恢复
-        // shareTabsEnabled.value = shareFileEditorTabsBoolean.value; // <-- 移除恢复逻辑
-    } finally {
-        shareTabsLoading.value = false;
-    }
-};
-
-// --- Auto Copy on Select setting method ---
-const handleUpdateAutoCopySetting = async () => {
-    autoCopyLoading.value = true;
-    autoCopyMessage.value = '';
-    autoCopySuccess.value = false;
-    try {
-        const valueToSave = autoCopyEnabled.value ? 'true' : 'false';
-        await settingsStore.updateSetting('autoCopyOnSelect', valueToSave);
-        autoCopyMessage.value = t('settings.autoCopyOnSelect.success.saved'); // 需要添加翻译
-        autoCopySuccess.value = true;
-    } catch (error: any) {
-        console.error('更新自动复制设置失败:', error);
-        autoCopyMessage.value = error.message || t('settings.autoCopyOnSelect.error.saveFailed'); // 需要添加翻译
-        autoCopySuccess.value = false;
-    } finally {
-        autoCopyLoading.value = false;
-    }
-};
-
-// --- Docker settings method ---
-const handleUpdateDockerSettings = async () => {
-    dockerSettingsLoading.value = true;
-    dockerSettingsMessage.value = '';
-    dockerSettingsSuccess.value = false;
-    try {
-        const intervalValue = dockerInterval.value;
-        if (isNaN(intervalValue) || intervalValue < 1) {
-            throw new Error(t('settings.docker.error.invalidInterval')); // 需要添加翻译
-        }
-        await settingsStore.updateMultipleSettings({
-            dockerStatusIntervalSeconds: String(intervalValue), // 保存为字符串
-            dockerDefaultExpand: dockerExpandDefault.value ? 'true' : 'false' // 保存为字符串 'true'/'false'
-        });
-        dockerSettingsMessage.value = t('settings.docker.success.saved'); // 需要添加翻译
-        dockerSettingsSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新 Docker 设置失败:', error);
-        dockerSettingsMessage.value = error.message || t('settings.docker.error.saveFailed'); // 需要添加翻译
-        dockerSettingsSuccess.value = false;
-    } finally {
-        dockerSettingsLoading.value = false;
-    }
-};
-
-// --- Status Monitor interval setting method ---
-const handleUpdateStatusMonitorInterval = async () => {
-    statusMonitorLoading.value = true;
-    statusMonitorMessage.value = '';
-    statusMonitorSuccess.value = false;
-    try {
-        const intervalValue = statusMonitorIntervalLocal.value;
-        if (isNaN(intervalValue) || intervalValue < 1 || !Number.isInteger(intervalValue)) {
-            throw new Error(t('settings.statusMonitor.error.invalidInterval')); // 需要添加翻译
-        }
-        await settingsStore.updateSetting('statusMonitorIntervalSeconds', String(intervalValue)); // 保存为字符串
-        statusMonitorMessage.value = t('settings.statusMonitor.success.saved'); // 需要添加翻译
-        statusMonitorSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新状态监控间隔失败:', error);
-        statusMonitorMessage.value = error.message || t('settings.statusMonitor.error.saveFailed'); // 需要添加翻译
-        statusMonitorSuccess.value = false;
-    } finally {
-        statusMonitorLoading.value = false;
-    }
-};
-
-// --- Workspace Sidebar Persistent setting method ---
-const handleUpdateWorkspaceSidebarSetting = async () => {
-    workspaceSidebarPersistentLoading.value = true;
-    workspaceSidebarPersistentMessage.value = '';
-    workspaceSidebarPersistentSuccess.value = false;
-    try {
-        const valueToSave = workspaceSidebarPersistentEnabled.value ? 'true' : 'false';
-        await settingsStore.updateSetting('workspaceSidebarPersistent', valueToSave);
-        workspaceSidebarPersistentMessage.value = t('settings.workspace.success.sidebarPersistentSaved'); // 需要添加翻译
-        workspaceSidebarPersistentSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新侧边栏固定设置失败:', error);
-        workspaceSidebarPersistentMessage.value = error.message || t('settings.workspace.error.sidebarPersistentSaveFailed'); // 需要添加翻译
-        workspaceSidebarPersistentSuccess.value = false;
-    } finally {
-        workspaceSidebarPersistentLoading.value = false;
-    }
-};
-
-// --- Command Input Sync Target setting method ---
-const handleUpdateCommandInputSyncTarget = async () => {
-    commandInputSyncLoading.value = true;
-    commandInputSyncMessage.value = '';
-    commandInputSyncSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('commandInputSyncTarget', commandInputSyncTargetLocal.value);
-        commandInputSyncMessage.value = t('settings.commandInputSync.success.saved', '同步目标已保存'); // 需要添加翻译
-        commandInputSyncSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新命令输入同步目标失败:', error);
-        commandInputSyncMessage.value = error.message || t('settings.commandInputSync.error.saveFailed', '保存同步目标失败'); // 需要添加翻译
-        commandInputSyncSuccess.value = false;
-    } finally {
-        commandInputSyncLoading.value = false;
-    }
-};
-
-// --- Timezone setting method ---
-const handleUpdateTimezone = async () => {
-    timezoneLoading.value = true;
-    timezoneMessage.value = '';
-    timezoneSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('timezone', selectedTimezone.value);
-        timezoneMessage.value = t('settings.timezone.success.saved');
-        timezoneSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新时区设置失败:', error);
-        timezoneMessage.value = error.message || t('settings.timezone.error.saveFailed');
-        timezoneSuccess.value = false;
-    } finally {
-        timezoneLoading.value = false;
-    }
-};
-
-// --- Show Connection Tags setting method ---
-const handleUpdateShowConnectionTags = async () => {
-    showConnectionTagsLoading.value = true;
-    showConnectionTagsMessage.value = '';
-    showConnectionTagsSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('showConnectionTags', showConnectionTagsLocal.value);
-        showConnectionTagsMessage.value = t('settings.workspace.success.showConnectionTagsSaved', '连接标签显示设置已保存'); // 需要添加翻译
-        showConnectionTagsSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新显示连接标签设置失败:', error);
-        showConnectionTagsMessage.value = error.message || t('settings.workspace.error.showConnectionTagsSaveFailed', '保存连接标签显示设置失败'); // 需要添加翻译
-        showConnectionTagsSuccess.value = false;
-        // No need to revert local state on failure with explicit save button
-    } finally {
-        showConnectionTagsLoading.value = false;
-        // Keep message visible until next save attempt
-    }
-};
-
-// --- Show Quick Command Tags setting method ---
-const handleUpdateShowQuickCommandTags = async () => {
-    showQuickCommandTagsLoading.value = true;
-    showQuickCommandTagsMessage.value = '';
-    showQuickCommandTagsSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('showQuickCommandTags', showQuickCommandTagsLocal.value);
-        showQuickCommandTagsMessage.value = t('settings.workspace.success.showQuickCommandTagsSaved', '快捷指令标签显示设置已保存'); // 需要添加翻译
-        showQuickCommandTagsSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新显示快捷指令标签设置失败:', error);
-        showQuickCommandTagsMessage.value = error.message || t('settings.workspace.error.showQuickCommandTagsSaveFailed', '保存快捷指令标签显示设置失败'); // 需要添加翻译
-        showQuickCommandTagsSuccess.value = false;
-        // No need to revert local state on failure with explicit save button
-    } finally {
-        showQuickCommandTagsLoading.value = false;
-        // Keep message visible until next save attempt
-    }
-};
-
-// --- Terminal Scrollback Limit setting method ---
-const handleUpdateTerminalScrollbackLimit = async () => {
-    terminalScrollbackLimitLoading.value = true;
-    terminalScrollbackLimitMessage.value = '';
-    terminalScrollbackLimitSuccess.value = false;
-    try {
-        const limitValue = terminalScrollbackLimitLocal.value;
-
-        // Validate: must be a non-negative integer or null/undefined (treat null/undefined as default 5000)
-        if (limitValue !== null && limitValue !== undefined && (isNaN(limitValue) || !Number.isInteger(limitValue) || limitValue < 0)) {
-            throw new Error(t('settings.terminalScrollback.error.invalidInput', '请输入一个有效的非负整数。'));
-        }
-
-        // If input is empty (null/undefined), save the default value '5000'. Otherwise, save the entered number as string.
-        const valueToSave = (limitValue === null || limitValue === undefined) ? '5000' : String(limitValue);
-
-        await settingsStore.updateSetting('terminalScrollbackLimit', valueToSave);
-        terminalScrollbackLimitMessage.value = t('settings.terminalScrollback.success.saved', '终端回滚行数设置已保存。');
-        terminalScrollbackLimitSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新终端回滚行数设置失败:', error);
-        terminalScrollbackLimitMessage.value = error.message || t('settings.terminalScrollback.error.saveFailed', '保存终端回滚行数设置失败。');
-        terminalScrollbackLimitSuccess.value = false;
-    } finally {
-        terminalScrollbackLimitLoading.value = false;
-    }
-  };
-   
-  // --- File Manager Delete Confirmation setting method ---
-  const handleUpdateFileManagerDeleteConfirmation = async () => {
-      fileManagerShowDeleteConfirmationLoading.value = true;
-      fileManagerShowDeleteConfirmationMessage.value = '';
-      fileManagerShowDeleteConfirmationSuccess.value = false;
-      try {
-          const valueToSave = fileManagerShowDeleteConfirmationLocal.value ? 'true' : 'false';
-          await settingsStore.updateSetting('fileManagerShowDeleteConfirmation', valueToSave);
-          fileManagerShowDeleteConfirmationMessage.value = t('settings.workspace.fileManagerDeleteConfirmSuccess', '文件管理器删除确认设置已保存。'); // 需要添加翻译
-          fileManagerShowDeleteConfirmationSuccess.value = true;
-      } catch (error: any) {
-          console.error('更新文件管理器删除确认设置失败:', error);
-          fileManagerShowDeleteConfirmationMessage.value = error.message || t('settings.workspace.fileManagerDeleteConfirmError', '保存文件管理器删除确认设置失败。'); // 需要添加翻译
-          fileManagerShowDeleteConfirmationSuccess.value = false;
-      } finally {
-          fileManagerShowDeleteConfirmationLoading.value = false;
-      }
-  };
-  
-// --- Export Connections Method ---
-const handleExportConnections = async () => {
-  exportConnectionsLoading.value = true;
-  exportConnectionsMessage.value = '';
-  exportConnectionsSuccess.value = false;
-  try {
-    const response = await apiClient.get('/settings/export-connections', { // Corrected API path
-      responseType: 'blob',
-    });
-
-    let filename = 'nexus_connections_export.zip';
-    const disposition = response.headers['content-disposition'];
-    if (disposition && disposition.includes('attachment')) {
-      const filenameRegex = /filename[^;=\n]*=(?:(['"])(.*?)\1|([^;\n]*))/;
-      const matches = filenameRegex.exec(disposition);
-      if (matches != null && (matches[2] || matches[3])) {
-        filename = matches[2] || matches[3]; // Use captured group 2 (quoted) or 3 (unquoted)
-      }
-    }
-
-    const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/zip' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    exportConnectionsMessage.value = t('settings.exportConnections.success', '导出成功。文件已开始下载。');
-    exportConnectionsSuccess.value = true;
-  } catch (error: any) {
-    console.error('导出连接失败:', error);
-    let message = t('settings.exportConnections.error', '导出连接时发生错误。');
-    if (isAxiosError(error) && error.response && error.response.data) {
-        if (error.response.data instanceof Blob && error.response.data.type === 'application/json') {
-            try {
-                const errorJson = JSON.parse(await error.response.data.text());
-                message = errorJson.message || message;
-            } catch (e) { /* Blob not valid JSON */ }
-        } else if (typeof error.response.data === 'string') {
-            message = error.response.data;
-        } else if (error.response.data && typeof error.response.data.message === 'string') {
-            message = error.response.data.message;
-        }
-    } else if (error.message) {
-        message = error.message;
-    }
-    exportConnectionsMessage.value = message;
-    exportConnectionsSuccess.value = false;
-  } finally {
-    exportConnectionsLoading.value = false;
-  }
-};
-
-// --- 外观设置 ---
-  const openStyleCustomizer = () => {
-    appearanceStore.toggleStyleCustomizer(true);
-};
-
-// --- Passkey Methods ---
-const handleRegisterNewPasskey = async () => {
-  passkeyLoading.value = true;
-  passkeyMessage.value = '';
-  passkeySuccess.value = false;
-
-  const username = authStore.user?.username;
-  if (!username) {
-    passkeyMessage.value = t('settings.passkey.error.userNotLoggedIn');
-    passkeyLoading.value = false;
-    return;
-  }
-
-  try {
-    // 1. Get registration options from the server
-    const registrationOptions = await authStore.getPasskeyRegistrationOptions(username);
-
-    // 2. Start WebAuthn registration ceremony
-    const registrationResult = await startRegistration(registrationOptions);
-
-    // 3. Send registration result to the server
-    await authStore.registerPasskey(username, registrationResult);
-
-    passkeyMessage.value = t('settings.passkey.success.registered');
-    passkeySuccess.value = true;
-    await authStore.fetchPasskeys(); // Refresh passkey list
-  } catch (error: any) {
-    console.error('Passkey 注册失败:', error);
-    // Check if the error is from startRegistration (e.g., user cancellation)
-    if (error.name === 'InvalidStateError' || error.message.includes('cancelled')) {
-        passkeyMessage.value = t('settings.passkey.error.registrationCancelled');
-    } else {
-        passkeyMessage.value = error.response?.data?.message || error.message || t('settings.passkey.error.registrationFailed');
-    }
-    passkeySuccess.value = false;
-  } finally {
-    passkeyLoading.value = false;
-  }
-};
-
-const startEditPasskeyName = (credentialID: string, currentName: string) => {
-  editingPasskeyId.value = credentialID;
-  editingPasskeyName.value = currentName;
-  passkeyMessage.value = ''; // Clear previous messages
-  passkeySuccess.value = false;
-};
-
-const cancelEditPasskeyName = () => {
-  editingPasskeyId.value = null;
-  editingPasskeyName.value = '';
-};
-
-const savePasskeyName = async (credentialID: string) => {
-  if (!editingPasskeyName.value.trim()) {
-    passkeyMessage.value = t('settings.passkey.error.nameRequired', 'Passkey 名称不能为空。');
-    passkeySuccess.value = false;
-    return;
-  }
-  passkeyEditLoadingStates[credentialID] = true;
-  passkeyMessage.value = '';
-  passkeySuccess.value = false;
-  try {
-    // Предполагается, что в authStore есть метод updatePasskeyName
-    await authStore.updatePasskeyName(credentialID, editingPasskeyName.value.trim());
-    passkeyMessage.value = t('settings.passkey.success.nameUpdated');
-    passkeySuccess.value = true;
-    await authStore.fetchPasskeys(); // Обновить список для отображения нового имени
-    cancelEditPasskeyName(); // Сбросить состояние редактирования
-  } catch (error: any) {
-    console.error(`更新 Passkey ${credentialID} 名称失败:`, error);
-    passkeyMessage.value = error.message || t('settings.passkey.error.nameUpdateFailed', '更新 Passkey 名称失败。');
-    passkeySuccess.value = false;
-  } finally {
-    passkeyEditLoadingStates[credentialID] = false;
-  }
-};
- 
-const handleDeletePasskey = async (credentialID: string) => {
-  if (editingPasskeyId.value === credentialID) {
-    cancelEditPasskeyName(); // Cancel editing if the key being edited is deleted
-  }
-  if (!credentialID || typeof credentialID !== 'string') {
-    console.error('Attempted to delete a passkey with an invalid or undefined credentialID:', credentialID);
-    passkeyDeleteError.value = t('settings.passkey.error.deleteFailedInvalidId', '删除失败：无效的凭证 ID。'); // Add translation
-    return;
-  }
-  if (!confirm(t('settings.passkey.confirmDelete'))) return;
- 
-  passkeyDeleteLoadingStates[credentialID] = true;
-  passkeyDeleteError.value = null;
-  passkeyMessage.value = ''; // Clear previous general passkey messages
-  try {
-    await authStore.deletePasskey(credentialID);
-    passkeyMessage.value = t('settings.passkey.success.deleted');
-    passkeySuccess.value = true; // Use general success for feedback
-    // authStore.fetchPasskeys() will be called by deletePasskey if successful
-  } catch (error: any) {
-    console.error(`删除 Passkey ${credentialID} 失败:`, error);
-    passkeyDeleteError.value = error.message || t('settings.passkey.error.deleteFailedGeneral');
-    passkeySuccess.value = false;
-  } finally {
-    passkeyDeleteLoadingStates[credentialID] = false;
-  }
-};
-
-// --- Formatting function (kept in case other parts need it, can be removed if unused) ---
-const formatDate = (dateInput: string | number | Date | undefined): string => {
-    if (!dateInput) return t('statusMonitor.notAvailable');
-    try {
-        // If dateInput is a number, assume it's a Unix timestamp in seconds
-        if (typeof dateInput === 'number') {
-            const dateFromSeconds = new Date(dateInput * 1000);
-            if (!isNaN(dateFromSeconds.getTime())) {
-                return dateFromSeconds.toLocaleString();
-            }
-            // If conversion from seconds still results in an invalid date, return N/A
-            return t('statusMonitor.notAvailable');
-        }
-
-        // If dateInput is a string or Date object, try to parse it directly
-        const date = new Date(dateInput);
-        if (!isNaN(date.getTime())) {
-            return date.toLocaleString();
-        }
-
-        // If all parsing fails
-        return t('statusMonitor.notAvailable');
-    } catch (e) {
-        console.error("Error formatting date:", e);
-        return t('statusMonitor.notAvailable');
-    }
-};
-
-
-// --- Change Password state & methods --- (Keep as is)
-const currentPassword = ref('');
-const newPassword = ref('');
-const confirmPassword = ref('');
-const changePasswordLoading = ref(false);
-const changePasswordMessage = ref('');
-const changePasswordSuccess = ref(false);
-const handleChangePassword = async () => {
-  changePasswordMessage.value = '';
-  changePasswordSuccess.value = false;
-  if (newPassword.value !== confirmPassword.value) {
-    changePasswordMessage.value = t('settings.changePassword.error.passwordsDoNotMatch');
-    return;
-  }
-  changePasswordLoading.value = true;
-  try {
-    await authStore.changePassword(currentPassword.value, newPassword.value);
-    changePasswordMessage.value = t('settings.changePassword.success');
-    changePasswordSuccess.value = true;
-    currentPassword.value = '';
-    newPassword.value = '';
-    confirmPassword.value = '';
-  } catch (error: any) {
-    console.error('修改密码失败:', error);
-    changePasswordMessage.value = error.message || t('settings.changePassword.error.generic');
-    changePasswordSuccess.value = false;
-  } finally {
-    changePasswordLoading.value = false;
-  }
-};
-
-// --- 2FA state & methods --- (Keep as is)
-const twoFactorEnabled = ref(false);
-const twoFactorLoading = ref(false);
-const twoFactorMessage = ref('');
-const twoFactorSuccess = ref(false);
-const setupData = ref<{ secret: string; qrCodeUrl: string } | null>(null);
-const verificationCode = ref('');
-const disablePassword = ref('');
-const isSettingUp2FA = computed(() => setupData.value !== null);
-const checkTwoFactorStatus = async () => {
-  await authStore.checkAuthStatus();
-  twoFactorEnabled.value = authStore.user?.isTwoFactorEnabled ?? false;
-};
-const handleSetup2FA = async () => {
-  twoFactorMessage.value = ''; twoFactorSuccess.value = false; twoFactorLoading.value = true;
-  setupData.value = null; verificationCode.value = '';
-  try {
-    const response = await apiClient.post<{ secret: string; qrCodeUrl: string }>('/auth/2fa/setup'); // 使用 apiClient
-    setupData.value = response.data;
-  } catch (error: any) {
-    console.error('开始设置 2FA 失败:', error);
-    twoFactorMessage.value = error.response?.data?.message || t('settings.twoFactor.error.setupFailed');
-  } finally { twoFactorLoading.value = false; }
-};
-const handleVerifyAndActivate2FA = async () => {
-  if (!setupData.value || !verificationCode.value) {
-    twoFactorMessage.value = t('settings.twoFactor.error.codeRequired'); return;
-  }
-  twoFactorMessage.value = ''; twoFactorSuccess.value = false; twoFactorLoading.value = true;
-  try {
-    await apiClient.post('/auth/2fa/verify', { token: verificationCode.value }); // 使用 apiClient
-    twoFactorMessage.value = t('settings.twoFactor.success.activated');
-    twoFactorSuccess.value = true; twoFactorEnabled.value = true;
-    setupData.value = null; verificationCode.value = '';
-  } catch (error: any) {
-    console.error('验证并激活 2FA 失败:', error);
-    twoFactorMessage.value = error.response?.data?.message || t('settings.twoFactor.error.verificationFailed');
-  } finally { twoFactorLoading.value = false; }
-};
-const handleDisable2FA = async () => {
-  if (!disablePassword.value) {
-    twoFactorMessage.value = t('settings.twoFactor.error.passwordRequiredForDisable'); return;
-  }
-  twoFactorMessage.value = ''; twoFactorSuccess.value = false; twoFactorLoading.value = true;
-  try {
-    await apiClient.delete('/auth/2fa', { data: { password: disablePassword.value } }); // 使用 apiClient
-    twoFactorMessage.value = t('settings.twoFactor.success.disabled');
-    twoFactorSuccess.value = true; twoFactorEnabled.value = false;
-    disablePassword.value = '';
-  } catch (error: any) {
-    console.error('禁用 2FA 失败:', error);
-    twoFactorMessage.value = error.response?.data?.message || t('settings.twoFactor.error.disableFailed');
-  } finally { twoFactorLoading.value = false; }
-};
-const cancelSetup = () => {
-    setupData.value = null; verificationCode.value = ''; twoFactorMessage.value = '';
-};
-
-// --- Language settings method --- (Refactored)
-const handleUpdateLanguage = async () => {
-    languageLoading.value = true;
-    languageMessage.value = '';
-    languageSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('language', selectedLanguage.value);
-        languageMessage.value = t('settings.language.success.saved');
-        languageSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新语言设置失败:', error);
-        languageMessage.value = error.message || t('settings.language.error.saveFailed');
-        languageSuccess.value = false;
-    } finally {
-        languageLoading.value = false;
-    }
-};
-
-// --- IP Whitelist method --- (Refactored)
-const handleUpdateIpWhitelist = async () => {
-    ipWhitelistLoading.value = true;
-    ipWhitelistMessage.value = '';
-    ipWhitelistSuccess.value = false;
-    try {
-        await settingsStore.updateSetting('ipWhitelist', ipWhitelistInput.value.trim());
-        ipWhitelistMessage.value = t('settings.ipWhitelist.success.saved');
-        ipWhitelistSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新 IP 白名单失败:', error);
-        ipWhitelistMessage.value = error.message || t('settings.ipWhitelist.error.saveFailed');
-        ipWhitelistSuccess.value = false;
-    } finally {
-        ipWhitelistLoading.value = false;
-    }
-};
-
-// --- IP Blacklist state & methods --- (Keep fetch/delete as is, update uses store)
-const ipBlacklist = reactive({
-    entries: [] as any[],
-    total: 0,
-    loading: false,
-    error: null as string | null,
-    currentPage: 1,
-    limit: 10,
-});
-const blacklistToDeleteIp = ref<string | null>(null);
-const blacklistDeleteLoading = ref(false);
-const blacklistDeleteError = ref<string | null>(null);
-
-const fetchIpBlacklist = async (page = 1) => {
-    ipBlacklist.loading = true;
-    ipBlacklist.error = null;
-    const offset = (page - 1) * ipBlacklist.limit;
-    try {
-        // Assuming fetchIpBlacklist is still needed from authStore
-        const data = await authStore.fetchIpBlacklist(ipBlacklist.limit, offset);
-        ipBlacklist.entries = data.entries;
-        ipBlacklist.total = data.total;
-        ipBlacklist.currentPage = page;
-    } catch (error: any) {
-        ipBlacklist.error = error.message || t('settings.ipBlacklist.error.fetchFailed');
-    } finally {
-        ipBlacklist.loading = false;
-    }
-};
-
-const handleDeleteIp = async (ip: string) => {
-    blacklistToDeleteIp.value = ip;
-    if (confirm(t('settings.ipBlacklist.confirmRemoveIp', { ip }))) {
-        blacklistDeleteLoading.value = true;
-        blacklistDeleteError.value = null;
-        try {
-            // Assuming deleteIpFromBlacklist is still needed from authStore
-            await authStore.deleteIpFromBlacklist(ip);
-            await fetchIpBlacklist(ipBlacklist.currentPage);
-        } catch (error: any) {
-            blacklistDeleteError.value = error.message || t('settings.ipBlacklist.error.deleteFailed');
-        } finally {
-            blacklistDeleteLoading.value = false;
-            blacklistToDeleteIp.value = null;
-        }
-    } else {
-        blacklistToDeleteIp.value = null;
-    }
-};
-
-// Update Blacklist Config method (Refactored)
-const handleUpdateBlacklistSettings = async () => {
-    blacklistSettingsLoading.value = true;
-    blacklistSettingsMessage.value = '';
-    blacklistSettingsSuccess.value = false;
-    try {
-        const maxAttempts = parseInt(blacklistSettingsForm.maxLoginAttempts, 10);
-        const banDuration = parseInt(blacklistSettingsForm.loginBanDuration, 10);
-        if (isNaN(maxAttempts) || maxAttempts <= 0) {
-            throw new Error(t('settings.ipBlacklist.error.invalidMaxAttempts'));
-        }
-        if (isNaN(banDuration) || banDuration <= 0) {
-            throw new Error(t('settings.ipBlacklist.error.invalidBanDuration'));
-        }
-        await settingsStore.updateMultipleSettings({
-            maxLoginAttempts: blacklistSettingsForm.maxLoginAttempts,
-            loginBanDuration: blacklistSettingsForm.loginBanDuration,
-        });
-        blacklistSettingsMessage.value = t('settings.ipBlacklist.success.configUpdated');
-        blacklistSettingsSuccess.value = true;
-    } catch (error: any) {
-        console.error('更新黑名单配置失败:', error);
-        blacklistSettingsMessage.value = error.message || t('settings.ipBlacklist.error.updateConfigFailed');
-        blacklistSettingsSuccess.value = false;
-    } finally {
-        blacklistSettingsLoading.value = false;
-    }
-};
-
-// --- IP Blacklist Enable/Disable Method (Button Style) ---
-const handleUpdateIpBlacklistEnabled = async () => {
-   // Toggle local state immediately for instant UI feedback
-   const originalValue = ipBlacklistEnabled.value;
-   ipBlacklistEnabled.value = !ipBlacklistEnabled.value;
-
-   try {
-       const valueToSave = ipBlacklistEnabled.value ? 'true' : 'false';
-       await settingsStore.updateSetting('ipBlacklistEnabled', valueToSave);
-       // Save successful, no message needed for toggle switch
-       console.log('IP Blacklist enabled status saved:', valueToSave);
-   } catch (error: any) {
-       console.error('更新 IP 黑名单启用状态失败:', error);
-       // Optionally show error notification to user here
-       // Revert button state on failure
-       ipBlacklistEnabled.value = originalValue; // Revert to original value
-   }
-   // No loading/message state management needed
-};
-
-// --- CAPTCHA Settings Method ---
-const handleUpdateCaptchaSettings = async () => {
-    captchaLoading.value = true;
-    captchaMessage.value = '';
-    captchaSuccess.value = false;
-    try {
-        let needsVerification = false;
-        let providerForVerification: CaptchaProvider | null = null;
-        let siteKeyForVerification: string | undefined = undefined;
-        let secretKeyForVerification: string | undefined = undefined;
-
-        // 步骤 1: 确定是否需要验证
-        if (captchaForm.enabled && captchaForm.provider && captchaForm.provider !== 'none') {
-            const originalSettings = captchaSettings.value; // 从 store 获取的持久化设置
-
-            if (captchaForm.provider === 'hcaptcha') {
-                const originalSiteKeyValue = originalSettings?.hcaptchaSiteKey || '';
-                const currentSiteKeyValue = captchaForm.hcaptchaSiteKey || '';
-                const currentSecretKeyValue = captchaForm.hcaptchaSecretKey || ''; // 用户在表单中输入的新 secret
-
-                if (currentSiteKeyValue !== originalSiteKeyValue) { // 情况 A: 站点密钥已更改
-                    if (!currentSiteKeyValue || !currentSecretKeyValue) {
-                        captchaMessage.value = t('settings.captcha.error.hcaptchaKeysRequired');
-                        captchaSuccess.value = false;
-                        captchaLoading.value = false;
-                        return;
-                    }
-                    needsVerification = true;
-                    providerForVerification = 'hcaptcha';
-                    siteKeyForVerification = currentSiteKeyValue;
-                    secretKeyForVerification = currentSecretKeyValue;
-                } else if (currentSecretKeyValue) { // 情况 B: 站点密钥未更改，但用户输入了新的秘密密钥
-                     if (!currentSiteKeyValue) { // 确保站点密钥本身不为空
-                        captchaMessage.value = t('settings.captcha.error.hcaptchaKeysRequired');
-                        captchaSuccess.value = false;
-                        captchaLoading.value = false;
-                        return;
-                    }
-                    needsVerification = true;
-                    providerForVerification = 'hcaptcha';
-                    siteKeyForVerification = currentSiteKeyValue; // 使用当前的 (也是原始的) 站点密钥
-                    secretKeyForVerification = currentSecretKeyValue;
-                }
-                // 情况 C: 站点密钥未更改，且用户未输入新的秘密密钥 (currentSecretKeyValue is empty) -> needsVerification 保持 false
-            } else if (captchaForm.provider === 'recaptcha') {
-                const originalSiteKeyValue = originalSettings?.recaptchaSiteKey || '';
-                const currentSiteKeyValue = captchaForm.recaptchaSiteKey || '';
-                const currentSecretKeyValue = captchaForm.recaptchaSecretKey || '';
-
-                if (currentSiteKeyValue !== originalSiteKeyValue) { // 情况 A: 站点密钥已更改
-                    if (!currentSiteKeyValue || !currentSecretKeyValue) {
-                        captchaMessage.value = t('settings.captcha.error.recaptchaKeysRequired');
-                        captchaSuccess.value = false;
-                        captchaLoading.value = false;
-                        return;
-                    }
-                    needsVerification = true;
-                    providerForVerification = 'recaptcha';
-                    siteKeyForVerification = currentSiteKeyValue;
-                    secretKeyForVerification = currentSecretKeyValue;
-                } else if (currentSecretKeyValue) { // 情况 B: 站点密钥未更改，但用户输入了新的秘密密钥
-                    if (!currentSiteKeyValue) { // 确保站点密钥本身不为空
-                        captchaMessage.value = t('settings.captcha.error.recaptchaKeysRequired');
-                        captchaSuccess.value = false;
-                        captchaLoading.value = false;
-                        return;
-                    }
-                    needsVerification = true;
-                    providerForVerification = 'recaptcha';
-                    siteKeyForVerification = currentSiteKeyValue;
-                    secretKeyForVerification = currentSecretKeyValue;
-                }
-                // 情况 C: 站点密钥未更改，且用户未输入新的秘密密钥 -> needsVerification 保持 false
-            }
-        }
-
-        // 步骤 2: 如果需要，执行验证
-        if (needsVerification && providerForVerification && siteKeyForVerification && secretKeyForVerification) {
-            try {
-                await apiClient.post('/settings/captcha/verify', {
-                    provider: providerForVerification,
-                    siteKey: siteKeyForVerification,
-                    secretKey: secretKeyForVerification,
-                });
-                // 验证成功，可以继续
-            } catch (verifyError: any) {
-                console.error('CAPTCHA 验证失败:', verifyError);
-                captchaMessage.value = verifyError.response?.data?.message || verifyError.message || t('settings.captcha.error.verificationFailed');
-                captchaSuccess.value = false;
-                captchaLoading.value = false;
-                return; // 验证失败，不继续保存
-            }
-        }
-
-        // 步骤 3: 准备用于保存的 DTO
-        const dtoToSave: UpdateCaptchaSettingsDto = {
-            enabled: captchaForm.enabled,
-            provider: captchaForm.provider,
-            // Site keys 总是从表单获取
-            hcaptchaSiteKey: captchaForm.hcaptchaSiteKey || undefined,
-            recaptchaSiteKey: captchaForm.recaptchaSiteKey || undefined,
-            // Secret keys 仅在表单中提供时才包含
-            hcaptchaSecretKey: captchaForm.hcaptchaSecretKey || undefined,
-            recaptchaSecretKey: captchaForm.recaptchaSecretKey || undefined,
-        };
-        // 如果 captchaForm.provider 为 'none' 或 captchaForm.enabled 为 false,
-        // 后端应负责清除所有相关的 site/secret key。
-        // 如果表单中的 secret key 为空字符串，则发送 undefined，后端不应更新该特定 secret key。
-
-        // 步骤 4: 调用保存操作
-        await settingsStore.updateCaptchaSettings(dtoToSave);
-        captchaMessage.value = t('settings.captcha.success.saved');
-        captchaSuccess.value = true;
-        // 成功保存后清除表单中的 secret key 字段，以确保下次编辑时它们是空的，除非用户再次输入
-        captchaForm.hcaptchaSecretKey = '';
-        captchaForm.recaptchaSecretKey = '';
-
-    } catch (error: any) {
-        // 此 catch 块处理来自 settingsStore.updateCaptchaSettings 的错误
-        // 或在 try 块中未被 'return' 语句捕获的其他错误。
-        console.error('更新 CAPTCHA 设置时捕获到错误:', error);
-        // 避免覆盖更具体的错误消息（例如，来自验证失败的消息）
-        if (!captchaMessage.value) {
-            captchaMessage.value = error.message || t('settings.captcha.error.saveFailed');
-        }
-        captchaSuccess.value = false;
-    } finally {
-        captchaLoading.value = false;
-    }
-};
-
-
-// --- Version Check Function ---
-const checkLatestVersion = async () => {
-  isCheckingVersion.value = true;
-  versionCheckError.value = null;
-  latestVersion.value = null;
-  try {
-    // 使用 GitHub API 获取最新的 release 信息
-    // 移除 headers 以避免 CORS 问题
-    const response = await axios.get('https://api.github.com/repos/Heavrnl/nexus-terminal/releases/latest');
-    if (response.data && response.data.tag_name) {
-      latestVersion.value = response.data.tag_name;
-    } else {
-      throw new Error('Invalid API response format');
-    }
-  } catch (error: any) {
-    console.error('检查最新版本失败:', error);
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      versionCheckError.value = t('settings.about.error.noReleases'); // 没有找到发布版本
-    } else if (axios.isAxiosError(error) && error.response?.status === 403) {
-       versionCheckError.value = t('settings.about.error.rateLimit'); // API 速率限制
-    } else {
-      versionCheckError.value = t('settings.about.error.checkFailed'); // 通用检查失败
-    }
-  } finally {
-    isCheckingVersion.value = false;
-  }
-};
-
-// --- Lifecycle Hooks ---
 onMounted(async () => {
-  await checkTwoFactorStatus(); // Check 2FA status
-  await fetchIpBlacklist(); // Fetch current blacklist entries
+  // await fetchIpBlacklist(); // REMOVED - Handled by useIpBlacklist.ts onMounted
   await settingsStore.loadCaptchaSettings(); // <-- Load CAPTCHA settings
   await checkLatestVersion(); // <-- Check for latest version on mount
-  if (authStore.isAuthenticated) {
-    await authStore.fetchPasskeys();
-  }
-  // Initial settings (including language, whitelist, blacklist config) are loaded in main.ts via settingsStore.loadInitialSettings()
 });
 
 </script>
