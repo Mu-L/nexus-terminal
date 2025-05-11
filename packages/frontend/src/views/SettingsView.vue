@@ -1,4 +1,3 @@
-
 <template>
   <div class="p-4 bg-background text-foreground min-h-screen"> <!-- Outer container -->
     <div class="max-w-7xl mx-auto"> <!-- Inner container for max-width -->
@@ -77,17 +76,17 @@ import { useSettingsStore } from '../stores/settings.store';
 import { useAppearanceStore } from '../stores/appearance.store'; // 导入外观 store
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import ChangePasswordForm from '../components/settings/ChangePasswordForm.vue'; // 导入新组件
-import PasskeyManagement from '../components/settings/PasskeyManagement.vue'; // 导入新组件
-import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue'; // 导入新组件
-import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue'; // 导入新组件
-import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue'; // 导入新组件
-import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue'; // 导入新组件
-import AboutSection from '../components/settings/AboutSection.vue'; // 导入新组件
-import WorkspaceSettingsSection from '../components/settings/WorkspaceSettingsSection.vue'; // 导入新组件
-import SystemSettingsSection from '../components/settings/SystemSettingsSection.vue'; // 导入新组件
-import DataManagementSection from '../components/settings/DataManagementSection.vue'; // 导入新组件
-import AppearanceSection from '../components/settings/AppearanceSection.vue'; // 导入新组件
+import ChangePasswordForm from '../components/settings/ChangePasswordForm.vue';
+import PasskeyManagement from '../components/settings/PasskeyManagement.vue';
+import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue';
+import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue'; 
+import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue'; 
+import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue'; 
+import AboutSection from '../components/settings/AboutSection.vue'; 
+import WorkspaceSettingsSection from '../components/settings/WorkspaceSettingsSection.vue'; 
+import SystemSettingsSection from '../components/settings/SystemSettingsSection.vue'; 
+import DataManagementSection from '../components/settings/DataManagementSection.vue'; 
+import AppearanceSection from '../components/settings/AppearanceSection.vue'; 
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
