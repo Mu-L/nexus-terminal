@@ -1125,7 +1125,15 @@
         "untagged": "タグなし",
         "allConnectionsTaggedSuccess": "すべての接続にタグが正常に追加されました。",
         "noConnectionsToTag": "タグ付けする接続はありません。",
-        "clickToEditTag": "クリックしてタグ名を編集"
+        "clickToEditTag": "クリックしてタグ名を編集",
+        "connectAllInGroup": "グループ内のすべてに接続 (SSH)",
+        "connectingAllInGroup": "グループ '{groupName}' 内のすべてに接続しています...",
+        "noConnectionsInGroup": "グループ '{groupName}' 内に接続可能な項目がありません。",
+        "noConnectionsToConnect": "接続可能な項目がありません",
+        "connectingAllSshInGroup": "グループ '{groupName}' 内の {count} 個の SSH 接続に接続しています...",
+        "noSshConnectionsInGroup": "グループ '{groupName}' 内に接続可能な SSH 接続がありません。",
+        "connectAllSshInGroupMenu": "すべて接続",
+        "noSshConnectionsToConnectMenu": "SSH 接続なし"
       },
       "sshKeys": {
         "selector": {

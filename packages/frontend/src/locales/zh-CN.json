@@ -922,7 +922,15 @@
     "noResults": "未找到匹配 \"{searchTerm}\" 的连接。",
     "allConnectionsTaggedSuccess": "所有连接已成功添加标签。",
     "noConnectionsToTag": "没有需要添加标签的连接。",
-    "clickToEditTag": "点击编辑标签名称"
+    "clickToEditTag": "点击编辑标签名称",
+    "connectAllInGroup": "连接组内全部 (SSH)",
+    "connectingAllInGroup": "正在连接组 '{groupName}' 中的所有连接...",
+    "noConnectionsInGroup": "组 '{groupName}' 中没有可连接的项。",
+    "noConnectionsToConnect": "没有可连接的项",
+    "connectingAllSshInGroup": "正在连接组 '{groupName}' 中的 {count} 个 SSH 连接...",
+    "noSshConnectionsInGroup": "组 '{groupName}' 中没有 SSH 类型的连接可供连接。",
+    "connectAllSshInGroupMenu": "连接全部",
+    "noSshConnectionsToConnectMenu": "无 SSH 连接"
   },
   "remoteDesktopModal": {
     "title": "远程桌面",

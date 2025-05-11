@@ -38,6 +38,11 @@ const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextTargetConnection = ref<ConnectionInfo | null>(null);
 
+// 标签右键菜单状态
+const tagContextMenuVisible = ref(false);
+const tagContextMenuPosition = ref({ x: 0, y: 0 });
+const contextTargetTagGroup = ref<(typeof filteredAndGroupedConnections.value)[0] | null>(null);
+
 // +++ 本地存储键名 +++
 const EXPANDED_GROUPS_STORAGE_KEY = 'workspaceConnectionListExpandedGroups';
 
@@ -380,6 +385,50 @@ const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // �
   }
 };
 
+// 显示标签右键菜单
+const showTagContextMenu = (event: MouseEvent, groupData: (typeof filteredAndGroupedConnections.value)[0]) => {
+  event.preventDefault();
+  event.stopPropagation(); // 阻止事件冒泡到上层，例如关闭连接右键菜单的 document click listener
+  closeContextMenu(); // 如果连接的右键菜单是打开的，先关闭它
+  contextTargetTagGroup.value = groupData;
+  tagContextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  tagContextMenuVisible.value = true;
+  // 添加全局点击监听器以关闭菜单
+  document.addEventListener('click', closeTagContextMenu, { once: true });
+};
+
+// 关闭标签右键菜单
+const closeTagContextMenu = () => {
+  tagContextMenuVisible.value = false;
+  // contextTargetTagGroup.value = null; // 保留 targetGroup 直到菜单完全消失，以便动画（如果未来添加）
+  document.removeEventListener('click', closeTagContextMenu);
+};
+
+// 处理标签右键菜单操作
+const handleTagMenuAction = (action: 'connectAll') => {
+  const group = contextTargetTagGroup.value;
+  closeTagContextMenu(); // 先关闭菜单
+
+  if (group && action === 'connectAll') {
+    const sshConnections = group.connections.filter(conn => conn.type === 'SSH');
+
+    if (sshConnections.length > 0) {
+      sshConnections.forEach(conn => {
+        emitWorkspaceEvent('connection:connect', { connectionId: conn.id });
+      });
+      uiNotificationsStore.addNotification({
+        message: t('workspaceConnectionList.connectingAllSshInGroup', { count: sshConnections.length, groupName: group.groupName }),
+        type: 'info',
+      });
+    } else {
+      uiNotificationsStore.addNotification({
+        message: t('workspaceConnectionList.noSshConnectionsInGroup', { groupName: group.groupName }),
+        type: 'info',
+      });
+    }
+  }
+};
+
  // 稍微延迟一下重置，以防是点击列表项导致的失焦
  // 如果用户点击了列表项，handleConnect 会先触发
  setTimeout(() => {
@@ -426,7 +475,7 @@ onBeforeUnmount(() => {
 
 // 处理中键点击（在新标签页打开） - 功能已移除
 
-// 新增：暴露聚焦搜索框的方法
+// 暴露聚焦搜索框的方法
 const focusSearchInput = (): boolean => {
   if (searchInputRef.value) {
     searchInputRef.value.focus();
@@ -634,6 +683,7 @@ const cancelEditingTag = () => {
               class="group px-3 py-2 font-semibold flex items-center text-foreground rounded-md hover:bg-header/80 transition-colors duration-150"
               :class="{ 'cursor-pointer': editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) }"
               @click="editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) ? toggleGroup(groupData.groupName) : null"
+              @contextmenu.prevent="showTagContextMenu($event, groupData)"
             >
               <i
                 :class="['fas', expandedGroups[groupData.groupName] ? 'fa-chevron-down' : 'fa-chevron-right', 'mr-2 w-4 text-center text-text-secondary group-hover:text-foreground transition-transform duration-200 ease-in-out', {'transform rotate-0': !expandedGroups[groupData.groupName]}]"
@@ -733,6 +783,33 @@ const cancelEditingTag = () => {
             <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
             <span>{{ t('connections.actions.delete') }}</span>
         </li>
+      </ul>
+    </div>
+
+    <!-- 标签右键菜单 -->
+    <div
+      v-if="tagContextMenuVisible"
+      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[200px]"
+      :style="{ top: `${tagContextMenuPosition.y}px`, left: `${tagContextMenuPosition.x}px` }"
+      @click.stop
+    >
+      <ul class="list-none p-0 m-0">
+        <li
+          v-if="contextTargetTagGroup && contextTargetTagGroup.connections.some((c: ConnectionInfo) => c.type === 'SSH')"
+          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+          @click="handleTagMenuAction('connectAll')"
+        >
+          <i class="fas fa-network-wired mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+          <span>{{ t('workspaceConnectionList.connectAllSshInGroupMenu') }}</span>
+        </li>
+         <li
+          v-else-if="contextTargetTagGroup"
+          class="group px-4 py-1.5 flex items-center text-text-disabled text-sm rounded-md mx-1 cursor-not-allowed"
+        >
+          <i class="fas fa-ban mr-3 w-4 text-center text-text-disabled"></i>
+          <span>{{ t('workspaceConnectionList.noSshConnectionsToConnectMenu') }}</span>
+        </li>
+        <!-- Future: Add "Rename Tag" or "Delete Tag (if empty)" options here -->
       </ul>
     </div>
 

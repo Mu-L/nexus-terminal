@@ -920,7 +920,15 @@
     "noResults": "No connections found matching \"{searchTerm}\".",
     "allConnectionsTaggedSuccess": "All connections tagged successfully.",
     "noConnectionsToTag": "No connections to tag.",
-    "clickToEditTag": "Click to edit tag name"
+    "clickToEditTag": "Click to edit tag name",
+    "connectAllInGroup": "Connect All in Group (SSH)",
+    "connectingAllInGroup": "Connecting all in group '{groupName}'...",
+    "noConnectionsInGroup": "No connections to connect in group '{groupName}'.",
+    "noConnectionsToConnect": "No connections to connect",
+    "connectingAllSshInGroup": "Connecting {count} SSH connections in group '{groupName}'...",
+    "noSshConnectionsInGroup": "No SSH connections to connect in group '{groupName}'.",
+    "connectAllSshInGroupMenu": "Connect All",
+    "noSshConnectionsToConnectMenu": "No SSH Connections"
   },
 "remoteDesktopModal": {
     "title": "Remote Desktop",
