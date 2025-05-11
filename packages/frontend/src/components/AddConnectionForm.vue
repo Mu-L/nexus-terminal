@@ -142,8 +142,8 @@ const handleHostIconMouseLeave = () => {
              class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
              :placeholder="t('connections.form.scriptModePlaceholder')"
            ></textarea>
-           <p class="mt-1 text-xs text-text-secondary">
-             {{ t('connections.form.scriptModeFormatInfo', '格式: user@host:port [-type TYPE] [-name NAME] [-p PASSWORD] [-k KEY_NAME] [-tags TAG1 TAG2...] [-note NOTE_TEXT]') }}
+           <p class="mt-1 text-xs text-text-secondary whitespace-pre-line">
+             {{ t('connections.form.scriptModeFormatInfo') }}
            </p>
          </div>
        </div>
