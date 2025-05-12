@@ -1076,9 +1076,19 @@
         "osLabel": "OS:",
         "swapLabel": "スワップ:",
         "swapNotAvailable": "スワップは利用できません",
-        "title": "サーバー状態"
-    },
-    "styleCustomizer": {
+        "title": "サーバー状態",
+        "cpuUsageTitle": "CPU使用率",
+        "memoryUsageTitleUnit": "メモリ使用状況 ({unit})",
+        "networkSpeedTitleUnit": "ネットワーク速度 ({unit})",
+        "cpuUsageLabel": "CPU使用率 (%)",
+        "memoryUsageLabelUnit": "メモリ使用量 ({unit})",
+        "networkDownloadLabelUnit": "ダウンロード ({unit})",
+        "networkUploadLabelUnit": "アップロード ({unit})",
+        "latestCpuValue": "{value}%",
+        "latestMemoryValue": "{value} {unit}",
+        "latestNetworkValue": "↓ {download} ↑ {upload} {unit}"
+      },
+      "styleCustomizer": {
         "activeTheme": "現在のテーマ",
         "addNewTheme": "新しいテーマを作成",
         "applyButton": "適用",

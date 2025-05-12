@@ -442,7 +442,17 @@
     "gigaBytesPerSecond": "GB/s",
     "megaBytes": "MB",
     "gigaBytes": "GB",
-    "swapNotAvailable": "Swap 不可用"
+    "swapNotAvailable": "Swap 不可用",
+    "cpuUsageTitle": "CPU 使用率",
+    "memoryUsageTitleUnit": "内存使用情况 ({unit})",
+    "networkSpeedTitleUnit": "网络速度 ({unit})",
+    "cpuUsageLabel": "CPU 使用率 (%)",
+    "memoryUsageLabelUnit": "内存使用 ({unit})",
+    "networkDownloadLabelUnit": "下载 ({unit})",
+    "networkUploadLabelUnit": "上传 ({unit})",
+    "latestCpuValue": "{value}%",
+    "latestMemoryValue": "{value} {unit}",
+    "latestNetworkValue": "↓ {download} ↑ {upload} {unit}"
   },
   "tags": {
     "title": "标签管理",

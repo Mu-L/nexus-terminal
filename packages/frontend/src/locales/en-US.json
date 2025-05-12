@@ -443,7 +443,17 @@
     "gigaBytesPerSecond": "GB/s",
     "megaBytes": "MB",
     "gigaBytes": "GB",
-    "swapNotAvailable": "Swap Unavailable"
+    "swapNotAvailable": "Swap Unavailable",
+    "cpuUsageTitle": "CPU Usage",
+    "memoryUsageTitleUnit": "Memory Usage ({unit})",
+    "networkSpeedTitleUnit": "Network Speed ({unit})",
+    "cpuUsageLabel": "CPU Usage (%)",
+    "memoryUsageLabelUnit": "Memory Usage ({unit})",
+    "networkDownloadLabelUnit": "Download ({unit})",
+    "networkUploadLabelUnit": "Upload ({unit})",
+    "latestCpuValue": "{value}%",
+    "latestMemoryValue": "{value} {unit}",
+    "latestNetworkValue": "↓ {download} ↑ {upload} {unit}"
   },
   "tags": {
     "title": "Tag Management",

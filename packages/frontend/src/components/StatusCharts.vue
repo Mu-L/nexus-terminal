@@ -2,9 +2,9 @@
   <div class="status-charts grid grid-cols-1 gap-4 mt-4">
     <div class="chart-container bg-header rounded p-3">
       <div class="flex justify-between items-center mb-2">
-        <h5 class="text-sm font-medium text-text-secondary">CPU 使用率</h5>
+        <h5 class="text-sm font-medium text-text-secondary">{{ $t('statusMonitor.cpuUsageTitle') }}</h5>
         <span class="text-xs text-text-tertiary ml-2">
-          {{ cpuChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}%
+          {{ $t('statusMonitor.latestCpuValue', { value: cpuChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }) }}
         </span>
       </div>
       <div class="chart-wrapper h-40">
@@ -13,9 +13,9 @@
     </div>
     <div class="chart-container bg-header rounded p-3">
       <div class="flex justify-between items-center mb-2">
-        <h5 class="text-sm font-medium text-text-secondary">{{ memoryChartTitle }}</h5>
+        <h5 class="text-sm font-medium text-text-secondary">{{ $t('statusMonitor.memoryUsageTitleUnit', { unit: memoryUnitIsGB ? 'GB' : 'MB' }) }}</h5>
         <span class="text-xs text-text-tertiary ml-2">
-          {{ memoryChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }} {{ memoryUnitIsGB ? 'GB' : 'MB' }}
+           {{ $t('statusMonitor.latestMemoryValue', { value: memoryChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1), unit: memoryUnitIsGB ? 'GB' : 'MB' }) }}
         </span>
       </div>
       <div class="chart-wrapper h-40">
@@ -24,11 +24,9 @@
     </div>
     <div class="chart-container bg-header rounded p-3">
       <div class="flex justify-between items-center mb-2">
-        <h5 class="text-sm font-medium text-text-secondary">{{ networkChartTitle }}</h5>
+        <h5 class="text-sm font-medium text-text-secondary">{{ $t('statusMonitor.networkSpeedTitleUnit', { unit: networkRateUnitIsMB ? 'MB/s' : 'KB/s' }) }}</h5>
         <span class="text-xs text-text-tertiary ml-2">
-          ↓ {{ networkChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}
-          ↑ {{ networkChartData.datasets[1].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}
-          {{ networkRateUnitIsMB ? 'MB/s' : 'KB/s' }}
+          {{ $t('statusMonitor.latestNetworkValue', { download: networkChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1), upload: networkChartData.datasets[1].data[MAX_DATA_POINTS - 1]?.toFixed(1), unit: networkRateUnitIsMB ? 'MB/s' : 'KB/s' }) }}
         </span>
       </div>
       <div class="chart-wrapper h-40">
@@ -39,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -84,15 +83,17 @@ const MAX_DATA_POINTS = 60;
 const KB_TO_MB_THRESHOLD = 1024; // For network
 const MB_TO_GB_THRESHOLD = 1024; // For memory
 
+const { t } = useI18n();
+
 const cpuChartKey = ref(0);
 const memoryChartKey = ref(0);
 const networkChartKey = ref(0);
 
 const networkRateUnitIsMB = ref(false);
-const networkChartTitle = ref('网络速度 (KB/s)');
-
 const memoryUnitIsGB = ref(false);
-const memoryChartTitle = ref('内存使用情况 (MB)');
+
+// const networkChartTitle = ref('网络速度 (KB/s)'); // Will be replaced by i18n
+// const memoryChartTitle = ref('内存使用情况 (MB)'); // Will be replaced by i18n
 
 
 const initialLabels = Array.from({ length: MAX_DATA_POINTS }, (_, i) => `-${(MAX_DATA_POINTS - 1 - i)}s`);
@@ -101,7 +102,7 @@ const cpuChartData = ref({
   labels: [...initialLabels],
   datasets: [
     {
-      label: 'CPU 使用率 (%)',
+      label: computed(() => t('statusMonitor.cpuUsageLabel')),
       backgroundColor: 'rgba(54, 162, 235, 0.2)',
       borderColor: 'rgba(54, 162, 235, 1)',
       borderWidth: 1,
@@ -117,7 +118,7 @@ const memoryChartData = ref({
   labels: [...initialLabels],
   datasets: [
     {
-      label: '内存使用 (MB)', // Initial label
+      label: computed(() => t('statusMonitor.memoryUsageLabelUnit', { unit: memoryUnitIsGB.value ? 'GB' : 'MB' })),
       backgroundColor: 'rgba(255, 99, 132, 0.2)',
       borderColor: 'rgba(255, 99, 132, 1)',
       borderWidth: 1,
@@ -133,7 +134,7 @@ const networkChartData = ref({
   labels: [...initialLabels],
   datasets: [
     {
-      label: '下载 (KB/s)',
+      label: computed(() => t('statusMonitor.networkDownloadLabelUnit', { unit: networkRateUnitIsMB.value ? 'MB/s' : 'KB/s' })),
       backgroundColor: 'rgba(75, 192, 192, 0.2)',
       borderColor: 'rgba(75, 192, 192, 1)',
       borderWidth: 1,
@@ -143,7 +144,7 @@ const networkChartData = ref({
       pointHoverRadius: 5,
     },
     {
-      label: '上传 (KB/s)',
+      label: computed(() => t('statusMonitor.networkUploadLabelUnit', { unit: networkRateUnitIsMB.value ? 'MB/s' : 'KB/s' })),
       backgroundColor: 'rgba(255, 159, 64, 0.2)',
       borderColor: 'rgba(255, 159, 64, 1)',
       borderWidth: 1,
@@ -286,15 +287,11 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
 
     if (!memoryUnitIsGB.value && (memTotal >= MB_TO_GB_THRESHOLD || currentMemUsed >= MB_TO_GB_THRESHOLD)) {
       memoryUnitIsGB.value = true;
-      memoryChartTitle.value = '内存使用情况 (GB)';
-      memoryChartData.value.datasets[0].label = '内存使用 (GB)';
       currentData = currentData.map(d => parseFloat((d / MB_TO_GB_THRESHOLD).toFixed(1)));
       memoryChartKey.value++; // Force re-render
     } else if (memoryUnitIsGB.value && memTotal < MB_TO_GB_THRESHOLD && currentMemUsed < MB_TO_GB_THRESHOLD) {
       // This case is less likely if total is large, but handles potential fluctuations or incorrect initial state
       memoryUnitIsGB.value = false;
-      memoryChartTitle.value = '内存使用情况 (MB)';
-      memoryChartData.value.datasets[0].label = '内存使用 (MB)';
       currentData = currentData.map(d => parseFloat((d * MB_TO_GB_THRESHOLD).toFixed(1)));
       memoryChartKey.value++;
     }
@@ -353,12 +350,9 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
 
   if (!networkRateUnitIsMB.value && (currentNetRxRateKB >= KB_TO_MB_THRESHOLD || currentNetTxRateKB >= KB_TO_MB_THRESHOLD)) {
     networkRateUnitIsMB.value = true;
-    networkChartTitle.value = '网络速度 (MB/s)';
-    networkChartData.value.datasets[0].label = '下载 (MB/s)';
-    networkChartData.value.datasets[1].label = '上传 (MB/s)';
     newNetRxData = newNetRxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(1)));
     newNetTxData = newNetTxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(1)));
-    networkChartKey.value++; 
+    networkChartKey.value++;
   }
   
   let newRxValue, newTxValue;
