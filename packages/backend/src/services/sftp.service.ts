@@ -460,50 +460,69 @@ export class SftpService {
     async rmdir(sessionId: string, path: string, requestId: string): Promise<void> {
         const state = this.clientStates.get(sessionId);
         // 检查 SSH 客户端是否存在，而不是 SFTP 实例
-        if (!state || !state.sshClient) {
-            console.warn(`[SSH Exec] SSH 客户端未准备好，无法在 ${sessionId} 上执行 rmdir (ID: ${requestId})`);
-            state?.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: 'SSH 会话未就绪', requestId: requestId }));
+        if (!state || !state.sshClient || !state.sftp) {
+            console.warn(`[SSH Exec] SSH 客户端或 SFTP 未准备好，无法在 ${sessionId} 上执行 rmdir (ID: ${requestId})`);
+            state?.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: 'SSH 或 SFTP 会话未就绪', requestId: requestId }));
             return;
         }
         console.debug(`[SSH Exec ${sessionId}] Received rmdir (force) request for ${path} (ID: ${requestId})`);
 
-        // 构建 rm -rf 命令，确保路径被正确引用
-        const command = `rm -rf "${path.replace(/"/g, '\\"')}"`; // Basic quoting for paths with spaces/quotes
-        console.log(`[SSH Exec ${sessionId}] Executing command: ${command} (ID: ${requestId})`);
+        // 首先尝试使用 rm -rf 命令
+        const tryRmRfCommand = async () => {
+            // 构建 rm -rf 命令，确保路径被正确引用
+            const command = `rm -rf "${path.replace(/"/g, '\\"')}"`; // Basic quoting for paths with spaces/quotes
+            console.log(`[SSH Exec ${sessionId}] Executing command: ${command} (ID: ${requestId})`);
 
-        try {
-            state.sshClient.exec(command, (err, stream) => {
-                if (err) {
-                    console.error(`[SSH Exec ${sessionId}] Failed to start exec for rmdir ${path} (ID: ${requestId}):`, err);
-                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `执行删除命令失败: ${err.message}`, requestId: requestId }));
-                    return;
-                }
-
-                let stderrOutput = '';
-                stream.stderr.on('data', (data: Buffer) => {
-                    stderrOutput += data.toString();
-                });
-
-                stream.on('close', (code: number | null, signal: string | null) => {
-                    if (code === 0) {
-                        console.log(`[SSH Exec ${sessionId}] rmdir ${path} command executed successfully (ID: ${requestId})`);
-                        state.ws.send(JSON.stringify({ type: 'sftp:rmdir:success', path: path, requestId: requestId }));
-                    } else {
-                        const errorMessage = stderrOutput.trim() || `命令退出，代码: ${code ?? 'N/A'}${signal ? `, 信号: ${signal}` : ''}`;
-                        console.error(`[SSH Exec ${sessionId}] rmdir ${path} command failed (ID: ${requestId}). Code: ${code}, Signal: ${signal}, Stderr: ${stderrOutput}`);
-                        state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: ${errorMessage}`, requestId: requestId }));
+            try {
+                state.sshClient.exec(command, (err, stream) => {
+                    if (err) {
+                        console.error(`[SSH Exec ${sessionId}] Failed to start exec for rmdir ${path} (ID: ${requestId}):`, err);
+                        trySftpRmdir(`执行删除命令失败: ${err.message}`);
+                        return;
                     }
-                });
 
-                stream.on('data', (data: Buffer) => {
-                    // 通常 rm -rf 成功时 stdout 没有输出，但可以记录以防万一
-                    console.debug(`[SSH Exec ${sessionId}] rmdir stdout (ID: ${requestId}): ${data.toString()}`);
+                    let stderrOutput = '';
+                    stream.stderr.on('data', (data: Buffer) => {
+                        stderrOutput += data.toString();
+                    });
+
+                    stream.on('close', (code: number | null, signal: string | null) => {
+                        if (code === 0) {
+                            console.log(`[SSH Exec ${sessionId}] rmdir ${path} command executed successfully (ID: ${requestId})`);
+                            state.ws.send(JSON.stringify({ type: 'sftp:rmdir:success', path: path, requestId: requestId }));
+                        } else {
+                            const errorMessage = stderrOutput.trim() || `命令退出，代码: ${code ?? 'N/A'}${signal ? `, 信号: ${signal}` : ''}`;
+                            console.error(`[SSH Exec ${sessionId}] rmdir ${path} command failed (ID: ${requestId}). Code: ${code}, Signal: ${signal}, Stderr: ${stderrOutput}`);
+                            trySftpRmdir(`删除目录失败: ${errorMessage}`);
+                        }
+                    });
+
+                    stream.on('data', (data: Buffer) => {
+                        // 通常 rm -rf 成功时 stdout 没有输出，但可以记录以防万一
+                        console.debug(`[SSH Exec ${sessionId}] rmdir stdout (ID: ${requestId}): ${data.toString()}`);
+                    });
                 });
+            } catch (error: any) {
+                console.error(`[SSH Exec ${sessionId}] rmdir ${path} caught unexpected error during exec setup (ID: ${requestId}):`, error);
+                trySftpRmdir(`执行删除时发生意外错误: ${error.message}`);
+            }
+        };
+
+        // 备用方案：使用 SFTP 的 rmdir 方法
+        const trySftpRmdir = (errorMessage: string) => {
+            console.log(`[SFTP ${sessionId}] rm -rf 命令失败，尝试使用 SFTP rmdir 方法删除 ${path} (ID: ${requestId})`);
+            state.sftp!.rmdir(path, (err) => {
+                if (err) {
+                    console.error(`[SFTP ${sessionId}] SFTP rmdir ${path} 也失败 (ID: ${requestId}):`, err);
+                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: ${errorMessage}; SFTP 尝试也失败: ${err.message}`, requestId: requestId }));
+                } else {
+                    console.log(`[SFTP ${sessionId}] SFTP rmdir ${path} 成功 (ID: ${requestId})`);
+                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:success', path: path, requestId: requestId }));
+                }
             });
-        } catch (error: any) {
-            console.error(`[SSH Exec ${sessionId}] rmdir ${path} caught unexpected error during exec setup (ID: ${requestId}):`, error);
-            state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `执行删除时发生意外错误: ${error.message}`, requestId: requestId }));
-        }
+        };
+
+        tryRmRfCommand();
     }
 
     /** 删除文件 */
