@@ -188,7 +188,7 @@
             "sectionScriptMode": "スクリプトモード",
             "scriptModeInputLabel": "接続スクリプト (1行に1つ)",
             "scriptModePlaceholder": "接続スクリプトを入力してください。1行に1つの接続設定。",
-            "scriptModeFormatInfo": "書式: ユーザー名@ホスト名またはIP:ポート [-type タイプ] [-name 名前] [-p パスワード] [-k キー名] [-tags タグ1 タグ2...] [-note 注意書き]\nパラメータ説明:\n  ユーザー名@ホスト名またはIP:ポート  - ユーザー名@ホスト名またはIPアドレス:ポート番号 (必須)\n  -type タイプ      - 接続タイプ (SSH, RDP, VNC; デフォルトは SSH)\n  -name 名前      - 接続の表示名 (任意; デフォルトは ユーザー名@ホスト名)\n  -p パスワード     - パスワード (SSHパスワード認証, RDP, VNC の場合に必要)\n  -k キー名     - SSHキー名 (SSHキー認証の場合に必要, アップロード済みのキーに対応)\n  -tags タグ1 タグ2 - タグのリスト, スペース区切り (任意)\n  -note 注意書き - 接続に関する注意書き (任意, スペースを含むテキストをサポート, 特殊文字を含む場合は引用符を使用)",
+            "scriptModeFormatInfo": "書式: ユーザー名@ホスト名またはIP:ポート [-type タイプ] [-name 名前] [-p パスワード] [-k キー名] [-proxy PROXY_NAME] [-tags タグ1 タグ2...] [-note 注意書き]\nパラメータ説明:\n  ユーザー名@ホスト名またはIP:ポート  - ユーザー名@ホスト名またはIPアドレス:ポート番号 (必須)\n  -type タイプ      - 接続タイプ (SSH, RDP, VNC; デフォルトは SSH)\n  -name 名前      - 接続の表示名 (任意; デフォルトは ユーザー名@ホスト名)\n  -p パスワード     - パスワード (SSHパスワード認証, RDP, VNC の場合に必要)\n  -k キー名     - SSHキー名 (SSHキー認証の場合に必要, アップロード済みのキーに対応)\n  -proxy PROXY_NAME - プロキシ名 (任意, 設定済みのプロキシに対応)\n  -tags タグ1 タグ2 - タグのリスト, スペース区切り (任意)\n  -note 注意書き - 接続に関する注意書き (任意, スペースを含むテキストをサポート, 特殊文字を含む場合は引用符を使用)",
             "scriptErrorMissingHost": "スクリプト行 '{line}' には 'user@host:port' 部分がありません。",
             "scriptErrorInvalidType": "スクリプト行 '{line}' のタイプ '{type}' は無効です。有効なタイプは SSH, RDP, VNC です。",
             "scriptErrorUnknownArg": "スクリプト行 '{line}' に不明な引数 '{arg}' があります。",

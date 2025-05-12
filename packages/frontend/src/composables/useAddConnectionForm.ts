@@ -200,7 +200,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
   };
 
   // Helper function to parse a single script line
-  const parseScriptLine = (line: string): { type: 'SSH' | 'RDP' | 'VNC' | null, userHostPort: string, name: string | null, password: string | null, keyName: string | null, tags: string[], note: string | null, error?: string } => {
+  const parseScriptLine = (line: string): { type: 'SSH' | 'RDP' | 'VNC' | null, userHostPort: string, name: string | null, password: string | null, keyName: string | null, proxyName: string | null, tags: string[], note: string | null, error?: string } => {
     const firstSpaceIndex = line.indexOf(' ');
     let userHostPortPart = '';
     let remainingLine = line;
@@ -213,12 +213,13 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       remainingLine = '';
     }
     
-    if (!userHostPortPart) return { type: null, userHostPort: '', name: null, password: null, keyName: null, tags: [], note: null, error: t('connections.form.scriptErrorMissingHost', '缺少 user@host:port 部分') };
+    if (!userHostPortPart) return { type: null, userHostPort: '', name: null, password: null, keyName: null, proxyName: null, tags: [], note: null, error: t('connections.form.scriptErrorMissingHost', '缺少 user@host:port 部分') };
 
     let type: 'SSH' | 'RDP' | 'VNC' | null = 'SSH';
     let name: string | null = null;
     let password: string | null = null;
     let keyName: string | null = null;
+    let proxyName: string | null = null;
     const tags: string[] = [];
     let note: string | null = null;
     let currentArg: string | null = null;
@@ -256,7 +257,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
             if (upperType === 'SSH' || upperType === 'RDP' || upperType === 'VNC') {
               type = upperType as 'SSH' | 'RDP' | 'VNC';
             } else {
-              return { type: null, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorInvalidType', { type: value }) };
+              return { type: null, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorInvalidType', { type: value }) };
             }
             currentArg = null;
             break;
@@ -272,6 +273,10 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
             keyName = value;
             currentArg = null;
             break;
+          case '-proxy':
+            proxyName = value;
+            currentArg = null;
+            break;
           case '-tags':
             tags.push(value);
             break;
@@ -282,7 +287,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
             if (currentArg === '-note') {
               noteParts.push(value);
             } else {
-              return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorUnknownArg', { arg: currentArg }) };
+              return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnknownArg', { arg: currentArg }) };
             }
         }
       }
@@ -304,7 +309,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       } else if (currentArg === '-note') {
         noteParts.push(remainingPart);
       } else {
-        return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorUnexpectedToken', { token: remainingPart }) };
+        return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnexpectedToken', { token: remainingPart }) };
       }
     }
 
@@ -314,10 +319,10 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
 
     const userHostPortRegex = /^[^@]+@[^:]+(:[0-9]+)?$/;
     if (!userHostPortRegex.test(userHostPortPart)) {
-      return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note, error: t('connections.form.scriptErrorInvalidUserHostPort', { part: userHostPortPart })};
+      return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorInvalidUserHostPort', { part: userHostPortPart })};
     }
-
-    return { type, userHostPort: userHostPortPart, name, password, keyName, tags, note };
+ 
+    return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note };
   };
 
   // 处理表单提交
@@ -369,6 +374,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
         username,
         notes: parsed.note || '',
         tag_names: parsed.tags,
+        proxy_name: parsed.proxyName,
       };
 
       if (parsed.type === 'SSH') {
@@ -443,6 +449,18 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
         delete connData.ssh_key_name;
       }
       
+      if (connData.proxy_name) {
+       const foundProxy = proxies.value.find(p => p.name === connData.proxy_name);
+       if (foundProxy) {
+         connData.proxy_id = foundProxy.id;
+       } else {
+         uiNotificationsStore.showError(t('proxies.errors.notFound', { name: connData.proxy_name })); // Assuming you add this translation
+         resolutionErrorOccurred = true;
+         break;
+       }
+       delete connData.proxy_name;
+     }
+
       if (connData.type !== 'SSH' || connData.auth_method !== 'key') delete connData.ssh_key_id;
       if (connData.type === 'SSH' && connData.auth_method === 'key') delete connData.password;
       if (connData.type !== 'SSH') delete connData.auth_method;
