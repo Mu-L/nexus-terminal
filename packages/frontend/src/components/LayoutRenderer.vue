@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ConnectionInfo } from '../stores/connections.store'; // +++ 导入 ConnectionInfo 类型 +++
-import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted } from 'vue'; // +++ Add onMounted +++
+import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // <-- Import useI18n
 // 添加依赖 font-awesome
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -55,7 +55,7 @@ const fileEditorStore = useFileEditorStore(); // <-- Initialize FileEditorStore
 const settingsStore = useSettingsStore(); // +++ Initialize SettingsStore +++
 const { t } = useI18n(); // <-- Get translation function
 const { activeSession } = storeToRefs(sessionStore);
-const { workspaceSidebarPersistentBoolean, getSidebarPaneWidth } = storeToRefs(settingsStore); // +++ Get sidebar setting and width getter +++
+const { workspaceSidebarPersistentBoolean, getSidebarPaneWidth } = storeToRefs(settingsStore);
 const { sidebarPanes } = storeToRefs(layoutStore);
 const { orderedTabs: editorTabsFromStore, activeTabId: activeEditorTabIdFromStore } = storeToRefs(fileEditorStore); // <-- Get editor state
 
@@ -101,6 +101,16 @@ const currentRightSidebarComponent = computed(() => {
   return activeRightSidebarPane.value ? componentMap[activeRightSidebarPane.value] : null;
 });
 
+const hasSshSessions = computed(() => {
+ // Check if any session has a terminalManager (indicates SSH)
+ for (const [_, sessionState] of sessionStore.sessions) {
+   if (sessionState.terminalManager) {
+     return true;
+   }
+ }
+ return false;
+});
+
 // 面板标签 (Similar to LayoutConfigurator)
 const paneLabels = computed(() => ({
   connections: t('layout.pane.connections', '连接列表'),
@@ -126,14 +136,7 @@ const componentProps = computed(() => {
 
   switch (componentName) {
     // --- 为需要转发事件的组件添加事件绑定 ---
-    case 'terminal':
-      // Terminal 需要 sessionId, isActive, 并转发 ready, data, resize 事件
-      // 确保 sessionId 始终为字符串
-      return {
-        sessionId: props.activeSessionId ?? '', // 如果 activeSessionId 为 null，则传递空字符串
-        isActive: true,
-        // --- 移除事件转发 ---
-      };
+    // 'terminal' case removed as props are now passed directly in the v-for loop
     case 'fileManager':
       // 仅当有活动会话时才返回实际 props，否则返回空对象
       if (!currentActiveSession) return {};
@@ -442,36 +445,45 @@ onMounted(() => {
 
             <!-- Pane Node -->
             <template v-else-if="layoutNode.type === 'pane'">
-                <!-- Terminal -->
-                <template v-if="layoutNode.component === 'terminal'">
-                    <keep-alive>
-                        <component
-                          v-if="activeSession"
-                          :is="currentMainComponent"
-                          :key="activeSessionId"
-                          v-bind="componentProps"
-                          class="flex-grow overflow-auto"
-                        />
-                    </keep-alive>
-                    <div v-if="!activeSession" class="flex-grow flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4">
-                      <div class="flex flex-col items-center justify-center p-8 w-full h-full">
-                        <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                        <span class="text-lg font-medium text-text-secondary mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                        <div class="text-xs text-text-secondary mt-2">{{ t('layout.noActiveSession.message') }}</div>
-                      </div>
-                    </div>
-                </template>
-                <!-- FileManager -->
-                <template v-else-if="layoutNode.component === 'fileManager'">
-                    <template v-if="activeSession">
+                <!-- Terminal Pane: Render ALL SSH sessions, show only the active one -->
+               <template v-if="layoutNode.component === 'terminal'">
+                   <div class="terminal-pane-container relative flex-grow overflow-hidden bg-background"> <!-- Add bg-background -->
+                       <template v-for="[sessionId, sessionState] in sessionStore.sessions" :key="sessionId">
+                           <!-- Only render terminals if terminalManager exists (indicates SSH) -->
+                           <template v-if="sessionState.terminalManager">
+                                <keep-alive>
+                                   <component
+                                       :is="componentMap.terminal"
+                                       v-show="sessionId === activeSessionId"
+                                       :session-id="sessionId"
+                                       :is-active="sessionId === activeSessionId"
+                                       class="absolute inset-0 w-full h-full"
+                                       :options="{}"
+                                   />
+                                </keep-alive>
+                           </template>
+                       </template>
+                       <!-- Placeholder if no session is active or no SSH sessions exist -->
+                       <div v-if="!activeSessionId || !hasSshSessions" class="absolute inset-0 flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4"> <!-- Use absolute positioning for placeholder too -->
+                           <div class="flex flex-col items-center justify-center p-8 w-full h-full">
+                               <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
+                               <span class="text-lg font-medium text-text-secondary mb-2">{{ activeSessionId ? t('layout.noSshSessionActive.title', '无活动的 SSH 会话') : t('layout.noActiveSession.title') }}</span>
+                               <div class="text-xs text-text-secondary mt-2">{{ activeSessionId ? t('layout.noSshSessionActive.message', '请激活一个 SSH 会话以使用此终端面板。') : t('layout.noActiveSession.message') }}</div>
+                           </div>
+                       </div>
+                   </div>
+               </template>
+                 <!-- FileManager -->
+                 <template v-else-if="layoutNode.component === 'fileManager'">
                         <component
                           :is="currentMainComponent"
                           :key="layoutNode.id"
                           v-bind="componentProps"
-                          class="flex-grow overflow-auto">
+                          class="flex-grow overflow-auto"
+                          v-if="activeSession"
+                        >
                         </component>
-                    </template>
-                    <div v-if="!activeSession" class="flex-grow flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4">
+                     <div v-if="!activeSession" class="flex-grow flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4">
                       <div class="flex flex-col items-center justify-center p-8 w-full h-full">
                         <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
                         <span class="text-lg font-medium text-text-secondary mb-2">{{ t('layout.noActiveSession.title') }}</span>
@@ -498,22 +510,10 @@ onMounted(() => {
                 </template>
                 <!-- Other Panes -->
                 <template v-else-if="currentMainComponent">
-                    <component
-                      v-if="layoutNode.component === 'connections'"
+                     <component
                       :is="currentMainComponent"
                       v-bind="componentProps"
-                      class="flex-grow overflow-auto"
-                    />
-                    <component
-                      v-else-if="layoutNode.component === 'commandBar'"
-                      :is="currentMainComponent"
-                      v-bind="componentProps"
-                      class="flex-grow overflow-auto"
-                    />
-                    <component
-                      v-else
-                      :is="currentMainComponent"
-                      v-bind="componentProps"
+                      :class="['flex-grow overflow-auto', componentProps.class]"
                     />
                 </template>
                 <!-- Invalid Pane Component -->

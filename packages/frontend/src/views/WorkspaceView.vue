@@ -125,6 +125,7 @@ onMounted(() => {
   subscribeToWorkspaceEvents('terminal:resize', handleTerminalResize);
   subscribeToWorkspaceEvents('terminal:ready', handleTerminalReady);
   subscribeToWorkspaceEvents('terminal:clear', handleClearTerminal);
+  subscribeToWorkspaceEvents('terminal:scrollToBottomRequest', handleScrollToBottomRequest);
 
   subscribeToWorkspaceEvents('editor:closeTab', (payload) => handleCloseEditorTab(payload.tabId));
   subscribeToWorkspaceEvents('editor:activateTab', (payload) => handleActivateEditorTab(payload.tabId));
@@ -167,6 +168,7 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('terminal:resize', handleTerminalResize);
   unsubscribeFromWorkspaceEvents('terminal:ready', handleTerminalReady);
   unsubscribeFromWorkspaceEvents('terminal:clear', handleClearTerminal);
+  unsubscribeFromWorkspaceEvents('terminal:scrollToBottomRequest', handleScrollToBottomRequest);
 
   unsubscribeFromWorkspaceEvents('editor:closeTab', (payload) => handleCloseEditorTab(payload.tabId));
   unsubscribeFromWorkspaceEvents('editor:activateTab', (payload) => handleActivateEditorTab(payload.tabId));
@@ -446,6 +448,18 @@ const handleClearTerminal = () => { // +++ 修改 +++
     } else {
       console.warn(`[WorkspaceView Desktop] Cannot clear terminal for session ${currentSession.sessionId}, terminal manager, instance, or clear method not available.`);
     }
+  }
+};
+
+// +++ 处理滚动到底部请求 +++
+const handleScrollToBottomRequest = (payload: { sessionId: string }) => {
+  const session = sessionStore.sessions.get(payload.sessionId);
+  const terminalManager = session?.terminalManager as (SshTerminalInstance | undefined);
+  if (terminalManager?.terminalInstance?.value) {
+    console.log(`[WorkspaceView] Scrolling to bottom for session ${payload.sessionId}`);
+    terminalManager.terminalInstance.value.scrollToBottom();
+  } else {
+    console.warn(`[WorkspaceView] Cannot scroll to bottom for session ${payload.sessionId}, terminal instance not found.`);
   }
 };
 
