@@ -477,7 +477,8 @@
       "security": "安全设置",
       "appearance": "外观设置",
       "system": "系统设置",
-      "about": "关于"
+      "about": "关于",
+      "dataManagement": "数据管理"
     },
     "timezone": {
       "title": "时区设置",
@@ -849,8 +850,14 @@
         "noReleases": "未找到发布版本",
         "rateLimit": "GitHub API 速率限制，请稍后再试"
       }
-    }
+    },
+    "exportConnections": {
+      "title": "导出连接数据",
+      "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
+      "buttonText": "开始导出"
+  }
 },
+
 "notificationController": {
       "errorFetchSettings": "获取通知设置失败",
       "errorMissingFields": "缺少必要的通知设置字段 (channel_type, name, config)",
