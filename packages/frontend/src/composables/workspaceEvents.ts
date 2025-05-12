@@ -11,6 +11,7 @@ export type WorkspaceEventPayloads = {
   'terminal:ready': { sessionId: string; terminal: XtermTerminal; searchAddon: any };
   'terminal:sendCommand': { command: string; sessionId?: string }; // sessionId 可选，用于指定目标，默认为 active
   'terminal:clear': void; // sessionId 可选，默认为 active
+  'terminal:scrollToBottomRequest': { sessionId: string }; 
 
   // Editor Events
   'editor:closeTab': { tabId: string };

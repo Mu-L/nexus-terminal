@@ -70,6 +70,13 @@ const sendCommand = () => {
   const command = currentSessionCommandInput.value; // 使用计算属性获取值
   console.log(`[CommandInputBar] Sending command: ${command || '<Enter>'} `);
   emitWorkspaceEvent('terminal:sendCommand', { command });
+
+  // 如果是空回车，并且有活动会话，则请求滚动到底部
+  if (command.trim() === '' && activeSessionId.value) {
+    console.log(`[CommandInputBar] Empty Enter detected. Requesting scroll to bottom for session: ${activeSessionId.value}`);
+    emitWorkspaceEvent('terminal:scrollToBottomRequest', { sessionId: activeSessionId.value });
+  }
+
   // 清空 store 中的值
   if (activeSessionId.value) {
     updateSessionCommandInput(activeSessionId.value, '');
