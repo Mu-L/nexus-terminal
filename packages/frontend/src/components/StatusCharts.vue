@@ -1,19 +1,36 @@
 <template>
   <div class="status-charts grid grid-cols-1 gap-4 mt-4">
     <div class="chart-container bg-header rounded p-3">
-      <h5 class="text-sm font-medium mb-2 text-text-secondary">CPU 使用率</h5>
+      <div class="flex justify-between items-center mb-2">
+        <h5 class="text-sm font-medium text-text-secondary">CPU 使用率</h5>
+        <span class="text-xs text-text-tertiary ml-2">
+          {{ cpuChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}%
+        </span>
+      </div>
       <div class="chart-wrapper h-40">
         <Line :data="cpuChartData" :options="percentageChartOptions" :key="cpuChartKey" />
       </div>
     </div>
     <div class="chart-container bg-header rounded p-3">
-      <h5 class="text-sm font-medium mb-2 text-text-secondary">{{ memoryChartTitle }}</h5>
+      <div class="flex justify-between items-center mb-2">
+        <h5 class="text-sm font-medium text-text-secondary">{{ memoryChartTitle }}</h5>
+        <span class="text-xs text-text-tertiary ml-2">
+          {{ memoryChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }} {{ memoryUnitIsGB ? 'GB' : 'MB' }}
+        </span>
+      </div>
       <div class="chart-wrapper h-40">
         <Line :data="memoryChartData" :options="memoryChartOptions" :key="memoryChartKey" />
       </div>
     </div>
     <div class="chart-container bg-header rounded p-3">
-      <h5 class="text-sm font-medium mb-2 text-text-secondary">{{ networkChartTitle }}</h5>
+      <div class="flex justify-between items-center mb-2">
+        <h5 class="text-sm font-medium text-text-secondary">{{ networkChartTitle }}</h5>
+        <span class="text-xs text-text-tertiary ml-2">
+          ↓ {{ networkChartData.datasets[0].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}
+          ↑ {{ networkChartData.datasets[1].data[MAX_DATA_POINTS - 1]?.toFixed(1) }}
+          {{ networkRateUnitIsMB ? 'MB/s' : 'KB/s' }}
+        </span>
+      </div>
       <div class="chart-wrapper h-40">
         <Line :data="networkChartData" :options="networkChartOptions" :key="networkChartKey" />
       </div>
