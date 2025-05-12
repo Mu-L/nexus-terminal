@@ -459,25 +459,33 @@ export class SftpService {
     /** 删除目录 (强制递归) */
     async rmdir(sessionId: string, path: string, requestId: string): Promise<void> {
         const state = this.clientStates.get(sessionId);
-        // 检查 SSH 客户端是否存在，而不是 SFTP 实例
-        if (!state || !state.sshClient || !state.sftp) {
-            console.warn(`[SSH Exec] SSH 客户端或 SFTP 未准备好，无法在 ${sessionId} 上执行 rmdir (ID: ${requestId})`);
-            state?.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: 'SSH 或 SFTP 会话未就绪', requestId: requestId }));
+        if (!state || !state.sshClient) { 
+            console.warn(`[SSH Exec] SSH 客户端未准备好，无法在 ${sessionId} 上执行 rmdir (ID: ${requestId})`);
+            state?.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: 'SSH 会话未就绪', requestId: requestId }));
             return;
         }
-        console.debug(`[SSH Exec ${sessionId}] Received rmdir (force) request for ${path} (ID: ${requestId})`);
+        console.debug(`[SSH Exec ${sessionId}] Received rmdir request for ${path} (ID: ${requestId})`);
 
-        // 首先尝试使用 rm -rf 命令
-        const tryRmRfCommand = async () => {
-            // 构建 rm -rf 命令，确保路径被正确引用
-            const command = `rm -rf "${path.replace(/"/g, '\\"')}"`; // Basic quoting for paths with spaces/quotes
+        // 第一种方案：尝试 rm -rf 命令
+        const tryRmRfCommand = async (isSudo: boolean) => {
+            const commandPrefix = isSudo ? 'sudo ' : '';
+            const command = `${commandPrefix}rm -rf "${path.replace(/"/g, '\\"')}"`;
+            const attemptDescription = isSudo ? 'sudo rm -rf' : 'rm -rf';
+
+            console.log(`[SSH Exec ${sessionId}] 尝试使用 ${attemptDescription} 命令删除 ${path} (ID: ${requestId})`);
             console.log(`[SSH Exec ${sessionId}] Executing command: ${command} (ID: ${requestId})`);
 
             try {
                 state.sshClient.exec(command, (err, stream) => {
                     if (err) {
-                        console.error(`[SSH Exec ${sessionId}] Failed to start exec for rmdir ${path} (ID: ${requestId}):`, err);
-                        trySftpRmdir(`执行删除命令失败: ${err.message}`);
+                        console.error(`[SSH Exec ${sessionId}] Failed to start exec for ${attemptDescription} ${path} (ID: ${requestId}):`, err);
+                        if (!isSudo) {
+                            // 如果普通 rm -rf 失败，尝试 sudo rm -rf
+                            tryRmRfCommand(true);
+                        } else {
+                            // 如果 sudo rm -rf 也失败
+                            state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: ${attemptDescription} 命令执行失败: ${err.message}`, requestId: requestId }));
+                        }
                         return;
                     }
 
@@ -488,41 +496,40 @@ export class SftpService {
 
                     stream.on('close', (code: number | null, signal: string | null) => {
                         if (code === 0) {
-                            console.log(`[SSH Exec ${sessionId}] rmdir ${path} command executed successfully (ID: ${requestId})`);
+                            console.log(`[SSH Exec ${sessionId}] ${attemptDescription} ${path} command executed successfully (ID: ${requestId})`);
                             state.ws.send(JSON.stringify({ type: 'sftp:rmdir:success', path: path, requestId: requestId }));
                         } else {
                             const errorMessage = stderrOutput.trim() || `命令退出，代码: ${code ?? 'N/A'}${signal ? `, 信号: ${signal}` : ''}`;
-                            console.error(`[SSH Exec ${sessionId}] rmdir ${path} command failed (ID: ${requestId}). Code: ${code}, Signal: ${signal}, Stderr: ${stderrOutput}`);
-                            trySftpRmdir(`删除目录失败: ${errorMessage}`);
+                            console.error(`[SSH Exec ${sessionId}] ${attemptDescription} ${path} command failed (ID: ${requestId}). Code: ${code}, Signal: ${signal}, Stderr: ${errorMessage}`);
+                            if (!isSudo) {
+                                // 如果普通 rm -rf 失败，尝试 sudo rm -rf
+                                console.log(`[SSH Exec ${sessionId}] 普通 rm -rf 失败，错误: ${errorMessage}。尝试 sudo rm -rf。`);
+                                tryRmRfCommand(true);
+                            } else {
+                                // 如果 sudo rm -rf 也失败
+                                state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: 普通 rm -rf 和 sudo rm -rf 命令均失败。最后错误: ${errorMessage}`, requestId: requestId }));
+                            }
                         }
                     });
 
                     stream.on('data', (data: Buffer) => {
-                        // 通常 rm -rf 成功时 stdout 没有输出，但可以记录以防万一
-                        console.debug(`[SSH Exec ${sessionId}] rmdir stdout (ID: ${requestId}): ${data.toString()}`);
+                        console.debug(`[SSH Exec ${sessionId}] ${attemptDescription} stdout (ID: ${requestId}): ${data.toString()}`);
                     });
                 });
             } catch (error: any) {
-                console.error(`[SSH Exec ${sessionId}] rmdir ${path} caught unexpected error during exec setup (ID: ${requestId}):`, error);
-                trySftpRmdir(`执行删除时发生意外错误: ${error.message}`);
+                console.error(`[SSH Exec ${sessionId}] ${attemptDescription} ${path} caught unexpected error during exec setup (ID: ${requestId}):`, error);
+                if (!isSudo) {
+                     // 如果普通 rm -rf 期间发生意外错误，尝试 sudo rm -rf
+                    console.log(`[SSH Exec ${sessionId}] 普通 rm -rf 发生意外错误。尝试 sudo rm -rf。`);
+                    tryRmRfCommand(true);
+                } else {
+                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: ${attemptDescription} 执行时发生意外错误: ${error.message}`, requestId: requestId }));
+                }
             }
         };
 
-        // 备用方案：使用 SFTP 的 rmdir 方法
-        const trySftpRmdir = (errorMessage: string) => {
-            console.log(`[SFTP ${sessionId}] rm -rf 命令失败，尝试使用 SFTP rmdir 方法删除 ${path} (ID: ${requestId})`);
-            state.sftp!.rmdir(path, (err) => {
-                if (err) {
-                    console.error(`[SFTP ${sessionId}] SFTP rmdir ${path} 也失败 (ID: ${requestId}):`, err);
-                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:error', path: path, payload: `删除目录失败: ${errorMessage}; SFTP 尝试也失败: ${err.message}`, requestId: requestId }));
-                } else {
-                    console.log(`[SFTP ${sessionId}] SFTP rmdir ${path} 成功 (ID: ${requestId})`);
-                    state.ws.send(JSON.stringify({ type: 'sftp:rmdir:success', path: path, requestId: requestId }));
-                }
-            });
-        };
-
-        tryRmRfCommand();
+        // 首先尝试不带 sudo 的 rm -rf
+        tryRmRfCommand(false);
     }
 
     /** 删除文件 */
