@@ -79,7 +79,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
     // Clear existing WebSocket listeners
     const clearWsListeners = () => {
         if (wsUnsubscribeHooks.length > 0) {
-            console.log(`[DockerManager ${sessionId}] Clearing ${wsUnsubscribeHooks.length} WebSocket listeners.`);
             wsUnsubscribeHooks.forEach(unsub => unsub());
             wsUnsubscribeHooks = [];
         }
@@ -88,7 +87,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
     // Request Docker status via WebSocket
     const requestDockerStatus = () => {
         if (!isConnected.value) {
-            console.log(`[DockerManager ${sessionId}] WebSocket not connected, skipping Docker status request.`);
             // Reset state if disconnected? Or rely on watch(isConnected)?
             // Let's reset here for immediate feedback if called manually while disconnected.
             containers.value = [];
@@ -102,7 +100,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
             return;
         }
 
-        console.log(`[DockerManager ${sessionId}] Requesting Docker status.`);
         isLoading.value = true;
         error.value = null; // Clear previous error
         sendMessage({ type: 'docker:get_status', sessionId }); // Ensure sessionId is included if needed by backend routing
@@ -115,11 +112,9 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
              console.warn(`[DockerManager ${sessionId}] Cannot setup listeners, WebSocket not connected.`);
              return;
         }
-        console.log(`[DockerManager ${sessionId}] Setting up WebSocket listeners.`);
 
         const unsubStatus = onMessage('docker:status:update', (payload, message) => {
             if (message?.sessionId && message.sessionId !== sessionId) return; // Ignore messages for other sessions
-            console.log(`[DockerManager ${sessionId}] Received docker:status:update`, payload);
             isLoading.value = false;
 
             if (payload && typeof payload.available === 'boolean') {
@@ -138,7 +133,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
 
                     // Handle default expand on initial load
                     if (!initialLoadDone.value && dockerDefaultExpandBoolean.value) {
-                        console.log(`[DockerManager ${sessionId}] Applying default expand setting.`);
                         containers.value.forEach(container => {
                             if (!expandedContainerIds.value.has(container.id)) {
                                 expandedContainerIds.value.add(container.id);
@@ -153,7 +147,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
                     if (refreshInterval && !payload.available) {
                         clearInterval(refreshInterval);
                         refreshInterval = null;
-                        console.log(`[DockerManager ${sessionId}] Stopped refresh interval due to remote Docker unavailability.`);
                     }
                 }
             } else {
@@ -189,7 +182,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
 
         const unsubRequestUpdate = onMessage('request_docker_status_update', (payload, message) => {
             if (message?.sessionId && message.sessionId !== sessionId) return;
-            console.log(`[DockerManager ${sessionId}] Received request_docker_status_update from backend.`);
             requestDockerStatus(); // Trigger a status refresh immediately
         });
 
@@ -209,7 +201,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
            return;
         }
 
-        console.log(`[DockerManager ${sessionId}] Sending command '${command}' for container ${containerId}`);
         sendMessage({
             type: 'docker:command',
             sessionId, // Include sessionId if needed by backend routing
@@ -223,10 +214,8 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
     const toggleExpand = (containerId: string) => {
         if (expandedContainerIds.value.has(containerId)) {
             expandedContainerIds.value.delete(containerId);
-            console.log(`[DockerManager ${sessionId}] Collapsed container ${containerId}.`);
         } else {
             expandedContainerIds.value.add(containerId);
-            console.log(`[DockerManager ${sessionId}] Expanded container ${containerId}.`);
         }
     };
 
@@ -234,7 +223,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
 
     // Reset state function
     const resetStateAndInterval = () => {
-        console.log(`[DockerManager ${sessionId}] Resetting state and clearing interval.`);
         containers.value = [];
         isLoading.value = false;
         error.value = null;
@@ -245,14 +233,12 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
         if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
-            console.log(`[DockerManager ${sessionId}] Cleared main refresh interval.`);
         }
         clearWsListeners();
     };
 
     // Watch for connection changes to manage listeners and interval
     watch(isConnected, (newIsConnected, oldIsConnected) => {
-        console.log(`[DockerManager ${sessionId}] Connection status changed: ${oldIsConnected} -> ${newIsConnected}`);
         if (newIsConnected) {
             // 只有当Docker管理器在布局中时才设置监听器和定时器
             const layoutStore = useLayoutStore();
@@ -265,10 +251,8 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
                 if (!refreshInterval) {
                     // Keep a safety interval
                     refreshInterval = setInterval(requestDockerStatus, 15000); // Check every 15s
-                    console.log(`[DockerManager ${sessionId}] Main refresh interval started (15s).`);
                 }
             } else {
-                console.log(`[DockerManager ${sessionId}] Docker管理器不在布局中，跳过设置监听器和定时器。`);
             }
         } else {
             // Connection lost
@@ -281,7 +265,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
 
     // Cleanup function to be called when the session ends
     const cleanup = () => {
-        console.log(`[DockerManager ${sessionId}] Cleaning up.`);
         resetStateAndInterval(); // Clears listeners and interval
     };
 
@@ -289,7 +272,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
     // If already connected when this manager is created, set up listeners and fetch data.
     // This handles cases where the manager is created after the WS connection is live.
     if (isConnected.value) {
-        console.log(`[DockerManager ${sessionId}] Initial setup: Already connected.`);
         // 只有当Docker管理器在布局中时才设置监听器和定时器
         const layoutStore = useLayoutStore();
         if (layoutStore.usedPanes.has('dockerManager')) {
@@ -297,13 +279,10 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
             requestDockerStatus();
             if (!refreshInterval) {
                  refreshInterval = setInterval(requestDockerStatus, 15000);
-                 console.log(`[DockerManager ${sessionId}] Initial setup: Main refresh interval started (15s).`);
             }
         } else {
-            console.log(`[DockerManager ${sessionId}] Docker管理器不在布局中，跳过初始设置。`);
         }
     } else {
-         console.log(`[DockerManager ${sessionId}] Initial setup: Not connected yet.`);
          // Set initial state for disconnected status
          error.value = t('dockerManager.error.sshDisconnected');
          isDockerAvailable.value = false;
