@@ -243,7 +243,8 @@ const networkChartOptions = ref<ChartOptions<'line'>>({
             label += ': ';
           }
           if (context.parsed.y !== null) {
-            const value = parseFloat(context.parsed.y.toFixed(1));
+            const precision = networkRateUnitIsMB.value ? 2 : 1;
+            const value = parseFloat(context.parsed.y.toFixed(precision));
             label += `${value} ${networkRateUnitIsMB.value ? 'MB/s' : 'KB/s'}`;
           }
           return label;
@@ -259,7 +260,14 @@ const networkChartOptions = ref<ChartOptions<'line'>>({
       ticks: {
         color: '#9CA3AF',
         callback: function(value) {
-          return `${parseFloat(Number(value).toFixed(1))}`;
+          const precision = networkRateUnitIsMB.value ? 2 : 0; // KB/s usually whole numbers, MB/s two decimal places
+          // For KB/s, if the value is very small (e.g. < 1), it might be better to show 1 decimal.
+          // However, for simplicity and typical KB/s display, 0 is often fine.
+          // Let's adjust for KB to show 1 decimal if it's not a whole number and small.
+          if (!networkRateUnitIsMB.value && Number(value) !== parseInt(String(value)) && Number(value) < 100) {
+            return `${Number(value).toFixed(1)}`;
+          }
+          return `${Number(value).toFixed(precision)}`;
         }
       },
       grid: { color: 'rgba(156, 163, 175, 0.1)' },
@@ -354,15 +362,15 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
 
   if (!networkRateUnitIsMB.value && (currentNetRxRateKB >= KB_TO_MB_THRESHOLD || currentNetTxRateKB >= KB_TO_MB_THRESHOLD)) {
     networkRateUnitIsMB.value = true;
-    newNetRxData = newNetRxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(1)));
-    newNetTxData = newNetTxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(1)));
+    newNetRxData = newNetRxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(2)));
+    newNetTxData = newNetTxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(2)));
     networkChartKey.value++;
   }
   
   let newRxValue, newTxValue;
   if (networkRateUnitIsMB.value) {
-    newRxValue = parseFloat((currentNetRxRateKB / KB_TO_MB_THRESHOLD).toFixed(1));
-    newTxValue = parseFloat((currentNetTxRateKB / KB_TO_MB_THRESHOLD).toFixed(1));
+    newRxValue = parseFloat((currentNetRxRateKB / KB_TO_MB_THRESHOLD).toFixed(2));
+    newTxValue = parseFloat((currentNetTxRateKB / KB_TO_MB_THRESHOLD).toFixed(2));
   } else {
     newRxValue = parseFloat(currentNetRxRateKB.toFixed(1));
     newTxValue = parseFloat(currentNetTxRateKB.toFixed(1));
