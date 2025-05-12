@@ -197,7 +197,10 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         menu.push({ label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest([targetItem], 'targz'), disabled: !canCompress });
         menu.push({ label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest([targetItem], 'tarbz2'), disabled: !canCompress });
 
-        menu.push({ label: t('fileManager.contextMenu.decompress'), action: () => onDecompressRequest(targetItem), disabled: !canDecompress });
+        // 只有在支持解压的文件上才显示解压选项
+        if (canDecompress) {
+            menu.push({ label: t('fileManager.contextMenu.decompress'), action: () => onDecompressRequest(targetItem) });
+        }
 
         // --- 分隔符 (视觉) ---
         menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
