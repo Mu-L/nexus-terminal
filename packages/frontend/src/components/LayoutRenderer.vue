@@ -484,13 +484,20 @@ onMounted(() => {
                 </template>
                 <!-- StatusMonitor -->
                 <template v-else-if="layoutNode.component === 'statusMonitor'">
-                     <keep-alive>
+                     <keep-alive v-if="activeSessionId">
                         <component
                           :is="currentMainComponent"
                           v-bind="componentProps"
                           class="flex-grow overflow-auto"
                         />
                      </keep-alive>
+                     <div v-else class="flex-grow flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4">
+                      <div class="flex flex-col items-center justify-center p-8 w-full h-full">
+                        <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
+                        <span class="text-lg font-medium text-text-secondary mb-2">{{ t('layout.noActiveSession.title') }}</span>
+                        <div class="text-xs text-text-secondary mt-2">{{ t('layout.noActiveSession.message') }}</div>
+                      </div>
+                    </div>
                 </template>
                 <!-- Other Panes -->
                 <template v-else-if="currentMainComponent">

@@ -1,16 +1,15 @@
 <template>
   <!-- 根元素，包含内边距、背景、边框和文本样式 -->
-  <div class="status-monitor p-4 bg-background text-foreground h-full overflow-y-auto text-sm">
-    <!-- 标题，包含外边距、边框、内边距、字体大小和颜色 -->
-    <h4 class="mt-0 mb-4 border-b border-border pb-2 text-base font-medium">
-      {{ t('statusMonitor.title') }}
-    </h4>
+  <div class="status-monitor p-4 bg-background text-foreground h-full overflow-y-auto text-sm" :class="{ 'bg-header': !activeSessionId }">
+  <h4 v-if="activeSessionId" class="mt-0 mb-4 border-b border-border pb-2 text-base font-medium">
+    {{ t('statusMonitor.title') }}
+  </h4>
 
-    <!-- 无活动会话状态 -->
-    <div v-if="!activeSessionId" class="no-session-status flex flex-col items-center justify-center text-center text-text-secondary mt-4 h-full">
-       <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-       <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
-    </div>
+  <!-- 无活动会话状态 -->
+  <div v-if="!activeSessionId" class="no-session-status flex flex-col items-center justify-center text-center text-text-secondary mt-4 h-full">
+     <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
+     <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
+  </div>
 
     <!-- 错误状态 -->
     <div v-else-if="currentStatusError" class="status-error flex flex-col items-center justify-center text-center text-red-500 mt-4 h-full">
@@ -95,8 +94,8 @@
 
     </div>
 
-     <!-- 网络速率 -->
-     <div class="status-item grid grid-cols-[auto_1fr] items-center gap-3 mt-2">
+     <!-- 网络速率，仅在有活动会话且有数据时显示 -->
+     <div v-if="activeSessionId && currentServerStatus" class="status-item grid grid-cols-[auto_1fr] items-center gap-3 mt-2">
           <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.networkLabel') }} ({{ currentServerStatus?.netInterface || '...' }}):</label>
           <div class="network-values flex items-center justify-start gap-4"> <!-- 减小间距 -->
             <span class="rate down inline-flex items-center gap-1 text-green-500 text-xs whitespace-nowrap">
