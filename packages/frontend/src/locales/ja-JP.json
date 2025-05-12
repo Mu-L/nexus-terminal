@@ -336,6 +336,13 @@
             "upload": "アップロード",
             "uploadFile": "ファイルをアップロード"
         },
+"contextMenu": {
+      "compress": "圧縮",
+      "compressZip": "zip に圧縮",
+      "compressTarGz": "tar.gz に圧縮",
+      "compressTarBz2": "tar.bz2 に圧縮",
+      "decompress": "解凍"
+    },
         "currentPath": "現在のパス",
         "dropFilesHere": "ファイルをここにドラッグ＆ドロップしてアップロード",
         "editPathTooltip": "パスをクリックして編集",
@@ -364,7 +371,16 @@
             "sendCommandFailed": "コマンドの送信に失敗しました",
             "sftpManagerNotFound": "SFTP マネージャーが見つかりません",
             "sftpNotReady": "SFTP セッションの準備ができていません",
-            "terminalManagerNotFound": "ターミナルマネージャーが見つかりません"
+            "terminalManagerNotFound": "ターミナルマネージャーが見つかりません",
+            "compressFailed": "圧縮に失敗しました",
+            "compressTimeout": "圧縮がタイムアウトしました",
+            "compressErrorDetailed": "圧縮に失敗しました: {error}",
+            "decompressFailed": "解凍に失敗しました",
+            "decompressTimeout": "解凍がタイムアウトしました",
+            "decompressErrorDetailed": "解凍に失敗しました: {error}",
+            "commandNotFoundCompress": "サーバーにコマンド '{command}' が見つからないため、圧縮操作を完了できません。",
+            "commandNotFoundDecompress": "サーバーにコマンド '{command}' が見つからないため、解凍操作を完了できません。",
+            "genericCommandNotFound": "サーバーにコマンド '{command}' が見つからないため、'{operation}' 操作を完了できません。"
         },
         "headers": {
             "modified": "変更日",
@@ -379,7 +395,9 @@
         "notifications": {
             "cdCommandSent": "CD コマンドがターミナルに送信されました",
             "copySuccess": "コピーに成功しました",
-            "moveSuccess": "移動に成功しました"
+            "moveSuccess": "移動に成功しました",
+            "compressSuccess": "{name} を正常に圧縮しました",
+            "decompressSuccess": "{name} を正常に解凍しました"
         },
         "prompts": {
             "confirmDeleteFile": "ファイル \"{name}\" を削除しますか？この操作は元に戻せません。",

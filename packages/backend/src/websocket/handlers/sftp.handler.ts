@@ -84,6 +84,35 @@ export async function handleSftpOperation(
                     sftpService.move(sessionId, payload.sources, payload.destination, requestId);
                 } else throw new Error("Missing 'sources' (array) or 'destination' in payload for move");
                 break;
+            case 'sftp:compress':
+                if (Array.isArray(payload?.sources) && payload?.destination && payload?.format && requestId) {
+                    const destinationPath = payload.destination as string;
+                    // 从 destinationPath 中提取 targetDirectory 和 destinationArchiveName
+                    // pathModule.posix 总是使用 / 作为分隔符
+                    const pathModule = await import('path'); // 动态导入 path 模块
+                    const targetDirectory = pathModule.posix.dirname(destinationPath);
+                    const destinationArchiveName = pathModule.posix.basename(destinationPath);
+
+                    const compressPayload = {
+                        sources: payload.sources as string[],
+                        destinationArchiveName: destinationArchiveName,
+                        format: payload.format as 'zip' | 'targz' | 'tarbz2',
+                        targetDirectory: targetDirectory,
+                        requestId: requestId
+                    };
+                    sftpService.compress(sessionId, compressPayload);
+                } else throw new Error("Missing 'sources' (array), 'destination', 'format', or 'requestId' in payload for compress");
+                break;
+            case 'sftp:decompress':
+                if (payload?.source && requestId) {
+                    const decompressPayload = {
+                        archivePath: payload.source as string,
+                        // destinationDirectory: payload.destination as string, // sftpService.decompress 目前不使用此参数
+                        requestId: requestId
+                    };
+                    sftpService.decompress(sessionId, decompressPayload);
+                } else throw new Error("Missing 'source' or 'requestId' in payload for decompress");
+                break;
             default:
                 console.warn(`WebSocket: Received unhandled SFTP message type in sftp.handler: ${type}`);
                 if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'sftp_error', payload: { message: `内部未处理的 SFTP 类型: ${type}`, requestId } }));

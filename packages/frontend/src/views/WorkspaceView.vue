@@ -72,7 +72,7 @@ const showLayoutConfigurator = ref(false); // 控制布局配置器可见性
 
 // --- 搜索状态 ---
 const currentSearchTerm = ref(''); // 当前搜索的关键词
-const mobileTerminalRef = ref<InstanceType<typeof Terminal> | null>(null); // +++ 添加 mobileTerminalRef +++
+const mobileTerminalRef = ref<InstanceType<typeof Terminal> | null>(null);
 const isVirtualKeyboardVisible = ref(true); // +++ State for virtual keyboard visibility +++
 
 // --- 处理全局键盘事件 ---

@@ -38,19 +38,21 @@ const handleItemClick = (item: ContextMenuItem) => {
     @click.stop
   >
     <ul class="list-none p-1 m-0">
-      <li
-        v-for="(menuItem, index) in items"
-        :key="index"
-        @click.stop="handleItemClick(menuItem)"
-        :class="[
-          'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded',
-          menuItem.disabled
-            ? 'text-text-secondary cursor-not-allowed opacity-60 bg-background'
-            : 'hover:bg-border' // Changed hover background for better visibility
-        ]"
-      >
-        {{ menuItem.label }}
-      </li>
+      <template v-for="(menuItem, index) in items" :key="index">
+        <li v-if="menuItem.separator" class="border-t border-border/50 my-1 mx-1"></li>
+        <li
+          v-else
+          @click.stop="handleItemClick(menuItem)"
+          :class="[
+            'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1', // Added mx-1 for consistency
+            menuItem.disabled
+              ? 'text-text-secondary cursor-not-allowed opacity-60' // Removed bg-background for disabled
+              : 'hover:bg-primary/10 hover:text-primary' // Use primary hover like TabBarContextMenu
+          ]"
+        >
+          {{ menuItem.label }}
+        </li>
+      </template>
     </ul>
   </div>
 </template>

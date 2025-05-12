@@ -17,7 +17,7 @@ export const sessionTabsWithStatus = computed((): SessionTabInfoWithStatus[] => 
     sessionId: session.sessionId,
     connectionName: session.connectionName,
     status: session.wsManager.connectionStatus.value, // 从 wsManager 获取状态
-    isMarkedForSuspend: session.isMarkedForSuspend, // +++ 添加 isMarkedForSuspend 状态 +++
+    isMarkedForSuspend: session.isMarkedForSuspend, 
   }));
 });
 

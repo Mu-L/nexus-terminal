@@ -33,7 +33,6 @@ const props = defineProps({
     required: false,
     default: null,
   },
-  // +++ 添加 isMobile prop +++
   isMobile: {
     type: Boolean,
     default: false,

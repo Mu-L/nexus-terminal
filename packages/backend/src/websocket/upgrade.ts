@@ -44,7 +44,7 @@ export function initializeUpgradeHandler(
         // 确保 ipAddress 不是 undefined 或空字符串，否则设为 'unknown'
         ipAddress = ipAddress || 'unknown';
         console.log(`[WebSocket Upgrade] Determined IP Address: ${ipAddress}`);
-        // --- 结束修改 ---
+        
 
         console.log(`WebSocket: 升级请求来自 IP: ${ipAddress}, Path: ${pathname}`); // 使用新获取的 ipAddress
 

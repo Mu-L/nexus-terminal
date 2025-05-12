@@ -5,13 +5,13 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia'; 
 import { createSftpActionsManager, type WebSocketDependencies } from '../composables/useSftpActions';
 import { useFileUploader } from '../composables/useFileUploader';
-import { useFileEditorStore, type FileInfo } from '../stores/fileEditor.store'; // 确保已导入
+import { useFileEditorStore, type FileInfo } from '../stores/fileEditor.store';
 import { useSessionStore } from '../stores/session.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
-import { useFileManagerContextMenu, type ClipboardState } from '../composables/file-manager/useFileManagerContextMenu';
-import { useFileManagerSelection } from '../composables/file-manager/useFileManagerSelection'; 
-import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileManagerDragAndDrop'; 
+import { useFileManagerContextMenu, type ClipboardState, type CompressFormat } from '../composables/file-manager/useFileManagerContextMenu';
+import { useFileManagerSelection } from '../composables/file-manager/useFileManagerSelection';
+import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileManagerDragAndDrop';
 import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation'; 
 import FileUploadPopup from './FileUploadPopup.vue';
 import FileManagerContextMenu from './FileManagerContextMenu.vue';
@@ -34,11 +34,6 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  // // 注入此会话特定的 SFTP 管理器实例 (移除)
-  // sftpManager: {
-  //   type: Object as PropType<SftpManagerInstance>,
-  //   required: true,
-  // },
   // 注入数据库连接 ID
   dbConnectionId: {
     type: String,
@@ -610,9 +605,33 @@ const triggerDownloadDirectory = (item: FileListItem) => {
             console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Network error during directory download:`, error);
             alert(`${t('fileManager.errors.downloadDirectoryFailed', 'Failed to download directory')}: Network error.`);
         });
-    // --- 结束修改 ---
+    
 };
-// --- 结束新增 ---
+
+
+
+// +++ 添加压缩/解压处理函数 +++
+const handleCompress = (items: FileListItem[], format: CompressFormat) => {
+  if (!currentSftpManager.value) {
+    console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot compress: SFTP manager not available.`);
+    // TODO: Show error notification
+    return;
+  }
+  console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Requesting compression for ${items.length} items, format: ${format}`);
+  // 调用 SFTP 管理器上的新方法 (将在 useSftpActions.ts 中实现)
+  currentSftpManager.value.compressItems(items, format);
+};
+
+const handleDecompress = (item: FileListItem) => {
+  if (!currentSftpManager.value) {
+    console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot decompress: SFTP manager not available.`);
+    // TODO: Show error notification
+    return;
+  }
+  console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Requesting decompression for item: ${item.filename}`);
+  // 调用 SFTP 管理器上的新方法 (将在 useSftpActions.ts 中实现)
+  currentSftpManager.value.decompressItem(item);
+};
 
 
 // --- 上下文菜单逻辑 (使用 Composable, 需要 Selection 和 Action Handlers) ---
@@ -651,6 +670,9 @@ const {
   onCut: handleCut, // +++ 传递剪切回调 +++
   onPaste: handlePaste, // +++ 传递粘贴回调 +++
   onDownloadDirectory: triggerDownloadDirectory, // +++ 传递文件夹下载回调 +++
+  // +++ 传递压缩/解压回调 +++
+  onCompressRequest: handleCompress,
+  onDecompressRequest: handleDecompress,
 });
 
 // --- 目录加载与导航 ---

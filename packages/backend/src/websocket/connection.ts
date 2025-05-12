@@ -117,6 +117,8 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                         case 'sftp:realpath':
                         case 'sftp:copy':
                         case 'sftp:move':
+                        case 'sftp:compress':
+                        case 'sftp:decompress':
                             await handleSftpOperation(ws, type, payload, requestId);
                             break;
 
@@ -132,8 +134,6 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                             break;
 
                         // --- SSH Suspend Cases ---
-                        // 旧的 SSH_SUSPEND_START 逻辑已被新的 SSH_MARK_FOR_SUSPEND 和 SshSuspendService.takeOverMarkedSession 取代
-                        // case 'SSH_SUSPEND_START': { ... } // Removed
 
                         case 'SSH_SUSPEND_LIST_REQUEST': {
                             if (!ws.userId) {

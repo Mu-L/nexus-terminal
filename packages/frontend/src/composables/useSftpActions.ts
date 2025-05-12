@@ -1,5 +1,5 @@
 import { ref, readonly, reactive, computed, type Ref, type ComputedRef } from 'vue'; // 引入 reactive 和 computed
-import type { FileListItem, FileAttributes, EditorFileContent, SftpReadFileSuccessPayload, SftpReadFileRequestPayload } from '../types/sftp.types'; // +++ 添加 SftpReadFileRequestPayload 导入 +++
+import type { FileListItem, FileAttributes, EditorFileContent, SftpReadFileSuccessPayload, SftpReadFileRequestPayload } from '../types/sftp.types';
 import type { WebSocketMessage, MessagePayload, MessageHandler } from '../types/websocket.types';
 // 导入 UI 通知 store
 import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // 更正导入
@@ -13,6 +13,38 @@ export interface WebSocketDependencies {
     onMessage: (type: string, handler: MessageHandler) => () => void;
     isConnected: ComputedRef<boolean>;
     isSftpReady: Readonly<Ref<boolean>>;
+}
+
+/**
+* @interface SftpManagerInstance
+* @description Defines the shape of the object returned by createSftpActionsManager.
+*/
+export interface SftpManagerInstance {
+   // State
+   fileList: Readonly<ComputedRef<FileListItem[]>>;
+   isLoading: Readonly<Ref<boolean>>;
+   fileTree: Readonly<FileTreeNode>;
+   initialLoadDone: Readonly<Ref<boolean>>;
+   currentPath: Readonly<Ref<string>>;
+
+   // Methods
+   loadDirectory: (path: string, forceRefresh?: boolean) => void;
+   createDirectory: (newDirName: string) => void;
+   createFile: (newFileName: string) => void;
+   deleteItems: (items: FileListItem[]) => void;
+   renameItem: (item: FileListItem, newName: string) => void;
+   changePermissions: (item: FileListItem, mode: number) => void;
+   readFile: (path: string, encoding?: string) => Promise<SftpReadFileSuccessPayload>;
+   writeFile: (path: string, content: string, encoding?: string) => Promise<void>;
+   copyItems: (sourcePaths: string[], destinationDir: string) => void;
+   moveItems: (sourcePaths: string[], destinationDir: string) => void;
+   compressItems: (items: FileListItem[], format: 'zip' | 'targz' | 'tarbz2') => Promise<void>; // Assume async
+   decompressItem: (item: FileListItem) => Promise<void>; // Assume async
+   joinPath: (base: string, name: string) => string;
+   setInitialLoadDone: (value: boolean) => void;
+
+   // Cleanup function
+   cleanup: () => void;
 }
 
 // Helper function
@@ -56,7 +88,7 @@ export function createSftpActionsManager(
     currentPathRef: Ref<string>,
     wsDeps: WebSocketDependencies,
     t: Function
-) {
+): SftpManagerInstance { // Add explicit return type
     const { sendMessage, onMessage, isConnected, isSftpReady } = wsDeps; // 使用注入的依赖
 
     // const fileList = ref<FileListItem[]>([]); // 不再直接使用 fileList ref
@@ -455,10 +487,134 @@ export function createSftpActionsManager(
         });
          console.log(`[SFTP ${instanceSessionId}] 发送 sftp:move 请求 (ID: ${requestId}) Sources: ${sourcePaths.join(', ')}, Dest: ${destinationDir}`);
         // 可选：显示一个“正在移动...”的通知
-    };
+   };
+
+   const compressItems = (items: FileListItem[], format: 'zip' | 'targz' | 'tarbz2'): Promise<void> => {
+       return new Promise((resolve, reject) => {
+           if (!isSftpReady.value) {
+               const errMsg = t('fileManager.errors.sftpNotReady');
+               uiNotificationsStore.showError(errMsg);
+               console.warn(`[SFTP ${instanceSessionId}] 尝试压缩项目但 SFTP 未就绪。`);
+               return reject(new Error(errMsg));
+           }
+           const sourcePaths = items.map(item => joinPath(currentPathRef.value, item.filename));
+           const requestId = generateRequestId();
+           const parentDir = currentPathRef.value;
+           // --- 修改：使用更智能的压缩包命名 ---
+           let archiveBaseName = 'archive';
+           if (items.length === 1) {
+               archiveBaseName = items[0].filename.split('.')[0]; // 使用第一个项目的文件名（不含扩展名）
+           } else if (items.length > 1) {
+               // 如果有多个项目，尝试使用共同的父目录名，或者保持 'archive'
+               const parentFolderName = parentDir.split('/').pop();
+               if (parentFolderName && parentFolderName !== 'root' && parentFolderName !== '') {
+                    archiveBaseName = parentFolderName;
+               }
+           }
+           const archiveName = `${archiveBaseName}.${format === 'targz' ? 'tar.gz' : (format === 'tarbz2' ? 'tar.bz2' : format)}`;
+           
+           const destinationPath = joinPath(parentDir, archiveName);
+
+           let unregisterSuccess: (() => void) | null = null;
+           let unregisterError: (() => void) | null = null;
+
+           const timeoutId = setTimeout(() => {
+               unregisterSuccess?.();
+               unregisterError?.();
+               const errMsg = t('fileManager.errors.compressTimeout'); // 使用 i18n
+               uiNotificationsStore.showError(errMsg);
+               reject(new Error(errMsg));
+           }, 60000); // 60 秒超时
+
+           unregisterSuccess = onMessage('sftp:compress:success', (payload: MessagePayload, message: WebSocketMessage) => {
+               if (message.requestId === requestId) {
+                   clearTimeout(timeoutId);
+                   unregisterSuccess?.();
+                   unregisterError?.();
+                   uiNotificationsStore.showSuccess(t('fileManager.notifications.compressSuccess', { name: archiveName })); // 使用 i18n
+                   loadDirectory(currentPathRef.value, true); // 强制刷新当前目录
+                   resolve();
+               }
+           });
+
+           unregisterError = onMessage('sftp:compress:error', (payload: MessagePayload, message: WebSocketMessage) => {
+               const errorPayload = payload as { error: string, details?: string };
+               if (message.requestId === requestId) {
+                   clearTimeout(timeoutId);
+                   unregisterSuccess?.();
+                   unregisterError?.();
+                   const errorMsg = errorPayload.details || errorPayload.error || t('fileManager.errors.compressFailed'); // 基础错误信息
+                   uiNotificationsStore.showError(t('fileManager.errors.compressErrorDetailed', { error: errorMsg })); // 使用 i18n 包装详细错误
+                   reject(new Error(errorMsg));
+               }
+           });
+
+           console.log(`[SFTP ${instanceSessionId}] 发送 sftp:compress 请求 (ID: ${requestId}) Sources: ${sourcePaths.join(', ')}, Dest: ${destinationPath}, Format: ${format}`);
+           sendMessage({
+               type: 'sftp:compress',
+               requestId: requestId,
+               payload: { sources: sourcePaths, destination: destinationPath, format: format }
+           });
+       });
+   };
+
+   const decompressItem = (item: FileListItem): Promise<void> => {
+       return new Promise((resolve, reject) => {
+           if (!isSftpReady.value) {
+               const errMsg = t('fileManager.errors.sftpNotReady');
+               uiNotificationsStore.showError(errMsg);
+               console.warn(`[SFTP ${instanceSessionId}] 尝试解压项目 ${item.filename} 但 SFTP 未就绪。`);
+               return reject(new Error(errMsg));
+           }
+           const sourcePath = joinPath(currentPathRef.value, item.filename);
+           const destinationDir = currentPathRef.value; // 默认解压到当前目录
+           const requestId = generateRequestId();
+
+           let unregisterSuccess: (() => void) | null = null;
+           let unregisterError: (() => void) | null = null;
+
+           const timeoutId = setTimeout(() => {
+               unregisterSuccess?.();
+               unregisterError?.();
+               const errMsg = t('fileManager.errors.decompressTimeout'); // 使用 i18n
+               uiNotificationsStore.showError(errMsg);
+               reject(new Error(errMsg));
+           }, 60000); // 60 秒超时
+
+           unregisterSuccess = onMessage('sftp:decompress:success', (payload: MessagePayload, message: WebSocketMessage) => {
+               if (message.requestId === requestId) {
+                   clearTimeout(timeoutId);
+                   unregisterSuccess?.();
+                   unregisterError?.();
+                   uiNotificationsStore.showSuccess(t('fileManager.notifications.decompressSuccess', { name: item.filename })); // 使用 i18n
+                   loadDirectory(currentPathRef.value, true); // 强制刷新当前目录
+                   resolve();
+               }
+           });
+
+           unregisterError = onMessage('sftp:decompress:error', (payload: MessagePayload, message: WebSocketMessage) => {
+                const errorPayload = payload as { error: string, details?: string };
+               if (message.requestId === requestId) {
+                   clearTimeout(timeoutId);
+                   unregisterSuccess?.();
+                   unregisterError?.();
+                   const errorMsg = errorPayload.details || errorPayload.error || t('fileManager.errors.decompressFailed'); // 基础错误信息
+                   uiNotificationsStore.showError(t('fileManager.errors.decompressErrorDetailed', { error: errorMsg })); // 使用 i18n 包装详细错误
+                   reject(new Error(errorMsg));
+               }
+           });
+
+           console.log(`[SFTP ${instanceSessionId}] 发送 sftp:decompress 请求 (ID: ${requestId}) Source: ${sourcePath}, Dest: ${destinationDir}`);
+           sendMessage({
+               type: 'sftp:decompress',
+               requestId: requestId,
+               payload: { source: sourcePath, destination: destinationDir }
+           });
+       });
+   };
 
 
-    // --- Message Handlers ---
+   // --- Message Handlers ---
 
     const onSftpReaddirSuccess = (payload: MessagePayload, message: WebSocketMessage) => {
         const fileListPayload = payload as FileListItem[];
@@ -603,7 +759,7 @@ export function createSftpActionsManager(
     const addOrUpdateNodeInTree = (parentPath: string, item: FileListItem): boolean => {
         // --- 修改：调用 findNodeByPath 时允许创建缺失的父节点 ---
         const parentNode = findNodeByPath(fileTree, parentPath, true);
-        // --- 结束修改 ---
+        
 
         // 如果父节点被成功找到或创建
         if (parentNode) {
@@ -957,6 +1113,29 @@ export function createSftpActionsManager(
     unregisterCallbacks.push(onMessage('sftp:move:success', onMoveSuccess));
     unregisterCallbacks.push(onMessage('sftp:move:error', onActionError));
 
+    // +++ 处理命令未找到错误 +++
+    const onCommandNotFound = (payload: MessagePayload, message: WebSocketMessage) => {
+        const { operation, command, message: details } = payload as { operation: 'compress' | 'decompress', command: string, message?: string };
+        console.error(`[SFTP ${instanceSessionId}] Command '${command}' not found on server for ${operation}. Details: ${details}`);
+        let errorMsgKey = '';
+        if (operation === 'compress') {
+            errorMsgKey = 'fileManager.errors.commandNotFoundCompress';
+        } else if (operation === 'decompress') {
+            errorMsgKey = 'fileManager.errors.commandNotFoundDecompress';
+        }
+        if (errorMsgKey) {
+            uiNotificationsStore.showError(t(errorMsgKey, { command }));
+        } else {
+            uiNotificationsStore.showError(t('fileManager.errors.genericCommandNotFound', { command, operation }));
+        }
+    };
+    unregisterCallbacks.push(onMessage('sftp:command_not_found', onCommandNotFound));
+    // --- 结束处理 ---
+
+    // 注意：sftp:compress:success, sftp:compress:error, sftp:decompress:success, sftp:decompress:error
+    // 的消息处理器直接在 compressItems 和 decompressItem 方法内部通过 onMessage 临时注册和注销，
+    // 因为它们与特定的 Promise 相关联。
+
     // 移除 onUnmounted 块
 
     // *** 计算属性 fileList ***
@@ -976,11 +1155,11 @@ export function createSftpActionsManager(
 
     return {
         // State
-        fileList: readonly(fileList), // 暴露计算属性
-        isLoading: readonly(isLoading),
-        // error: readonly(error), // 移除 error
-        fileTree: readonly(fileTree), // 可以选择性地暴露只读的文件树
-        initialLoadDone: readonly(initialLoadDone), // +++ 暴露只读的初始加载状态 +++
+       fileList: fileList, // 暴露计算属性 (类型已在接口中定义为 Readonly<ComputedRef>)
+       isLoading: isLoading, // (类型已在接口中定义为 Readonly<Ref>)
+       // error: readonly(error), // 移除 error
+       fileTree: fileTree, // (类型已在接口中定义为 Readonly<FileTreeNode>)
+       initialLoadDone: initialLoadDone, // (类型已在接口中定义为 Readonly<Ref>)
 
         // Methods
         loadDirectory,
@@ -992,13 +1171,15 @@ export function createSftpActionsManager(
         readFile,
         writeFile,
         copyItems, // +++ 暴露 copyItems +++
-        moveItems, // +++ 暴露 moveItems +++
-        joinPath, // 暴露辅助函数
-        // clearSftpError, // 移除 clearSftpError
+       moveItems, // +++ 暴露 moveItems +++
+       compressItems, // +++ 暴露 compressItems +++
+       decompressItem, // +++ 暴露 decompressItem +++
+       joinPath, // 暴露辅助函数
+       // clearSftpError, // 移除 clearSftpError
 
         // Cleanup function
-        currentPath: readonly(currentPathRef), // 暴露只读的当前路径 ref
-        setInitialLoadDone: (value: boolean) => { initialLoadDone.value = value; }, // +++ 暴露设置初始加载状态的方法 +++
+       currentPath: currentPathRef, // (类型已在接口中定义为 Readonly<Ref>)
+       setInitialLoadDone: (value: boolean) => { initialLoadDone.value = value; }, // +++ 暴露设置初始加载状态的方法 +++
 
         // Cleanup function
         // Cleanup function

@@ -189,8 +189,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
       });
     }
   };
-  // --- 结束新增 ---
-
+  
 
   // 处理蒙版上的 Drop 事件
   const handleOverlayDrop = (event: DragEvent) => {

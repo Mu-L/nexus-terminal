@@ -21,7 +21,7 @@ export function createWebSocketConnectionManager(
     sessionId: string,
     dbConnectionId: string,
     t: ReturnType<typeof useI18n>['t'],
-    options?: { isResumeFlow?: boolean; getIsMarkedForSuspend?: () => boolean } // +++ 添加 getIsMarkedForSuspend 回调 +++
+    options?: { isResumeFlow?: boolean; getIsMarkedForSuspend?: () => boolean }
 ) {
     // --- Instance State ---
     // 每个实例拥有独立的 WebSocket 对象、状态和消息处理器

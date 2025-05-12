@@ -1,9 +1,18 @@
 import { Client, SFTPWrapper, Stats, WriteStream } from 'ssh2'; // Import WriteStream (Removed Dirent)
 import { WebSocket } from 'ws';
-import { ClientState } from '../websocket'; // 导入统一的 ClientState
+import { ClientState, AuthenticatedWebSocket } from '../websocket/types'; // 导入统一的 ClientState 和 AuthenticatedWebSocket
 import * as pathModule from 'path'; // +++ Import path module +++
 import * as jschardet from 'jschardet'; // +++ Import jschardet +++
 import * as iconv from 'iconv-lite'; // +++ Import iconv-lite +++
+// +++ 导入新类型 +++
+import {
+    SftpCompressRequestPayload,
+    SftpCompressSuccessPayload,
+    SftpCompressErrorPayload,
+    SftpDecompressRequestPayload,
+    SftpDecompressSuccessPayload,
+    SftpDecompressErrorPayload
+} from '../websocket/types';
 
 // +++ Define local interface for readdir results +++
 interface SftpDirEntry {
@@ -796,8 +805,7 @@ export class SftpService {
                         console.error(`[SFTP ${sessionId}] Move failed: Target path ${newPath} already exists (ID: ${requestId})`);
                         throw new Error(`目标路径 ${pathModule.basename(newPath)} 已存在`);
                     }
-                    // --- 结束新增 ---
-
+                    
                     console.log(`[SFTP ${sessionId}] Moving ${oldPath} to ${newPath} (ID: ${requestId})`);
                     await this.performRename(sftp, oldPath, newPath); // Use helper for rename logic
 
@@ -1017,6 +1025,374 @@ export class SftpService {
     }
 
 
+    // --- Compress/Decompress Methods ---
+/**
+     * 压缩远程服务器上的文件/目录
+     * @param sessionId 会话 ID
+     * @param payload 压缩请求的 payload
+     */
+    async compress(sessionId: string, payload: SftpCompressRequestPayload): Promise<void> {
+        const state = this.clientStates.get(sessionId);
+        const { sources, destinationArchiveName, format, targetDirectory, requestId } = payload;
+
+        if (!state || !state.sshClient) {
+            console.warn(`[SFTP Compress] SSH 客户端未准备好，无法在 ${sessionId} 上执行 compress (ID: ${requestId})`);
+            this.sendCompressError(state?.ws, 'SSH 会话未就绪', requestId);
+            return;
+        }
+
+        // 命令检查
+        const requiredCommand = format === 'zip' ? 'zip' : 'tar';
+        try {
+            const commandExists = await this.checkCommandExists(state, sessionId, requiredCommand); // 传递 sessionId
+            if (!commandExists) {
+                this.sendCompressError(state.ws, `命令 '${requiredCommand}' 在服务器上未找到`, requestId, `Command '${requiredCommand}' not found on server.`);
+                return;
+            }
+        } catch (checkError: any) {
+            this.sendCompressError(state.ws, `检查命令 '${requiredCommand}' 时出错`, requestId, checkError.message);
+            return;
+        }
+
+        console.debug(`[SFTP Compress ${sessionId}] Received request (ID: ${requestId}). Sources: ${sources.join(', ')}, Dest: ${destinationArchiveName}, Format: ${format}, Dir: ${targetDirectory}`);
+
+        // 构建目标压缩包的完整路径
+        const destinationArchivePath = pathModule.posix.join(targetDirectory, destinationArchiveName);
+
+        // --- 构建 Shell 命令 ---
+        let command: string;
+        // --- 修改：计算相对路径并引用 ---
+        const relativeSources = sources.map((s: string) => {
+            // 计算相对于 targetDirectory 的路径
+            const relativePath = pathModule.posix.relative(targetDirectory, s);
+            // 如果计算出的相对路径为空或'.', 表示源文件就在目标目录下，直接使用文件名
+            // 否则使用计算出的相对路径
+            return (relativePath === '' || relativePath === '.') ? pathModule.posix.basename(s) : relativePath;
+        });
+        const quotedRelativeSources = relativeSources.map((s: string) => `"${s.replace(/"/g, '\\"')}"`).join(' ');
+        
+        // 确保目标目录和压缩包路径被正确引用
+        const quotedTargetDir = `"${targetDirectory.replace(/"/g, '\\"')}"`;
+        // const quotedDestPath = `"${destinationArchivePath.replace(/"/g, '\\"')}"`; // 目标路径在命令中不直接使用，使用相对名称
+        const quotedDestName = `"${destinationArchiveName.replace(/"/g, '\\"')}"`;
+
+        const cdCommand = `cd ${quotedTargetDir}`;
+
+        switch (format) {
+            case 'zip':
+                // zip -r [归档名] [源文件/目录列表]
+                // 需要在目标目录执行
+                command = `${cdCommand} && zip -r ${quotedDestName} ${quotedRelativeSources}`; // 使用相对路径
+                break;
+            case 'targz':
+                // tar -czvf [归档名] [源文件/目录列表]
+                // 需要在目标目录执行
+                command = `${cdCommand} && tar -czvf ${quotedDestName} ${quotedRelativeSources}`; // 使用相对路径
+                break;
+            case 'tarbz2':
+                // tar -cjvf [归档名] [源文件/目录列表]
+                // 需要在目标目录执行
+                command = `${cdCommand} && tar -cjvf ${quotedDestName} ${quotedRelativeSources}`; // 使用相对路径
+                break;
+            default:
+                this.sendCompressError(state.ws, `不支持的压缩格式: ${format}`, requestId);
+                return;
+        }
+
+        console.log(`[SFTP Compress ${sessionId}] Executing command: ${command} (ID: ${requestId})`);
+
+        // --- 执行命令 ---
+        try {
+            state.sshClient.exec(command, (err, stream) => {
+                if (err) {
+                    console.error(`[SFTP Compress ${sessionId}] Failed to start exec for compress (ID: ${requestId}):`, err);
+                    this.sendCompressError(state.ws, `执行压缩命令失败: ${err.message}`, requestId);
+                    return;
+                }
+
+                let stdoutData = '';
+                let stderrData = '';
+                let code: number | null = null; // Track exit code
+
+                stream.on('data', (data: Buffer) => {
+                    stdoutData += data.toString();
+                    // console.debug(`[SFTP Compress ${sessionId}] stdout: ${data.toString()}`);
+                });
+                stream.stderr.on('data', (data: Buffer) => {
+                    stderrData += data.toString();
+                    // console.debug(`[SFTP Compress ${sessionId}] stderr: ${data.toString()}`);
+                });
+
+                stream.on('close', (exitCode: number | null) => {
+                    code = exitCode; // Store exit code
+                    console.log(`[SFTP Compress ${sessionId}] Command finished with code ${code} (ID: ${requestId}). Stderr: ${stderrData.trim()}`);
+                    if (code === 0 && !this.isErrorInStdErr(stderrData)) { // 检查退出码和 stderr
+                        console.log(`[SFTP Compress ${sessionId}] Compression successful (ID: ${requestId}).`);
+                        const successPayload: SftpCompressSuccessPayload = {
+                            message: '压缩成功',
+                            requestId: requestId
+                        };
+                        if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                             state.ws.send(JSON.stringify({ type: 'sftp:compress:success', requestId: requestId, payload: successPayload })); // Ensure requestId is included
+                        }
+                    } else {
+                        const errorDetails = stderrData.trim() || `压缩命令退出，代码: ${code ?? 'N/A'}`;
+                        console.error(`[SFTP Compress ${sessionId}] Compression failed (ID: ${requestId}): ${errorDetails}`);
+                        this.sendCompressError(state.ws, '压缩失败', requestId, errorDetails);
+                    }
+                });
+                 stream.on('error', (streamErr: Error) => { 
+                     console.error(`[SFTP Compress ${sessionId}] Command stream error (ID: ${requestId}):`, streamErr);
+                     // 避免重复发送错误
+                     if (!stderrData && code === undefined) { // 仅当 close 事件未触发且 stderr 为空时发送
+                          this.sendCompressError(state.ws, '压缩命令流错误', requestId, streamErr.message);
+                     }
+                 });
+            });
+        } catch (execError: any) {
+            console.error(`[SFTP Compress ${sessionId}] Compress command caught unexpected error during exec setup (ID: ${requestId}):`, execError);
+            this.sendCompressError(state.ws, `执行压缩时发生意外错误: ${execError.message}`, requestId);
+        }
+    }
+
+    /**
+     * 解压远程服务器上的压缩文件
+     * @param sessionId 会话 ID
+     * @param payload 解压请求的 payload
+     */
+    async decompress(sessionId: string, payload: SftpDecompressRequestPayload): Promise<void> {
+        const state = this.clientStates.get(sessionId);
+        const { archivePath, requestId } = payload;
+
+        if (!state || !state.sshClient) {
+            console.warn(`[SFTP Decompress] SSH 客户端未准备好，无法在 ${sessionId} 上执行 decompress (ID: ${requestId})`);
+            this.sendDecompressError(state?.ws, 'SSH 会话未就绪', requestId);
+            return;
+        }
+
+        const lowerArchivePath = archivePath.toLowerCase(); // 在此声明一次
+
+        // 命令检查
+        let requiredCommand = '';
+        // 使用已经声明的 lowerArchivePath
+        if (lowerArchivePath.endsWith('.zip')) {
+            requiredCommand = 'unzip';
+        } else if (lowerArchivePath.endsWith('.tar.gz') || lowerArchivePath.endsWith('.tgz') || lowerArchivePath.endsWith('.tar.bz2') || lowerArchivePath.endsWith('.tbz2')) {
+            requiredCommand = 'tar';
+        } else {
+            this.sendDecompressError(state.ws, `不支持的压缩文件格式: ${archivePath}`, requestId);
+            return;
+        }
+
+        try {
+            const commandExists = await this.checkCommandExists(state, sessionId, requiredCommand); // 传递 sessionId
+            if (!commandExists) {
+                this.sendDecompressError(state.ws, `命令 '${requiredCommand}' 在服务器上未找到`, requestId, `Command '${requiredCommand}' not found on server.`);
+                return;
+            }
+        } catch (checkError: any) {
+            this.sendDecompressError(state.ws, `检查命令 '${requiredCommand}' 时出错`, requestId, checkError.message);
+            return;
+        }
+
+        console.debug(`[SFTP Decompress ${sessionId}] Received request for ${archivePath} (ID: ${requestId})`);
+
+        const extractDir = pathModule.posix.dirname(archivePath);
+        const archiveBasename = pathModule.posix.basename(archivePath);
+
+        // --- 构建 Shell 命令 ---
+        let command: string;
+        // 确保路径被正确引用
+        const quotedExtractDir = `"${extractDir.replace(/"/g, '\\"')}"`;
+        const quotedArchiveBasename = `"${archiveBasename.replace(/"/g, '\\"')}"`;
+
+        const cdCommand = `cd ${quotedExtractDir}`;
+
+        // 使用在方法开始处声明的 lowerArchivePath
+        if (lowerArchivePath.endsWith('.zip')) {
+            // unzip -o [压缩包名]
+            // 需要在目标目录执行
+            command = `${cdCommand} && unzip -o ${quotedArchiveBasename}`;
+        } else if (lowerArchivePath.endsWith('.tar.gz') || lowerArchivePath.endsWith('.tgz')) {
+            // tar -xzvf [压缩包名]
+            // 需要在目标目录执行
+            command = `${cdCommand} && tar -xzvf ${quotedArchiveBasename}`;
+        } else if (lowerArchivePath.endsWith('.tar.bz2') || lowerArchivePath.endsWith('.tbz2')) {
+            // tar -xjvf [压缩包名]
+            // 需要在目标目录执行
+            command = `${cdCommand} && tar -xjvf ${quotedArchiveBasename}`;
+        } else {
+            this.sendDecompressError(state.ws, `不支持的压缩文件格式: ${archivePath}`, requestId);
+            return;
+        }
+
+        console.log(`[SFTP Decompress ${sessionId}] Executing command: ${command} (ID: ${requestId})`);
+
+        // --- 执行命令 ---
+        try {
+            state.sshClient.exec(command, (err, stream) => {
+                if (err) {
+                    console.error(`[SFTP Decompress ${sessionId}] Failed to start exec for decompress (ID: ${requestId}):`, err);
+                    this.sendDecompressError(state.ws, `执行解压命令失败: ${err.message}`, requestId);
+                    return;
+                }
+
+                let stdoutData = '';
+                let stderrData = '';
+                let code: number | null = null; // Track exit code
+
+                stream.on('data', (data: Buffer) => {
+                    stdoutData += data.toString();
+                    // console.debug(`[SFTP Decompress ${sessionId}] stdout: ${data.toString()}`);
+                });
+                stream.stderr.on('data', (data: Buffer) => {
+                    stderrData += data.toString();
+                    // console.debug(`[SFTP Decompress ${sessionId}] stderr: ${data.toString()}`);
+                });
+
+                stream.on('close', (exitCode: number | null) => {
+                     code = exitCode; // Store exit code
+                    console.log(`[SFTP Decompress ${sessionId}] Command finished with code ${code} (ID: ${requestId}). Stderr: ${stderrData.trim()}`);
+                    if (code === 0 && !this.isErrorInStdErr(stderrData)) { // 检查退出码和 stderr
+                        console.log(`[SFTP Decompress ${sessionId}] Decompression successful (ID: ${requestId}).`);
+                        const successPayload: SftpDecompressSuccessPayload = {
+                            message: '解压成功',
+                            requestId: requestId
+                        };
+                         if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                            state.ws.send(JSON.stringify({ type: 'sftp:decompress:success', requestId: requestId, payload: successPayload })); // Ensure requestId is included
+                         }
+                    } else {
+                        const errorDetails = stderrData.trim() || `解压命令退出，代码: ${code ?? 'N/A'}`;
+                        console.error(`[SFTP Decompress ${sessionId}] Decompression failed (ID: ${requestId}): ${errorDetails}`);
+                        this.sendDecompressError(state.ws, '解压失败', requestId, errorDetails);
+                    }
+                });
+                 stream.on('error', (streamErr: Error) => {
+                     console.error(`[SFTP Decompress ${sessionId}] Command stream error (ID: ${requestId}):`, streamErr);
+                     // 避免重复发送错误
+                     if (!stderrData && code === undefined) { // 仅当 close 事件未触发且 stderr 为空时发送
+                         this.sendDecompressError(state.ws, '解压命令流错误', requestId, streamErr.message);
+                     }
+                 });
+            });
+        } catch (execError: any) {
+            console.error(`[SFTP Decompress ${sessionId}] Decompress command caught unexpected error during exec setup (ID: ${requestId}):`, execError);
+            this.sendDecompressError(state.ws, `执行解压时发生意外错误: ${execError.message}`, requestId);
+        }
+    }
+
+    // --- 辅助方法 ---
+
+    /** 检查远程服务器上是否存在指定的命令 */
+    private checkCommandExists(state: ClientState, sessionId: string, commandName: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            if (!state.sshClient) {
+                return reject(new Error('SSH client is not available.'));
+            }
+            // 优先使用 command -v, 其次 which
+            const checkCommands = [`command -v ${commandName}`, `which ${commandName}`];
+            let currentCheckIndex = 0;
+
+            const tryCommand = () => {
+                if (currentCheckIndex >= checkCommands.length) {
+                    resolve(false); // 所有检查命令都尝试过了，未找到
+                    return;
+                }
+                const checkCmd = checkCommands[currentCheckIndex];
+                console.log(`[SFTP Command Check ${sessionId}] Executing: ${checkCmd}`);
+                state.sshClient.exec(checkCmd, (err, stream) => {
+                    if (err) {
+                        console.error(`[SFTP Command Check ${sessionId}] Failed to start exec for "${checkCmd}":`, err);
+                        currentCheckIndex++;
+                        tryCommand(); // 尝试下一个检查命令
+                        return;
+                    }
+                    let output = '';
+                    stream.on('data', (data: Buffer) => {
+                        output += data.toString();
+                    });
+                    stream.on('close', (code: number | null) => {
+                        if (code === 0 && output.trim() !== '') {
+                            console.log(`[SFTP Command Check ${sessionId}] Command '${commandName}' found using "${checkCmd}". Output: ${output.trim()}`);
+                            resolve(true);
+                        } else {
+                            console.log(`[SFTP Command Check ${sessionId}] Command '${commandName}' not found with "${checkCmd}" (code: ${code}, output: "${output.trim()}").`);
+                            currentCheckIndex++;
+                            tryCommand(); // 尝试下一个检查命令
+                        }
+                    });
+                    stream.stderr.on('data', (data: Buffer) => {
+                        // console.debug(`[SFTP Command Check ${sessionId}] stderr for "${checkCmd}": ${data.toString()}`);
+                    });
+                    stream.on('error', (streamErr: Error) => {
+                        console.error(`[SFTP Command Check ${sessionId}] Stream error for "${checkCmd}":`, streamErr);
+                        currentCheckIndex++;
+                        tryCommand(); // 尝试下一个检查命令
+                    });
+                });
+            };
+            tryCommand();
+        });
+    }
+
+
+    /** 发送压缩错误消息 */
+    private sendCompressError(ws: AuthenticatedWebSocket | undefined, error: string, requestId: string, details?: string): void {
+         if (ws && ws.readyState === WebSocket.OPEN) {
+            const payload: SftpCompressErrorPayload = { error, requestId };
+            if (details) payload.details = details;
+            // 检查是否是命令未找到的特定错误
+            if (error.includes('在服务器上未找到')) {
+                 ws.send(JSON.stringify({ type: 'sftp:command_not_found', payload: { operation: 'compress', command: error.match(/'([^']+)'/)?.[1] || 'unknown', message: details || error }, requestId }));
+            } else {
+                 ws.send(JSON.stringify({ type: 'sftp:compress:error', payload }));
+            }
+         } else {
+             console.warn(`[SFTP Compress] WebSocket closed or invalid, cannot send error for request ${requestId}.`);
+         }
+    }
+
+    /** 发送解压错误消息 */
+    private sendDecompressError(ws: AuthenticatedWebSocket | undefined, error: string, requestId: string, details?: string): void {
+         if (ws && ws.readyState === WebSocket.OPEN) {
+            const payload: SftpDecompressErrorPayload = { error, requestId };
+            if (details) payload.details = details;
+            // 检查是否是命令未找到的特定错误
+            if (error.includes('在服务器上未找到')) {
+                ws.send(JSON.stringify({ type: 'sftp:command_not_found', payload: { operation: 'decompress', command: error.match(/'([^']+)'/)?.[1] || 'unknown', message: details || error }, requestId }));
+            } else {
+                ws.send(JSON.stringify({ type: 'sftp:decompress:error', payload }));
+            }
+        } else {
+             console.warn(`[SFTP Decompress] WebSocket closed or invalid, cannot send error for request ${requestId}.`);
+         }
+    }
+
+    /** 检查 stderr 输出是否包含表示错误的常见模式 */
+    private isErrorInStdErr(stderr: string): boolean {
+        if (!stderr || stderr.trim().length === 0) {
+            return false; // 空 stderr 不是错误
+        }
+        const lowerStderr = stderr.toLowerCase();
+        // 常见的错误关键词或模式
+        const errorPatterns = [
+            'error', 'fail', 'cannot', 'not found', 'no such file', 'permission denied', 'invalid', '不支持'
+        ];
+        // tar/zip 进度信息通常包含百分比或文件名，不应视为错误
+        if (/[\d.]+%/.test(stderr) || /adding:/.test(lowerStderr) || /inflating:/.test(lowerStderr) || /extracting:/.test(lowerStderr)) {
+            // 忽略一些明确的非错误输出
+            if (errorPatterns.some(pattern => lowerStderr.includes(pattern))) {
+                 // 如果进度信息中包含错误关键词，则可能真的是错误
+                 return true;
+            }
+            return false;
+        }
+
+        return errorPatterns.some(pattern => lowerStderr.includes(pattern));
+    }
+
+
     // --- File Upload Methods ---
 
     /** Start a new file upload */
@@ -1053,8 +1429,7 @@ export class SftpService {
                     return; // Stop the upload process
                 }
             }
-            // --- 结束新增 ---
-
+            
             // --- 预检查文件是否可写 ---
             console.log(`[SFTP Upload ${uploadId}] Pre-checking writability for: ${remotePath}`);
             try {
@@ -1083,8 +1458,7 @@ export class SftpService {
                  state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: `文件不可写或创建失败: ${preCheckError.message}` } }));
                  return; // Stop if pre-check fails
             }
-            // --- 结束新增 ---
-
+            
 
             console.log(`[SFTP Upload ${uploadId}] Creating write stream for: ${remotePath}`);
             // 确保 state.sftp 存在

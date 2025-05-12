@@ -330,6 +330,13 @@
       "paste": "Paste",
       "openEditor": "Open Editor"
     },
+"contextMenu": {
+      "compress": "Compress",
+      "compressZip": "Compress to zip",
+      "compressTarGz": "Compress to tar.gz",
+      "compressTarBz2": "Compress to tar.bz2",
+      "decompress": "Decompress"
+    },
     "headers": {
       "type": "Type",
       "name": "Name",
@@ -365,14 +372,25 @@
       "terminalManagerNotFound": "Terminal manager not found",
       "sendCommandFailed": "Failed to send command",
       "downloadDirectoryFailed": "Failed to download directory",
-      "downloadDirectoryNotImplemented": "Directory download feature is not yet implemented on the server."
-    },
-    "notifications": {
-        "copySuccess": "Copy successful",
-        "moveSuccess": "Move successful",
-        "cdCommandSent": "CD command sent to terminal"
-    },
-     "warnings": {
+      "downloadDirectoryNotImplemented": "Directory download feature is not yet implemented on the server.",
+      "compressFailed": "Compression failed",
+      "compressTimeout": "Compression timed out",
+      "compressErrorDetailed": "Compression failed: {error}",
+      "decompressFailed": "Decompression failed",
+      "decompressTimeout": "Decompression timed out",
+      "decompressErrorDetailed": "Decompression failed: {error}",
+      "commandNotFoundCompress": "Command '{command}' not found on server, cannot complete compression.",
+      "commandNotFoundDecompress": "Command '{command}' not found on server, cannot complete decompression.",
+      "genericCommandNotFound": "Command '{command}' not found on server, cannot complete '{operation}' operation."
+  },
+  "notifications": {
+      "copySuccess": "Copy successful",
+      "moveSuccess": "Move successful",
+      "cdCommandSent": "CD command sent to terminal",
+      "compressSuccess": "Compressed {name} successfully",
+      "decompressSuccess": "Decompressed {name} successfully"
+  },
+   "warnings": {
         "moveSameDirectory": "Cannot cut and paste in the same directory."
     },
     "prompts": {

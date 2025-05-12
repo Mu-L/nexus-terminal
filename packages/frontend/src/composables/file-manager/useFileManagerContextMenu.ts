@@ -8,7 +8,11 @@ export interface ContextMenuItem {
   label: string;
   action: () => void;
   disabled?: boolean;
+  separator?: boolean; // 添加分隔符类型
 }
+
+// 支持的压缩格式
+export type CompressFormat = 'zip' | 'targz' | 'tarbz2';
 
 // 定义剪贴板状态类型
 export interface ClipboardState {
@@ -40,7 +44,18 @@ export interface UseFileManagerContextMenuOptions {
   onCopy: () => void; // +++ 复制回调 +++
   onCut: () => void; // +++ 剪切回调 +++
   onPaste: () => void; // +++ 粘贴回调 +++
+  // --- 压缩/解压回调 ---
+  onCompressRequest: (items: FileListItem[], format: CompressFormat) => void; // +++ 压缩回调 +++
+  onDecompressRequest: (item: FileListItem) => void; // +++ 解压回调 +++
 }
+
+// 辅助函数：检查文件是否为支持的压缩格式
+const SUPPORTED_ARCHIVE_EXTENSIONS = ['.zip', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2'];
+function isSupportedArchive(filename: string): boolean {
+  const lowerCaseFilename = filename.toLowerCase();
+  return SUPPORTED_ARCHIVE_EXTENSIONS.some(ext => lowerCaseFilename.endsWith(ext));
+}
+
 
 export function useFileManagerContextMenu(options: UseFileManagerContextMenuOptions) {
   const {
@@ -64,6 +79,8 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
     onCut, // +++ 解构剪切回调 +++
     onPaste, // +++ 解构粘贴回调 +++
     onDownloadDirectory, // +++ 解构文件夹下载回调 +++
+    onCompressRequest, // +++ 解构压缩回调 +++
+    onDecompressRequest, // +++ 解构解压回调 +++
   } = options;
 
   const contextMenuVisible = ref(false);
@@ -119,6 +136,16 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
          }
 
 
+        // --- 多选压缩 ---
+        menu.push(
+            { label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest(selectedFileItems, 'zip'), disabled: !(isConnected.value && isSftpReady.value) },
+            { label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest(selectedFileItems, 'targz'), disabled: !(isConnected.value && isSftpReady.value) },
+            { label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest(selectedFileItems, 'tarbz2'), disabled: !(isConnected.value && isSftpReady.value) },
+        );
+        menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
+
+
+
        menu.push(
              // --- 分隔符 (视觉) ---
             { label: t('fileManager.actions.deleteMultiple', { count: selectionSize }), action: onDelete, disabled: !(isConnected.value && isSftpReady.value) },
@@ -135,7 +162,7 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         } else if (targetItem.attrs.isDirectory) {
             menu.push({ label: t('fileManager.actions.downloadFolder', { name: targetItem.filename }), action: () => onDownloadDirectory(targetItem), disabled: !(isConnected.value && isSftpReady.value) }); // 文件夹下载
         }
-        // --- 结束修改 ---
+        
 
 
         // 2. 剪切、复制、粘贴 (粘贴 - 如果是文件夹)
@@ -146,10 +173,34 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         }
 
         // --- 分隔符 (视觉) ---
+        // The invalid object literal was here and is now removed.
+        // The separator below handles the division correctly.
+
+        // Ensure separator is pushed separately and correctly
+        menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
+
 
         // 3. 删除、重命名
         menu.push({ label: t('fileManager.actions.delete'), action: onDelete, disabled: !(isConnected.value && isSftpReady.value) });
         menu.push({ label: t('fileManager.actions.rename'), action: () => onRename(targetItem), disabled: !(isConnected.value && isSftpReady.value) });
+
+        // --- 分隔符 (视觉) ---
+        // Ensure separator is pushed separately and correctly
+        menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
+
+        // --- 压缩 & 解压 ---
+        const canCompress = isConnected.value && isSftpReady.value;
+        const canDecompress = isConnected.value && isSftpReady.value && targetItem.attrs.isFile && isSupportedArchive(targetItem.filename);
+
+        // menu.push({ label: t('fileManager.contextMenu.compress'), action: () => {}, disabled: true }); // Removed isSubmenuHeader
+        menu.push({ label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest([targetItem], 'zip'), disabled: !canCompress });
+        menu.push({ label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest([targetItem], 'targz'), disabled: !canCompress });
+        menu.push({ label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest([targetItem], 'tarbz2'), disabled: !canCompress });
+
+        menu.push({ label: t('fileManager.contextMenu.decompress'), action: () => onDecompressRequest(targetItem), disabled: !canDecompress });
+
+        // --- 分隔符 (视觉) ---
+        menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
 
         // --- 分隔符 (视觉) ---
 
