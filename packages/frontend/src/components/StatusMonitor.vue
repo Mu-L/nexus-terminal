@@ -104,12 +104,16 @@
           </div>
 
       </div>
+<!-- 图表组件 -->
+      <StatusCharts :server-status="serverStatus" />
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import StatusCharts from './StatusCharts.vue';
 
 const { t } = useI18n();
 
