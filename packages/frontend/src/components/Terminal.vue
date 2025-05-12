@@ -47,8 +47,9 @@ const {
 const settingsStore = useSettingsStore(); // +++ 实例化设置 store +++
 const {
   autoCopyOnSelectBoolean,
-  terminalScrollbackLimitNumber // NEW: Import scrollback limit getter
-} = storeToRefs(settingsStore); // +++ 获取选中即复制状态 +++
+  terminalScrollbackLimitNumber, //  Import scrollback limit getter
+  terminalEnableRightClickPasteBoolean, //  Import right-click paste setting getter
+} = storeToRefs(settingsStore); // +++ 获取设置状态 +++
 
 // 防抖函数
 const debounce = (func: Function, delay: number) => {
@@ -121,13 +122,43 @@ const debouncedSetTerminalFontSize = debounce(async (size: number) => {
     }
 }, 500); // 500ms 防抖延迟，可以调整
 
-// NEW: Helper function to convert setting value to xterm scrollback value
+//  Helper function to convert setting value to xterm scrollback value
 const getScrollbackValue = (limit: number): number => {
   if (limit === 0) {
     return Infinity; // 0 means unlimited for xterm
   }
   return Math.max(0, limit); // Ensure non-negative, return the number otherwise
 };
+
+// --- 右键粘贴功能 ---
+const handleContextMenuPaste = async (event: MouseEvent) => {
+  event.preventDefault(); // 阻止默认右键菜单
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && terminal) {
+      // 将粘贴的文本发送到后端
+      emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
+      console.log('[Terminal] Pasted via Right Click');
+    }
+  } catch (err) {
+    console.error('[Terminal] Failed to paste via Right Click:', err);
+  }
+};
+
+const addContextMenuListener = () => {
+  if (terminalRef.value) {
+    terminalRef.value.addEventListener('contextmenu', handleContextMenuPaste);
+    console.log(`[Terminal ${props.sessionId}] Right-click paste listener added.`);
+  }
+};
+
+const removeContextMenuListener = () => {
+  if (terminalRef.value) {
+    terminalRef.value.removeEventListener('contextmenu', handleContextMenuPaste);
+    console.log(`[Terminal ${props.sessionId}] Right-click paste listener removed.`);
+  }
+};
+// --- 右键粘贴功能结束 ---
 
 // 初始化终端
 onMounted(() => {
@@ -142,7 +173,7 @@ onMounted(() => {
       allowTransparency: true,
       disableStdin: false,
       convertEol: true,
-      scrollback: getScrollbackValue(terminalScrollbackLimitNumber.value), // NEW: Use setting from store
+      scrollback: getScrollbackValue(terminalScrollbackLimitNumber.value), //  Use setting from store
       scrollOnUserInput: true, // 输入时滚动到底部
       ...props.options, // 合并外部传入的选项
     });
@@ -402,23 +433,19 @@ onMounted(() => {
         });
     }
 
-
-    // --- 添加右键粘贴功能 ---
-    if (terminalRef.value) {
-      terminalRef.value.addEventListener('contextmenu', async (event: MouseEvent) => {
-        event.preventDefault(); // 阻止默认右键菜单
-        try {
-          const text = await navigator.clipboard.readText();
-          if (text && terminal) {
-            // 将粘贴的文本发送到后端
-            emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
-            console.log('[Terminal] Pasted via Right Click');
-          }
-        } catch (err) {
-          console.error('[Terminal] Failed to paste via Right Click:', err);
-        }
-      });
+    // 根据初始设置添加监听器
+    if (terminalEnableRightClickPasteBoolean.value) {
+      addContextMenuListener();
     }
+
+    // 监听设置变化
+    watch(terminalEnableRightClickPasteBoolean, (newValue) => {
+      if (newValue) {
+        addContextMenuListener();
+      } else {
+        removeContextMenuListener();
+      }
+    });
 
 
     // 重新添加鼠标滚轮缩放功能
@@ -506,11 +533,14 @@ onBeforeUnmount(() => {
       selectionListenerDisposable.dispose();
   }
 
-  if (terminalRef.value) {
-
-  }
-});
-
+  
+    // 确保在卸载时移除右键监听器
+    removeContextMenuListener();
+  
+    if (terminalRef.value) {
+  
+    }
+  });
 // 暴露 write 方法给父组件 (可选)
 const write = (data: string | Uint8Array) => {
     terminal?.write(data);

@@ -48,13 +48,9 @@ export const settingsRepository = {
            updated_at = excluded.updated_at`;
     const params = [key, value, now, now];
 
-    // console.log(`[仓库] 尝试设置设置项。键: ${key}, 值: ${value}`);
-    // console.log(`[仓库] 执行 SQL: ${sql}，参数: ${JSON.stringify(params)}`);
-
     try {
       const db = await getDbInstance();
       const result = await runDb(db, sql, params);
-      // console.log(`[仓库] 成功设置键为 ${key} 的设置项。影响行数: ${result.changes}`);
     } catch (err: any) {
       console.error(`[Repository] 设置设置项 ${key} 时出错:`, err.message);
       throw new Error(`设置设置项 ${key} 失败`);
@@ -265,8 +261,9 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         statusMonitorIntervalSeconds: '3',
         [SIDEBAR_CONFIG_KEY]: JSON.stringify(defaultSidebarPanesStructure),
         [CAPTCHA_CONFIG_KEY]: JSON.stringify(defaultCaptchaSettings),
-        timezone: 'UTC', // NEW: 添加时区默认值
-        terminalScrollbackLimit: '5000', // NEW: 添加终端回滚行数默认值
+        timezone: 'UTC', //  添加时区默认值
+        terminalScrollbackLimit: '5000', //  添加终端回滚行数默认值
+        terminalEnableRightClickPaste: 'true', //  添加终端右键粘贴默认值
     };
     const nowSeconds = Math.floor(Date.now() / 1000);
     const sqlInsertOrIgnore = `INSERT OR IGNORE INTO settings (key, value, created_at, updated_at) VALUES (?, ?, ?, ?)`;

@@ -21,7 +21,7 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
     const isLoading = ref(false);
     const error = ref<string | null>(null);
     const uiNotificationsStore = useUiNotificationsStore();
-    const selectedIndex = ref<number>(-1); // NEW: Index of the selected command in the filtered list
+    const selectedIndex = ref<number>(-1); //  Index of the selected command in the filtered list
 
     // --- Getters ---
 
@@ -38,7 +38,7 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
 
     // --- Actions ---
 
-    // NEW: Action to select the next command in the filtered list
+    //  Action to select the next command in the filtered list
     const selectNextCommand = () => {
         const history = filteredHistory.value;
         if (history.length === 0) {
@@ -48,7 +48,7 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
         selectedIndex.value = (selectedIndex.value + 1) % history.length;
     };
 
-    // NEW: Action to select the previous command in the filtered list
+    //  Action to select the previous command in the filtered list
     const selectPreviousCommand = () => {
         const history = filteredHistory.value;
         if (history.length === 0) {
@@ -110,7 +110,7 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
 
     // 添加命令到历史记录 (由 CommandInputBar 调用, 添加后清除缓存)
     const addCommand = async (command: string) => {
-        // NEW: Filter out Ctrl+C signal (\x03) from being added to history
+        //  Filter out Ctrl+C signal (\x03) from being added to history
         if (command === '\x03') {
             console.log('[CmdHistoryStore] Ignoring Ctrl+C signal for history.');
             return;
@@ -172,7 +172,7 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
         selectedIndex.value = -1; // Reset selection when search term changes
     };
 
-    // NEW: Action to reset the selection (Moved before return)
+    //  Action to reset the selection (Moved before return)
     const resetSelection = () => {
         selectedIndex.value = -1;
     };
@@ -183,14 +183,14 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
         isLoading,
         error,
         filteredHistory,
-        selectedIndex, // NEW: Expose selected index
+        selectedIndex, //  Expose selected index
         fetchHistory,
         addCommand, // 导出 addCommand
         deleteCommand,
         clearAllHistory,
         setSearchTerm,
-        selectNextCommand, // NEW: Expose action
-        selectPreviousCommand, // NEW: Expose action
+        selectNextCommand, //  Expose action
+        selectPreviousCommand, //  Expose action
         resetSelection, // Ensure resetSelection is exported
     };
 

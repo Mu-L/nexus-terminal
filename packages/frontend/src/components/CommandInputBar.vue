@@ -114,7 +114,7 @@ watch(searchTerm, (newValue) => {
   }
 });
 
-// NEW: Watch currentSessionCommandInput and sync searchTerm based on settings
+//  Watch currentSessionCommandInput and sync searchTerm based on settings
 watch(currentSessionCommandInput, (newValue) => { // 监听计算属性
   const target = commandInputSyncTarget.value;
   if (target === 'quickCommands') {
@@ -213,7 +213,7 @@ const handleCommandInputKeydown = (event: KeyboardEvent) => {
  }
 };
 
-// NEW: Handle blur event on command input
+//  Handle blur event on command input
 const handleCommandInputBlur = () => {
     // Reset selection in the target store when input loses focus
     const target = commandInputSyncTarget.value;

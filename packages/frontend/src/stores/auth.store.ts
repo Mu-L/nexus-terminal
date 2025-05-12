@@ -62,10 +62,10 @@ interface AuthState {
         total: number;
     };
     needsSetup: boolean; // 是否需要初始设置
-    publicCaptchaConfig: PublicCaptchaConfig | null; // NEW: Public CAPTCHA config
-    passkeys: PasskeyInfo[] | null; // NEW: Store for user's passkeys
-    passkeysLoading: boolean; // NEW: Loading state for passkeys
-    hasPasskeysAvailable: boolean; // NEW: Indicates if passkeys are available for login
+    publicCaptchaConfig: PublicCaptchaConfig | null; //  Public CAPTCHA config
+    passkeys: PasskeyInfo[] | null; //  Store for user's passkeys
+    passkeysLoading: boolean; //  Loading state for passkeys
+    hasPasskeysAvailable: boolean; //  Indicates if passkeys are available for login
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -77,7 +77,7 @@ export const useAuthStore = defineStore('auth', {
         loginRequires2FA: false, // 初始为不需要
         ipBlacklist: { entries: [], total: 0 }, // 初始化黑名单状态
         needsSetup: false, // 初始假设不需要设置
-        publicCaptchaConfig: null, // NEW: Initialize CAPTCHA config as null
+        publicCaptchaConfig: null, //  Initialize CAPTCHA config as null
         passkeys: null, // Initialize passkeys as null
         passkeysLoading: false, // Initialize passkeysLoading as false
         hasPasskeysAvailable: false, // Initialize as false
@@ -322,7 +322,7 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // NEW: 获取公共 CAPTCHA 配置 (修改为从 /settings/captcha 获取)
+        //  获取公共 CAPTCHA 配置 (修改为从 /settings/captcha 获取)
         async fetchCaptchaConfig() {
             console.log('[AuthStore] fetchCaptchaConfig called. Forcing refetch.'); // 更新日志，表明强制刷新
 

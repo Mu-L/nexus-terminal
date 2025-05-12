@@ -398,7 +398,7 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
         }
     };
 
-    // NEW: Action to reset the selection
+    //  Action to reset the selection
     const resetSelection = () => {
         selectedIndex.value = -1;
     };

@@ -79,7 +79,7 @@
              </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- NEW: Separator -->
+      <hr class="border-border/50"> 
       <!-- Command Input Sync Target -->
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.commandInputSync.title', '命令输入同步') }}</h3>
@@ -104,7 +104,7 @@
            </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- NEW: Separator -->
+      <hr class="border-border/50"> 
       <!-- Show Connection Tags -->
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.workspace.showConnectionTagsTitle', '显示连接标签') }}</h3>
@@ -124,7 +124,7 @@
              </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- NEW: Separator -->
+      <hr class="border-border/50"> 
       <!-- Show Quick Command Tags -->
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.workspace.showQuickCommandTagsTitle', '显示快捷指令标签') }}</h3>
@@ -144,7 +144,7 @@
              </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- NEW: Separator -->
+      <hr class="border-border/50"> 
       <!-- Terminal Scrollback Limit -->
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.terminalScrollback.title', '终端回滚行数') }}</h3>
@@ -164,7 +164,7 @@
            </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- NEW: Separator -->
+      <hr class="border-border/50"> 
      <!-- File Manager Delete Confirmation -->
      <div class="settings-section-content">
         <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.workspace.fileManagerDeleteConfirmTitle', '文件管理器删除确认') }}</h3>
@@ -180,6 +180,26 @@
                  {{ $t('common.save') }}
                </button>
                <p v-if="fileManagerShowDeleteConfirmationMessage" :class="['text-sm', fileManagerShowDeleteConfirmationSuccess ? 'text-success' : 'text-error']">{{ fileManagerShowDeleteConfirmationMessage }}</p>
+            </div>
+        </form>
+     </div>
+     <hr class="border-border/50"> 
+     <!-- Terminal Right Click Paste -->
+     <div class="settings-section-content">
+        <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.workspace.terminalRightClickPasteTitle', '终端右键粘贴') }}</h3>
+        <form @submit.prevent="handleUpdateTerminalRightClickPasteSetting" class="space-y-4">
+            <div class="flex items-center">
+                <input type="checkbox" id="terminalEnableRightClickPaste" v-model="terminalEnableRightClickPasteLocal"
+                       class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
+                <label for="terminalEnableRightClickPaste" class="text-sm text-foreground cursor-pointer select-none">{{ $t('settings.workspace.terminalEnableRightClickPasteLabel', '启用终端右键粘贴') }}</label>
+            </div>
+            <p class="text-xs text-text-secondary mt-1">{{ $t('settings.workspace.terminalEnableRightClickPasteDescription', '允许在终端区域内使用鼠标右键粘贴剪贴板内容。') }}</p>
+            <div class="flex items-center justify-between pt-2">
+               <button type="submit"
+                       class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
+                 {{ $t('common.save') }}
+               </button>
+               <p v-if="terminalEnableRightClickPasteMessage" :class="['text-sm', terminalEnableRightClickPasteSuccess ? 'text-success' : 'text-error']">{{ terminalEnableRightClickPasteMessage }}</p>
             </div>
         </form>
      </div>
@@ -243,6 +263,11 @@ const {
   fileManagerShowDeleteConfirmationMessage,
   fileManagerShowDeleteConfirmationSuccess,
   handleUpdateFileManagerDeleteConfirmation,
+  terminalEnableRightClickPasteLocal, // NEW
+  terminalEnableRightClickPasteLoading, // NEW (Not used in template, but available)
+  terminalEnableRightClickPasteMessage, // NEW
+  terminalEnableRightClickPasteSuccess, // NEW
+  handleUpdateTerminalRightClickPasteSetting, // NEW
 } = useWorkspaceSettings();
 </script>
 

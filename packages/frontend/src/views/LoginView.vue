@@ -19,9 +19,9 @@ const credentials = reactive({
 });
 const twoFactorToken = ref(''); // 用于存储 2FA 验证码
 const rememberMe = ref(false); // 记住我状态，默认为 false
-const captchaToken = ref<string | null>(null); // NEW: Store CAPTCHA token
-const captchaError = ref<string | null>(null); // NEW: Store CAPTCHA specific error
-const hcaptchaWidget = ref<InstanceType<typeof VueHcaptcha> | null>(null); // NEW: Ref for hCaptcha component instance
+const captchaToken = ref<string | null>(null); //  Store CAPTCHA token
+const captchaError = ref<string | null>(null); //  Store CAPTCHA specific error
+const hcaptchaWidget = ref<InstanceType<typeof VueHcaptcha> | null>(null); //  Ref for hCaptcha component instance
 const recaptchaWidget = ref<InstanceType<typeof VueRecaptcha> | null>(null); // 更新 Ref 类型以匹配新导入
 
 // --- reCAPTCHA v3 Initialization ---

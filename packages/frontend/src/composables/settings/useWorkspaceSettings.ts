@@ -17,6 +17,7 @@ export function useWorkspaceSettings() {
     showQuickCommandTagsBoolean,
     terminalScrollbackLimitNumber,
     fileManagerShowDeleteConfirmationBoolean,
+    terminalEnableRightClickPasteBoolean, // NEW
   } = storeToRefs(settingsStore);
 
   // --- Popup Editor ---
@@ -236,6 +237,30 @@ export function useWorkspaceSettings() {
     }
   };
 
+  // --- Terminal Right Click Paste ---
+  const terminalEnableRightClickPasteLocal = ref(true);
+  const terminalEnableRightClickPasteLoading = ref(false);
+  const terminalEnableRightClickPasteMessage = ref('');
+  const terminalEnableRightClickPasteSuccess = ref(false);
+
+  const handleUpdateTerminalRightClickPasteSetting = async () => {
+    terminalEnableRightClickPasteLoading.value = true;
+    terminalEnableRightClickPasteMessage.value = '';
+    terminalEnableRightClickPasteSuccess.value = false;
+    try {
+      const valueToSave = terminalEnableRightClickPasteLocal.value ? 'true' : 'false';
+      await settingsStore.updateSetting('terminalEnableRightClickPaste', valueToSave);
+      terminalEnableRightClickPasteMessage.value = t('settings.workspace.terminalRightClickPasteSuccess', '终端右键粘贴设置已保存。');
+      terminalEnableRightClickPasteSuccess.value = true;
+    } catch (error: any) {
+      console.error('更新终端右键粘贴设置失败:', error);
+      terminalEnableRightClickPasteMessage.value = error.message || t('settings.workspace.terminalRightClickPasteError', '保存终端右键粘贴设置失败。');
+      terminalEnableRightClickPasteSuccess.value = false;
+    } finally {
+      terminalEnableRightClickPasteLoading.value = false;
+    }
+  };
+
   // Watchers to sync local state with store state
   watch(showPopupFileEditorBoolean, (newValue) => { popupEditorEnabled.value = newValue; }, { immediate: true });
   watch(shareFileEditorTabsBoolean, (newValue) => { shareTabsEnabled.value = newValue; }, { immediate: true });
@@ -246,6 +271,7 @@ export function useWorkspaceSettings() {
   watch(showQuickCommandTagsBoolean, (newValue) => { showQuickCommandTagsLocal.value = newValue; }, { immediate: true });
   watch(terminalScrollbackLimitNumber, (newValue) => { terminalScrollbackLimitLocal.value = newValue; }, { immediate: true });
   watch(fileManagerShowDeleteConfirmationBoolean, (newValue) => { fileManagerShowDeleteConfirmationLocal.value = newValue; }, { immediate: true });
+  watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true }); // NEW
 
 
   return {
@@ -302,5 +328,11 @@ export function useWorkspaceSettings() {
     fileManagerShowDeleteConfirmationMessage,
     fileManagerShowDeleteConfirmationSuccess,
     handleUpdateFileManagerDeleteConfirmation,
+
+    terminalEnableRightClickPasteLocal, // NEW
+    terminalEnableRightClickPasteLoading, // NEW
+    terminalEnableRightClickPasteMessage, // NEW
+    terminalEnableRightClickPasteSuccess, // NEW
+    handleUpdateTerminalRightClickPasteSetting, // NEW
   };
 }
