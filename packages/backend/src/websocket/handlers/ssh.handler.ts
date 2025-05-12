@@ -101,7 +101,9 @@ export async function handleSshConnect(
 
                 stream.on('data', (data: Buffer) => {
                     if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'ssh:output', payload: data.toString('base64'), encoding: 'base64' }));
+                        // 确保数据以 UTF-8 编码转换为 Base64
+                        const utf8Data = data.toString('utf8');
+                        ws.send(JSON.stringify({ type: 'ssh:output', payload: Buffer.from(utf8Data, 'utf8').toString('base64'), encoding: 'base64' }));
                     }
                     // 如果会话被标记为待挂起，则将输出写入日志
                     const currentState = clientStates.get(newSessionId); // 获取最新的状态
@@ -114,7 +116,9 @@ export async function handleSshConnect(
                 stream.stderr.on('data', (data: Buffer) => {
                     console.error(`SSH Stderr (会话: ${newSessionId}): ${data.toString('utf8').substring(0, 100)}...`);
                     if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'ssh:output', payload: data.toString('base64'), encoding: 'base64' }));
+                        // 确保数据以 UTF-8 编码转换为 Base64
+                        const utf8ErrData = data.toString('utf8');
+                        ws.send(JSON.stringify({ type: 'ssh:output', payload: Buffer.from(utf8ErrData, 'utf8').toString('base64'), encoding: 'base64' }));
                     }
                     // 同样，如果会话被标记为待挂起，则将 stderr 输出写入日志
                     const currentState = clientStates.get(newSessionId);

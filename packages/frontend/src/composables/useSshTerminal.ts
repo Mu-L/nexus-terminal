@@ -29,7 +29,7 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
     // Removed search result state refs
     // const searchResultCount = ref(0);
     // const currentSearchResultIndex = ref(-1);
-    const terminalOutputBuffer = ref<string[]>([]); // 缓冲 WebSocket 消息直到终端准备好
+    const terminalOutputBuffer = ref<(string | Uint8Array)[]>([]); // 缓冲 WebSocket 消息直到终端准备好
     const isSshConnected = ref(false); // 跟踪 SSH 连接状态
 
     // 辅助函数：获取终端消息文本
@@ -71,10 +71,8 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
         // 2. 将此管理器内部缓冲的输出 (terminalOutputBuffer, 来自 ssh:output) 写入终端
         if (terminalOutputBuffer.value.length > 0) {
             terminalOutputBuffer.value.forEach(data => {
-                 // console.log(`[会话 ${sessionId}][SSH前端] handleTerminalReady: 正在写入内部缓冲数据 (前100字符):`, data.substring(0, 100));
                  term.write(data);
             });
-            // console.log(`[会话 ${sessionId}][SSH前端] handleTerminalReady: 内部缓冲区处理完成。`);
             terminalOutputBuffer.value = []; // 清空内部缓冲区
         }
         
@@ -120,27 +118,8 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
-                // 使用TextDecoder确保UTF-8正确解码
-                outputData = new TextDecoder('utf-8').decode(bytes);
-                
-                // 如果输出仍然包含乱码字符，尝试其他编码
-                if (outputData.includes('�')) {
-                    console.warn(`[会话 ${sessionId}][SSH终端模块] UTF-8解码后仍有乱码，尝试其他编码...`);
-                    // 尝试不同的编码
-                    const encodings = ['gbk', 'gb18030', 'big5', 'iso-8859-1'];
-                    for (const encoding of encodings) {
-                        try {
-                            const decoded = new TextDecoder(encoding).decode(bytes);
-                            if (!decoded.includes('�')) {
-                                outputData = decoded;
-                                console.log(`[会话 ${sessionId}][SSH终端模块] 成功使用${encoding}解码`);
-                                break;
-                            }
-                        } catch (encErr) {
-                            // 忽略不支持的编码错误
-                        }
-                    }
-                }
+                // 直接使用原始二进制数据作为 Uint8Array 写入终端，避免编码转换问题
+                outputData = bytes;
             } catch (e) {
                 console.error(`[会话 ${sessionId}][SSH终端模块] Base64 解码失败:`, e, '原始数据:', message.payload);
                 outputData = `\r\n[解码错误: ${e}]\r\n`; // 在终端显示解码错误
@@ -156,52 +135,8 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
              }
         }
 
-        // 尝试过滤掉非标准的 OSC 184 序列 (更强的过滤)
-        if (typeof outputData === 'string' && outputData.includes('\x1b]184;')) {
-            const originalLength = outputData.length;
-            let cleanedData = '';
-            let currentIndex = 0;
-            let startIndex = outputData.indexOf('\x1b]184;');
-
-            while (startIndex !== -1) {
-                // 添加 OSC 序列之前的部分
-                cleanedData += outputData.substring(currentIndex, startIndex);
-
-                // 查找 OSC 序列的结束符 (BEL 或 ST)
-                const belIndex = outputData.indexOf('\x07', startIndex);
-                const stIndex = outputData.indexOf('\x1b\\', startIndex);
-
-                let endIndex = -1;
-                if (belIndex !== -1 && stIndex !== -1) {
-                    endIndex = Math.min(belIndex, stIndex);
-                } else if (belIndex !== -1) {
-                    endIndex = belIndex;
-                } else if (stIndex !== -1) {
-                    endIndex = stIndex;
-                }
-
-                if (endIndex !== -1) {
-                    // 找到结束符，跳过整个 OSC 序列
-                    currentIndex = endIndex + (outputData[endIndex] === '\x07' ? 1 : 2); // 跳过 BEL(1) 或 ST(2)
-                } else {
-                    // 未找到结束符，可能序列不完整，保留 OSC 开始之后的部分
-                    currentIndex = startIndex + 6; // 跳过 '\x1b]184;'
-                    console.warn(`[会话 ${sessionId}][SSH终端模块] 未找到 OSC 184 的结束符，可能序列不完整。`);
-                    break; // 停止处理，避免潜在问题
-                }
-
-                // 查找下一个 OSC 184 序列
-                startIndex = outputData.indexOf('\x1b]184;', currentIndex);
-            }
-
-            // 添加剩余的部分
-            cleanedData += outputData.substring(currentIndex);
-            outputData = cleanedData;
-
-            if (outputData.length < originalLength) {
-                 console.warn(`[会话 ${sessionId}][SSH终端模块] 过滤掉 OSC 184 序列。`);
-            }
-        }
+        // 由于直接使用原始二进制数据，不再需要过滤 OSC 184 序列
+        // 相关代码已移除
 
         // --- 添加前端日志 ---
         // console.log(`[会话 ${sessionId}][SSH前端] 收到 ssh:output 原始 payload (解码前):`, payload);
@@ -214,7 +149,6 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
             // console.log(`[会话 ${sessionId}][SSH前端] 写入完成。`);
         } else {
             // 如果终端还没准备好，先缓冲输出
-            console.log(`[会话 ${sessionId}][SSH前端] 终端实例不存在，缓冲数据...`);
             terminalOutputBuffer.value.push(outputData);
         }
     };
