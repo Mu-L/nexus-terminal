@@ -333,7 +333,7 @@
       "compress": "压缩",
       "compressZip": "压缩为 zip",
       "compressTarGz": "压缩为 tar.gz",
-      "compressTarBz2": "压缩为 ttar.bz2",
+      "compressTarBz2": "压缩为 tar.bz2",
       "decompress": "解压"
     },
     "headers": {
