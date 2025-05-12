@@ -199,129 +199,125 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
     return ips;
   };
 
-  // Helper function to parse a single script line
-  const parseScriptLine = (line: string): { type: 'SSH' | 'RDP' | 'VNC' | null, userHostPort: string, name: string | null, password: string | null, keyName: string | null, proxyName: string | null, tags: string[], note: string | null, error?: string } => {
-    const firstSpaceIndex = line.indexOf(' ');
-    let userHostPortPart = '';
-    let remainingLine = line;
-    
-    if (firstSpaceIndex !== -1) {
-      userHostPortPart = line.substring(0, firstSpaceIndex);
-      remainingLine = line.substring(firstSpaceIndex + 1).trim();
-    } else {
-      userHostPortPart = line;
-      remainingLine = '';
-    }
-    
-    if (!userHostPortPart) return { type: null, userHostPort: '', name: null, password: null, keyName: null, proxyName: null, tags: [], note: null, error: t('connections.form.scriptErrorMissingHost', '缺少 user@host:port 部分') };
+  // Helper function to parse a single script line using minimist
 
-    let type: 'SSH' | 'RDP' | 'VNC' | null = 'SSH';
-    let name: string | null = null;
+  
+  const parseScriptLine = (line: string): { type: 'SSH' | 'RDP' | 'VNC', userHostPort: string, name: string, password: string | null, keyName: string | null, proxyName: string | null, tags: string[], note: string | null, error?: string } => {
+    line = line.trim();
+    if (!line) {
+      return { type: 'SSH', userHostPort: '', name: '', password: null, keyName: null, proxyName: null, tags: [], note: null, error: t('connections.form.scriptErrorEmptyLine', 'Input line cannot be empty') };
+    }
+
+    // 1. Extract user@host:port
+    const firstSpaceIndex = line.indexOf(' ');
+    const userHostPortPart = firstSpaceIndex === -1 ? line : line.substring(0, firstSpaceIndex);
+    const optionsString = firstSpaceIndex === -1 ? '' : line.substring(firstSpaceIndex + 1).trim();
+
+    // 2. Validate user@host:port (allow user@host without port)
+    const userHostPortRegex = /^([^@\s]+)@([^:\s]+)(?::([0-9]+))?$/;
+    const match = userHostPortPart.match(userHostPortRegex);
+    if (!match) {
+      return { type: 'SSH', userHostPort: userHostPortPart, name: '', password: null, keyName: null, proxyName: null, tags: [], note: null, error: t('connections.form.scriptErrorInvalidUserHostPortFormat', { part: userHostPortPart }) };
+    }
+    const [, user, host /*, portStr */] = match; // portStr not used for now
+    const defaultName = `${user}@${host}`; // Default name
+
+    // 3. Initialize results and defaults
+    let type: 'SSH' | 'RDP' | 'VNC' = 'SSH';
+    let name: string = defaultName;
     let password: string | null = null;
     let keyName: string | null = null;
     let proxyName: string | null = null;
-    const tags: string[] = [];
+    let tags: string[] = [];
     let note: string | null = null;
-    let currentArg: string | null = null;
-    let noteParts: string[] = [];
 
-    const argRegex = /(-[^=\s]+)(?:\s+("(?:\\"|[^"])*"|[^-\s][^\s]*))?/g;
-    let match;
-    let lastIndex = 0;
-    
-    while ((match = argRegex.exec(remainingLine)) !== null) {
-      const arg = match[1];
-      let value = match[2] || '';
-      
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1).replace(/\\"/g, '"');
-      }
-      
-      if (noteParts.length > 0 && currentArg === '-note') {
-        note = noteParts.join(' ');
-        noteParts = [];
-      }
-      
-      currentArg = arg;
-      
-      if (arg === '-tags') {
-        // Tags handled later
-      } else if (arg === '-note') {
-        // Note handled later
-      }
-      
-      if (value) {
-        switch (arg) {
-          case '-type':
-            const upperType = value.toUpperCase();
-            if (upperType === 'SSH' || upperType === 'RDP' || upperType === 'VNC') {
-              type = upperType as 'SSH' | 'RDP' | 'VNC';
-            } else {
-              return { type: null, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorInvalidType', { type: value }) };
-            }
-            currentArg = null;
-            break;
-          case '-name':
-            name = value;
-            currentArg = null;
-            break;
-          case '-p':
-            password = value;
-            currentArg = null;
-            break;
-          case '-k':
-            keyName = value;
-            currentArg = null;
-            break;
-          case '-proxy':
-            proxyName = value;
-            currentArg = null;
-            break;
-          case '-tags':
-            tags.push(value);
-            break;
-          case '-note':
-            noteParts.push(value);
-            break;
-          default:
-            if (currentArg === '-note') {
-              noteParts.push(value);
-            } else {
-              return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnknownArg', { arg: currentArg }) };
-            }
-        }
-      }
-      lastIndex = argRegex.lastIndex;
-    }
-    
-    const remainingPart = remainingLine.substring(lastIndex).trim();
-    if (remainingPart) {
-      if (currentArg === '-tags') {
-        const tagRegex = /("(?:\\"|[^"])*"|[^\s"]+)/g;
-        let tagMatch;
-        while ((tagMatch = tagRegex.exec(remainingPart)) !== null) {
-          let tag = tagMatch[1];
-          if (tag.startsWith('"') && tag.endsWith('"')) {
-            tag = tag.slice(1, -1).replace(/\\"/g, '"');
+    // 4. Parse optionsString
+    // Regex to split by space, respecting quotes
+    const args = optionsString.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+    let i = 0;
+    while (i < args.length) {
+      const arg = args[i];
+      if (arg.startsWith('-')) {
+        const key = arg.substring(1).toLowerCase();
+        i++; // Move to the expected position of the value
+
+        if (key === 'tags') {
+          // Handle -tags, which can be followed by zero or more tags
+          tags = [];
+          while (i < args.length && !args[i].startsWith('-')) {
+            tags.push(args[i].replace(/^"|"$/g, '')); // Remove surrounding quotes
+            i++;
           }
-          tags.push(tag);
+          // No need to i++ here, the next loop iteration or outer loop handles it
+        } else if (key === 'note') {
+          // Handle -note, which consumes the rest of the line
+          const noteParts = [];
+          while (i < args.length) {
+            noteParts.push(args[i]);
+            i++;
+          }
+          note = noteParts.join(' ').replace(/^"|"$/g, ''); // Join parts and remove quotes
+          break; // Exit the outer loop as note consumes the rest
+        } else if (i >= args.length) {
+           // All other options require a value
+           return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorMissingValueForKey', { key: arg }) };
+        } else {
+           // Handle options that require a single value
+           const value = args[i].replace(/^"|"$/g, ''); // Remove surrounding quotes
+           switch (key) {
+             case 'type':
+               const typeValue = value.toUpperCase();
+               if (typeValue === 'SSH' || typeValue === 'RDP' || typeValue === 'VNC') {
+                 type = typeValue;
+               } else {
+                 return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorInvalidType', { value: args[i] }) };
+               }
+               break;
+             case 'name':
+               name = value;
+               break;
+             case 'p': // password
+               password = value;
+               break;
+             case 'k': // key name
+               keyName = value;
+               break;
+             case 'proxy':
+               proxyName = value;
+               break;
+             default:
+               return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnknownOption', { option: arg }) };
+           }
+           i++; // Move past the value
         }
-      } else if (currentArg === '-note') {
-        noteParts.push(remainingPart);
       } else {
-        return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnexpectedToken', { token: remainingPart }) };
+        // Arguments after user@host:port must start with '-'
+        return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorUnexpectedArgument', { argument: arg }) };
       }
     }
 
-    if (noteParts.length > 0 && currentArg === '-note') {
-      note = noteParts.join(' ');
+    // 5. Validation based on type
+    if (type === 'SSH') {
+      if (!password && !keyName) {
+        return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorMissingAuthForSsh') };
+      }
+      // Allow both password and key, handle precedence in handleScriptModeSubmit
+    } else if (type === 'RDP') {
+      if (!password) {
+        return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorMissingPasswordForRdp') };
+      }
+      if (keyName) {
+         return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorKeyNotApplicableForRdp') };
+      }
+    } else if (type === 'VNC') {
+      if (!password) {
+         return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorMissingPasswordForVnc') };
+      }
+       if (keyName) {
+         return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorKeyNotApplicableForVnc') };
+      }
     }
 
-    const userHostPortRegex = /^[^@]+@[^:]+(:[0-9]+)?$/;
-    if (!userHostPortRegex.test(userHostPortPart)) {
-      return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note, error: t('connections.form.scriptErrorInvalidUserHostPort', { part: userHostPortPart })};
-    }
- 
     return { type, userHostPort: userHostPortPart, name, password, keyName, proxyName, tags, note };
   };
 
@@ -421,14 +417,22 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       if (connData.tag_names && connData.tag_names.length > 0) {
         const tagIds = [];
         for (const tagName of connData.tag_names) {
-          const foundTag = tags.value.find(t_ => t_.name === tagName); // Renamed t to t_ to avoid conflict
-          if (foundTag) {
-            tagIds.push(foundTag.id);
-          } else {
-            uiNotificationsStore.showError(t('connections.form.scriptErrorTagNotFound', { tagName }));
-            resolutionErrorOccurred = true;
-            break;
+          let foundTag = tags.value.find(t_ => t_.name === tagName); // Renamed t to t_ to avoid conflict
+          if (!foundTag) {
+            // 自动创建不存在的标签
+            const newTag = await tagsStore.addTag(tagName);
+            if (newTag) {
+              foundTag = newTag;
+              uiNotificationsStore.showInfo(t('connections.form.scriptTagCreated', { tagName }));
+              // 确保标签列表已更新
+              await tagsStore.fetchTags();
+            } else {
+              uiNotificationsStore.showError(t('connections.form.scriptErrorTagCreationFailed', { tagName }));
+              resolutionErrorOccurred = true;
+              break;
+            }
           }
+          tagIds.push(foundTag.id);
         }
         if (resolutionErrorOccurred) break;
         connData.tag_ids = tagIds;

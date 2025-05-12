@@ -220,6 +220,18 @@
       "scriptErrorTagNotFound": "Script processing error: Tag '{tagName}' not found.",
       "scriptErrorSshKeyNotFound": "Script processing error: SSH Key '{keyName}' not found.",
       "scriptErrorNothingToProcess": "No valid connection data to process.",
+      "scriptErrorMissingAuthForSsh": "SSH connection must provide password (-p) or key name (-k)",
+      "scriptErrorMissingPasswordForRdp": "RDP connection must provide password (-p)",
+      "scriptErrorKeyNotApplicableForRdp": "Key name (-k) is not applicable for RDP connection",
+      "scriptErrorMissingPasswordForVnc": "VNC connection must provide password (-p)",
+      "scriptErrorKeyNotApplicableForVnc": "Key name (-k) is not applicable for VNC connection",
+      "scriptErrorMissingValueForKey": "Missing value for parameter '{key}'",
+      "scriptErrorUnknownOption": "Unknown option '{option}'",
+      "scriptErrorUnexpectedArgument": "Unexpected argument '{argument}'",
+      "scriptErrorEmptyLine": "Input line cannot be empty",
+      "scriptErrorInvalidUserHostPortFormat": "Invalid format for '{part}', expected format is 'user@host' or 'user@host:port'",
+      "scriptTagCreated": "Tag '{tagName}' created",
+      "scriptErrorTagCreationFailed": "Failed to create tag '{tagName}'",
       "scriptModeAddingConnections": "Adding {count} connections via script mode..."
     },
     "test": {

@@ -219,6 +219,18 @@
       "scriptErrorTagNotFound": "脚本处理错误：未找到标签 '{tagName}'。",
       "scriptErrorSshKeyNotFound": "脚本处理错误：未找到 SSH 密钥 '{keyName}'。",
       "scriptErrorNothingToProcess": "没有可处理的有效连接数据。",
+      "scriptErrorMissingAuthForSsh": "SSH连接必须提供密码 (-p) 或密钥名称 (-k)",
+      "scriptErrorMissingPasswordForRdp": "RDP连接必须提供密码 (-p)",
+      "scriptErrorKeyNotApplicableForRdp": "密钥名称 (-k) 不适用于 RDP 连接",
+      "scriptErrorMissingPasswordForVnc": "VNC连接必须提供密码 (-p)",
+      "scriptErrorKeyNotApplicableForVnc": "密钥名称 (-k) 不适用于 VNC 连接",
+      "scriptErrorMissingValueForKey": "参数 '{key}' 缺少对应的值",
+      "scriptErrorUnknownOption": "未知选项 '{option}'",
+      "scriptErrorUnexpectedArgument": "意外参数 '{argument}'",
+      "scriptErrorEmptyLine": "输入行不能为空",
+      "scriptErrorInvalidUserHostPortFormat": "'{part}' 部分格式无效，期望格式为 'user@host' 或 'user@host:port'",
+      "scriptTagCreated": "标签 '{tagName}' 已创建",
+      "scriptErrorTagCreationFailed": "创建标签 '{tagName}' 失败",
       "scriptModeAddingConnections": "正在通过脚本模式添加 {count} 个连接..."
     },
     "test": {
