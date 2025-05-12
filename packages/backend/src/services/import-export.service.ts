@@ -261,6 +261,27 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
                 line += ` -p ${escapeCliArgument(conn.password)}`;
             }
 
+            if (conn.proxy) {
+                line += ` -proxy-name ${escapeCliArgument(conn.proxy.name)}`;
+                line += ` -proxy-type ${conn.proxy.type}`;
+                line += ` -proxy-host ${escapeCliArgument(conn.proxy.host)}`;
+                line += ` -proxy-port ${conn.proxy.port}`;
+                if (conn.proxy.username) {
+                    line += ` -proxy-username ${escapeCliArgument(conn.proxy.username)}`;
+                }
+                if (conn.proxy.auth_method && conn.proxy.auth_method !== 'none') {
+                    line += ` -proxy-auth-method ${conn.proxy.auth_method}`;
+                    if (conn.proxy.auth_method === 'password' && conn.proxy.password) {
+                        line += ` -proxy-password ${escapeCliArgument(conn.proxy.password)}`;
+                    } else if (conn.proxy.auth_method === 'key' && conn.proxy.private_key) {
+                        line += ` -proxy-key ${escapeCliArgument('key-content-not-exported-for-security')}`;
+                        if (conn.proxy.passphrase) {
+                            line += ` -proxy-passphrase ${escapeCliArgument(conn.proxy.passphrase)}`;
+                        }
+                    }
+                }
+            }
+
             if (conn.tag_ids && conn.tag_ids.length > 0) {
                 const tagNames = conn.tag_ids.map(id => tagsMap.get(id)).filter(name => !!name) as string[];
                 if (tagNames.length > 0) {
@@ -333,27 +354,6 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
         throw new Error(`导出连接 ZIP (archiver) 失败: ${error.message}`);
     }
 };
-
-// Adjust PlaintextExportConnectionData to include ssh_key_id if it's relevant
-// This change should ideally be in the PlaintextExportConnectionData interface definition
-// and getPlaintextConnectionsData needs to populate it.
-
-// For the sake of this diff, we'll assume getPlaintextConnectionsData is modified
-// to include ssh_key_id on the objects in the `connectionsData` array
-// if conn.type === 'SSH' and conn.auth_method === 'key'.
-// A more robust solution would involve modifying `PlaintextExportConnectionData`
-// and `getPlaintextConnectionsData`.
-
-// Modify getPlaintextConnectionsData to include ssh_key_id
-// We need to adjust the interface and the mapping function.
-// The diff tool here has limitations, so I'll describe the change needed in getPlaintextConnectionsData:
-// 1. Add `ssh_key_id?: number | null;` to `PlaintextExportConnectionData` interface.
-// 2. In `getPlaintextConnectionsData`, when mapping `row` to `connection`, add:
-//    `ssh_key_id: (row.type === 'SSH' && row.auth_method === 'key') ? row.ssh_key_id : null,`
-
-// Since I cannot apply diff to two parts of the file simultaneously with this tool for the `getPlaintextConnectionsData` modification,
-// I will proceed with the current change and note that `getPlaintextConnectionsData` needs that adjustment for `-k <keyname>` to work correctly.
-// The `connAsAny.ssh_key_id` is a temporary access pattern.
 
 
 /**
