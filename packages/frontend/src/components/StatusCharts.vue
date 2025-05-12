@@ -11,6 +11,8 @@
         <Line :data="cpuChartData" :options="percentageChartOptions" :key="cpuChartKey" />
       </div>
     </div>
+    <!-- 内存使用图表已注释掉 -->
+    <!--
     <div class="chart-container bg-header rounded p-3">
       <div class="flex justify-between items-center mb-2">
         <h5 class="text-sm font-medium text-text-secondary">{{ $t('statusMonitor.memoryUsageTitleUnit', { unit: memoryUnitIsGB ? 'GB' : 'MB' }) }}</h5>
@@ -22,6 +24,7 @@
         <Line :data="memoryChartData" :options="memoryChartOptions" :key="memoryChartKey" />
       </div>
     </div>
+    -->
     <div class="chart-container bg-header rounded p-3">
       <div class="flex justify-between items-center mb-2">
         <h5 class="text-sm font-medium text-text-secondary">{{ $t('statusMonitor.networkSpeedTitleUnit', { unit: networkRateUnitIsMB ? 'MB/s' : 'KB/s' }) }}</h5>
@@ -383,7 +386,8 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
     const maxNetworkRate = Math.max(...allNetworkData, minMax); 
     const roundingFactor = networkRateUnitIsMB.value ? 1 : 10;
     const buffer = networkRateUnitIsMB.value ? 1 : 10;
-    networkChartOptions.value.scales.y.max = Math.ceil(maxNetworkRate / roundingFactor) * roundingFactor + buffer;
+    const newMax = Math.ceil(maxNetworkRate / roundingFactor) * roundingFactor + buffer;
+    networkChartOptions.value.scales.y.max = Math.max(newMax, Math.ceil(maxNetworkRate) + buffer);
   } 
 };
 
