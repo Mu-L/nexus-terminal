@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { type PropType } from 'vue';
+import { ref, type PropType } from 'vue';
 import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu'; // 导入菜单项类型
+import { onUnmounted } from 'vue';
 
 defineProps({
   isVisible: {
@@ -22,12 +23,38 @@ defineProps({
 const emit = defineEmits(['item-click', 'close-request']); // 添加 close-request
 
 const handleItemClick = (item: ContextMenuItem) => {
-  if (!item.disabled) {
-    item.action(); // 直接执行 action
+  if (!item.disabled && item.action) {
+    item.action(); // 只有当 action 存在时才执行
     emit('close-request'); // <-- 发出关闭请求
-    // 不需要 emit('item-click', item) 了
   }
 };
+
+
+
+// 管理二级菜单的展开状态
+const expandedSubmenu = ref<string | null>(null);
+let closeTimeout: NodeJS.Timeout | null = null;
+
+const showSubmenu = (label: string) => {
+  if (closeTimeout) {
+    clearTimeout(closeTimeout);
+    closeTimeout = null;
+  }
+  expandedSubmenu.value = label;
+};
+
+const hideSubmenu = () => {
+  closeTimeout = setTimeout(() => {
+    expandedSubmenu.value = null;
+    closeTimeout = null;
+  }, 300); // 延迟300ms关闭
+};
+
+onUnmounted(() => {
+  if (closeTimeout) {
+    clearTimeout(closeTimeout);
+  }
+});
 </script>
 
 <template>
@@ -41,16 +68,45 @@ const handleItemClick = (item: ContextMenuItem) => {
       <template v-for="(menuItem, index) in items" :key="index">
         <li v-if="menuItem.separator" class="border-t border-border/50 my-1 mx-1"></li>
         <li
-          v-else
+          v-else-if="!menuItem.submenu"
           @click.stop="handleItemClick(menuItem)"
           :class="[
-            'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1', // Added mx-1 for consistency
+            'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
             menuItem.disabled
-              ? 'text-text-secondary cursor-not-allowed opacity-60' // Removed bg-background for disabled
-              : 'hover:bg-primary/10 hover:text-primary' // Use primary hover like TabBarContextMenu
+              ? 'text-text-secondary cursor-not-allowed opacity-60'
+              : 'hover:bg-primary/10 hover:text-primary'
           ]"
         >
           {{ menuItem.label }}
+        </li>
+        <li
+          v-else
+          class="px-4 py-1.5 text-foreground text-sm flex items-center justify-between transition-colors duration-150 rounded mx-1 hover:bg-primary/10 hover:text-primary relative"
+          @mouseenter="showSubmenu(menuItem.label)"
+          @mouseleave="hideSubmenu()"
+        >
+          {{ menuItem.label }}
+          <span class="ml-2">›</span>
+          <ul
+            v-if="expandedSubmenu === menuItem.label"
+            class="absolute left-full top-0 mt-0 ml-1 bg-background border border-border shadow-lg rounded-md z-[1003] min-w-[150px] list-none p-1"
+            @mouseenter="showSubmenu(menuItem.label)"
+            @mouseleave="hideSubmenu()"
+          >
+            <li
+              v-for="(subItem, subIndex) in menuItem.submenu"
+              :key="subIndex"
+              @click.stop="handleItemClick(subItem)"
+              :class="[
+                'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+                subItem.disabled
+                  ? 'text-text-secondary cursor-not-allowed opacity-60'
+                  : 'hover:bg-primary/10 hover:text-primary'
+              ]"
+            >
+              {{ subItem.label }}
+            </li>
+          </ul>
         </li>
       </template>
     </ul>

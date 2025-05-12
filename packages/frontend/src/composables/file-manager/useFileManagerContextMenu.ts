@@ -6,9 +6,10 @@ import type FileManagerContextMenu from '../../components/FileManagerContextMenu
 // 定义菜单项类型 (可以根据需要扩展)
 export interface ContextMenuItem {
   label: string;
-  action: () => void;
+  action?: () => void;
   disabled?: boolean;
   separator?: boolean; // 添加分隔符类型
+  submenu?: ContextMenuItem[]; // 添加二级菜单支持
 }
 
 // 支持的压缩格式
@@ -137,11 +138,14 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
 
 
         // --- 多选压缩 ---
-        menu.push(
-            { label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest(selectedFileItems, 'zip'), disabled: !(isConnected.value && isSftpReady.value) },
-            { label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest(selectedFileItems, 'targz'), disabled: !(isConnected.value && isSftpReady.value) },
-            { label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest(selectedFileItems, 'tarbz2'), disabled: !(isConnected.value && isSftpReady.value) },
-        );
+        menu.push({
+            label: t('fileManager.contextMenu.compress'),
+            submenu: [
+                { label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest(selectedFileItems, 'zip'), disabled: !(isConnected.value && isSftpReady.value) },
+                { label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest(selectedFileItems, 'targz'), disabled: !(isConnected.value && isSftpReady.value) },
+                { label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest(selectedFileItems, 'tarbz2'), disabled: !(isConnected.value && isSftpReady.value) }
+            ]
+        });
         menu.push({ label: '', action: () => {}, disabled: true, separator: true }); // Separator
 
 
@@ -192,10 +196,15 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         const canCompress = isConnected.value && isSftpReady.value;
         const canDecompress = isConnected.value && isSftpReady.value && targetItem.attrs.isFile && isSupportedArchive(targetItem.filename);
 
-        // menu.push({ label: t('fileManager.contextMenu.compress'), action: () => {}, disabled: true }); // Removed isSubmenuHeader
-        menu.push({ label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest([targetItem], 'zip'), disabled: !canCompress });
-        menu.push({ label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest([targetItem], 'targz'), disabled: !canCompress });
-        menu.push({ label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest([targetItem], 'tarbz2'), disabled: !canCompress });
+        // 添加压缩选项作为二级菜单
+        menu.push({
+            label: t('fileManager.contextMenu.compress'),
+            submenu: [
+                { label: t('fileManager.contextMenu.compressZip'), action: () => onCompressRequest([targetItem], 'zip'), disabled: !canCompress },
+                { label: t('fileManager.contextMenu.compressTarGz'), action: () => onCompressRequest([targetItem], 'targz'), disabled: !canCompress },
+                { label: t('fileManager.contextMenu.compressTarBz2'), action: () => onCompressRequest([targetItem], 'tarbz2'), disabled: !canCompress }
+            ]
+        });
 
         // 只有在支持解压的文件上才显示解压选项
         if (canDecompress) {
