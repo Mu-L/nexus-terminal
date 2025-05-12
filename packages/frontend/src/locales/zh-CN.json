@@ -769,7 +769,12 @@
       "fileManagerDeleteConfirmTitle": "文件管理器删除确认",
       "fileManagerShowDeleteConfirmationLabel": "删除文件或文件夹时显示确认提示框",
       "fileManagerDeleteConfirmSuccess": "文件管理器删除确认设置已保存。",
-      "fileManagerDeleteConfirmError": "保存文件管理器删除确认设置失败。"
+      "fileManagerDeleteConfirmError": "保存文件管理器删除确认设置失败。",
+"terminalRightClickPasteTitle": "终端右键粘贴",
+        "terminalEnableRightClickPasteLabel": "启用终端右键粘贴",
+        "terminalEnableRightClickPasteDescription": "允许在终端区域内使用鼠标右键粘贴剪贴板内容。",
+        "terminalRightClickPasteSuccess": "终端右键粘贴设置已保存。",
+        "terminalRightClickPasteError": "保存终端右键粘贴设置失败。"
     },
     "terminalScrollback": {
       "title": "终端回滚行数",
