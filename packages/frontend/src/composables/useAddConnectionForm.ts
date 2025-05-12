@@ -669,7 +669,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
     const dataToSend: any = {
         type: formData.type,
         name: formData.name,
-        host: formData.host,
+        host: formData.host.trim(),
         port: formData.port,
         notes: formData.notes,
         username: formData.username,
