@@ -40,9 +40,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, onMounted, computed, type PropType } from 'vue'; // 添加 PropType
 import { useI18n } from 'vue-i18n';
 import { Line } from 'vue-chartjs';
+import { useSessionStore } from '../stores/session.store'; // 注入 sessionStore
+import { storeToRefs } from 'pinia'; // 导入 storeToRefs
 import {
   Chart as ChartJS,
   Title,
@@ -78,15 +80,24 @@ interface ServerStatusData {
   // ... other properties if needed
 }
 
-const props = defineProps<{
-  serverStatus: ServerStatusData | null;
-}>();
+const props = defineProps({
+  serverStatus: { // Keep serverStatus for current values and Y-axis scaling logic
+      type: Object as PropType<ServerStatusData | null>,
+      required: true,
+  },
+  activeSessionId: {
+    type: String as PropType<string | null>,
+    required: true,
+  },
+});
 
 const MAX_DATA_POINTS = 60;
 const KB_TO_MB_THRESHOLD = 1024; // For network
 const MB_TO_GB_THRESHOLD = 1024; // For memory
 
 const { t } = useI18n();
+const sessionStore = useSessionStore();
+const { sessions } = storeToRefs(sessionStore); // 获取响应式的 sessions
 
 const cpuChartKey = ref(0);
 const memoryChartKey = ref(0);
@@ -101,62 +112,130 @@ const memoryUnitIsGB = ref(false);
 
 const initialLabels = Array.from({ length: MAX_DATA_POINTS }, (_, i) => `-${(MAX_DATA_POINTS - 1 - i)}s`);
 
-const cpuChartData = ref({
-  labels: [...initialLabels],
+// --- 计算属性：从 Store 获取当前会话的历史数据 ---
+const currentSessionStatusManager = computed(() => {
+  return props.activeSessionId ? sessions.value.get(props.activeSessionId)?.statusMonitorManager : null;
+});
+
+const currentCpuHistory = computed(() => {
+  return currentSessionStatusManager.value?.cpuHistory.value ?? Array(MAX_DATA_POINTS).fill(null);
+});
+
+const currentMemUsedHistory = computed(() => {
+    // 返回 MB 为单位的历史数据
+  return currentSessionStatusManager.value?.memUsedHistory.value ?? Array(MAX_DATA_POINTS).fill(null);
+});
+
+const currentNetRxHistory = computed(() => {
+    // 返回 Bytes/sec 为单位的历史数据
+  return currentSessionStatusManager.value?.netRxHistory.value ?? Array(MAX_DATA_POINTS).fill(null);
+});
+
+const currentNetTxHistory = computed(() => {
+    // 返回 Bytes/sec 为单位的历史数据
+  return currentSessionStatusManager.value?.netTxHistory.value ?? Array(MAX_DATA_POINTS).fill(null);
+});
+
+
+// --- 图表数据结构，现在 data 指向 computed 属性 ---
+const cpuChartData = computed(() => ({
+  labels: initialLabels, // 标签保持不变
   datasets: [
     {
-      label: computed(() => t('statusMonitor.cpuUsageLabel')),
+      label: t('statusMonitor.cpuUsageLabel'),
       backgroundColor: 'rgba(54, 162, 235, 0.2)',
       borderColor: 'rgba(54, 162, 235, 1)',
       borderWidth: 1,
-      data: Array(MAX_DATA_POINTS).fill(0),
+      data: currentCpuHistory.value.map(v => v ?? 0), // 将 null 映射为 0 用于图表
       tension: 0.1,
       pointRadius: 0,
       pointHoverRadius: 5,
     },
   ],
+}));
+
+// 动态计算内存图表数据（转换单位）
+const memoryChartData = computed(() => {
+    const historyMB = currentMemUsedHistory.value;
+    let displayData: (number | null)[];
+
+    // 检查是否需要转换为 GB (基于当前值或历史峰值)
+    const currentTotalMB = props.serverStatus?.memTotal ?? 0;
+    const historyPeakMB = Math.max(...historyMB.filter((v): v is number => v !== null), 0);
+    const requiresGB = currentTotalMB >= MB_TO_GB_THRESHOLD || historyPeakMB >= MB_TO_GB_THRESHOLD;
+    memoryUnitIsGB.value = requiresGB; // 更新单位标志
+
+    if (requiresGB) {
+        displayData = historyMB.map(mb => mb === null ? null : parseFloat((mb / MB_TO_GB_THRESHOLD).toFixed(1)));
+    } else {
+        displayData = historyMB.map(mb => mb === null ? null : parseFloat(mb.toFixed(1)));
+    }
+
+    return {
+        labels: initialLabels,
+        datasets: [
+            {
+                label: t('statusMonitor.memoryUsageLabelUnit', { unit: requiresGB ? 'GB' : 'MB' }),
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                data: displayData.map(v => v ?? 0), // 将 null 映射为 0
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+            },
+        ],
+    };
 });
 
-const memoryChartData = ref({
-  labels: [...initialLabels],
-  datasets: [
-    {
-      label: computed(() => t('statusMonitor.memoryUsageLabelUnit', { unit: memoryUnitIsGB.value ? 'GB' : 'MB' })),
-      backgroundColor: 'rgba(255, 99, 132, 0.2)',
-      borderColor: 'rgba(255, 99, 132, 1)',
-      borderWidth: 1,
-      data: Array(MAX_DATA_POINTS).fill(0),
-      tension: 0.1,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-    },
-  ],
-});
 
-const networkChartData = ref({
-  labels: [...initialLabels],
-  datasets: [
-    {
-      label: computed(() => t('statusMonitor.networkDownloadLabelUnit', { unit: networkRateUnitIsMB.value ? 'MB/s' : 'KB/s' })),
-      backgroundColor: 'rgba(75, 192, 192, 0.2)',
-      borderColor: 'rgba(75, 192, 192, 1)',
-      borderWidth: 1,
-      data: Array(MAX_DATA_POINTS).fill(0),
-      tension: 0.1,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-    },
-    {
-      label: computed(() => t('statusMonitor.networkUploadLabelUnit', { unit: networkRateUnitIsMB.value ? 'MB/s' : 'KB/s' })),
-      backgroundColor: 'rgba(255, 159, 64, 0.2)',
-      borderColor: 'rgba(255, 159, 64, 1)',
-      borderWidth: 1,
-      data: Array(MAX_DATA_POINTS).fill(0),
-      tension: 0.1,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-    },
-  ],
+// 动态计算网络图表数据（转换单位）
+const networkChartData = computed(() => {
+    const historyRxBps = currentNetRxHistory.value;
+    const historyTxBps = currentNetTxHistory.value;
+    let displayRxData: (number | null)[];
+    let displayTxData: (number | null)[];
+
+    // 检查是否需要转换为 MB/s (基于当前值或历史峰值)
+    const currentRxKB = (props.serverStatus?.netRxRate ?? 0) / 1024;
+    const currentTxKB = (props.serverStatus?.netTxRate ?? 0) / 1024;
+    const historyPeakRxKB = Math.max(...historyRxBps.filter((v): v is number => v !== null).map(bps => bps / 1024), 0);
+    const historyPeakTxKB = Math.max(...historyTxBps.filter((v): v is number => v !== null).map(bps => bps / 1024), 0);
+    const requiresMB = currentRxKB >= KB_TO_MB_THRESHOLD || currentTxKB >= KB_TO_MB_THRESHOLD ||
+                       historyPeakRxKB >= KB_TO_MB_THRESHOLD || historyPeakTxKB >= KB_TO_MB_THRESHOLD;
+    networkRateUnitIsMB.value = requiresMB; // 更新单位标志
+
+    const divisor = requiresMB ? (1024 * 1024) : 1024;
+    const precision = requiresMB ? 2 : 1;
+
+    displayRxData = historyRxBps.map(bps => bps === null ? null : parseFloat((bps / divisor).toFixed(precision)));
+    displayTxData = historyTxBps.map(bps => bps === null ? null : parseFloat((bps / divisor).toFixed(precision)));
+
+    return {
+        labels: initialLabels,
+        datasets: [
+            {
+                label: t('statusMonitor.networkDownloadLabelUnit', { unit: requiresMB ? 'MB/s' : 'KB/s' }),
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                data: displayRxData.map(v => v ?? 0), // 将 null 映射为 0
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+            },
+            {
+                label: t('statusMonitor.networkUploadLabelUnit', { unit: requiresMB ? 'MB/s' : 'KB/s' }),
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                borderColor: 'rgba(255, 159, 64, 1)',
+                borderWidth: 1,
+                data: displayTxData.map(v => v ?? 0), // 将 null 映射为 0
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+            },
+        ],
+    };
 });
 
 const baseChartOptions: Omit<ChartOptions<'line'>, 'scales'> = {
@@ -280,174 +359,96 @@ const networkChartOptions = ref<ChartOptions<'line'>>({
 });
 
 
-const updateCharts = (newStatus: ServerStatusData | null) => {
-  if (!newStatus) return;
+// --- 函数：动态更新 Y 轴范围和单位（基于当前 serverStatus 和 store 中的历史数据） ---
+const updateAxisAndUnits = () => {
+  // 内存 Y 轴和单位
+  if (props.serverStatus && memoryChartOptions.value.scales?.y) {
+      const historyMB = currentMemUsedHistory.value;
+      const memTotal = props.serverStatus.memTotal ?? 0;
+      const requiresGB = memoryUnitIsGB.value; // memoryChartData computed prop already sets this
 
-  // Update CPU Chart
-  if (typeof newStatus.cpuPercent === 'number') {
-    const newCpuData = [...cpuChartData.value.datasets[0].data];
-    newCpuData.shift();
-    newCpuData.push(parseFloat(newStatus.cpuPercent.toFixed(1)));
-    cpuChartData.value = { ...cpuChartData.value, datasets: [{ ...cpuChartData.value.datasets[0], data: newCpuData }] };
-  }
+      let yAxisTopValue = requiresGB
+          ? parseFloat((memTotal / MB_TO_GB_THRESHOLD).toFixed(1))
+          : parseFloat(memTotal.toFixed(1));
 
-  // Update Memory Chart
-  if (typeof newStatus.memUsed === 'number' && typeof newStatus.memTotal === 'number') {
-    let currentMemUsed = newStatus.memUsed; // MB
-    const memTotal = newStatus.memTotal;   // MB
-    let currentData = [...memoryChartData.value.datasets[0].data];
-
-    if (!memoryUnitIsGB.value && (memTotal >= MB_TO_GB_THRESHOLD || currentMemUsed >= MB_TO_GB_THRESHOLD)) {
-      memoryUnitIsGB.value = true;
-      currentData = currentData.map(d => parseFloat((d / MB_TO_GB_THRESHOLD).toFixed(1)));
-      memoryChartKey.value++; // Force re-render
-    } else if (memoryUnitIsGB.value && memTotal < MB_TO_GB_THRESHOLD && currentMemUsed < MB_TO_GB_THRESHOLD) {
-      // This case is less likely if total is large, but handles potential fluctuations or incorrect initial state
-      memoryUnitIsGB.value = false;
-      currentData = currentData.map(d => parseFloat((d * MB_TO_GB_THRESHOLD).toFixed(1)));
-      memoryChartKey.value++;
-    }
-    
-    let newMemValue;
-    if (memoryUnitIsGB.value) {
-      newMemValue = parseFloat((currentMemUsed / MB_TO_GB_THRESHOLD).toFixed(1));
-    } else {
-      newMemValue = parseFloat(currentMemUsed.toFixed(1));
-    }
-
-    currentData.shift();
-    currentData.push(newMemValue);
-    memoryChartData.value = { ...memoryChartData.value, datasets: [{ ...memoryChartData.value.datasets[0], data: currentData }] };
-
-    if (memoryChartOptions.value.scales?.y && typeof memTotal === 'number') {
-      let yAxisTopValue = memoryUnitIsGB.value
-        ? parseFloat((memTotal / MB_TO_GB_THRESHOLD).toFixed(1))
-        : parseFloat(memTotal.toFixed(1));
-
-      // Ensure the yAxisTopValue is at least slightly larger than the max data point if data exceeds total.
-      // Also, handle cases where memTotal might be 0 or very small.
-      const currentMaxDataPoint = Math.max(...currentData, 0);
-      // The y-axis max should primarily be driven by memTotal.
-      // If current data somehow exceeds memTotal (which shouldn't happen for 'used' vs 'total'),
-      // then the axis should expand. Otherwise, stick to memTotal.
+      const currentMaxDataPoint = Math.max(...historyMB.filter((v): v is number => v !== null).map(mb => requiresGB ? mb / MB_TO_GB_THRESHOLD : mb), 0);
       yAxisTopValue = Math.max(yAxisTopValue, currentMaxDataPoint);
-      
-      // If memTotal is 0 (and thus yAxisTopValue is 0 after parseFloat), set a small default max.
+
       if (yAxisTopValue === 0) {
-        yAxisTopValue = memoryUnitIsGB.value ? 1 : 100; // Default small max if total is 0
+          yAxisTopValue = requiresGB ? 1 : 100;
       } else {
-        // Add a very tiny buffer if yAxisTopValue is not 0, to ensure the top line is visible if data hits the max.
-        // This helps if Chart.js clips data exactly at the 'max'.
-        // For example, if max is 8.0GB, a data point of 8.0GB might be at the very edge.
-        // A small increment ensures it's clearly within the chart area.
-        const epsilon = memoryUnitIsGB.value ? 0.01 : 1;
-        yAxisTopValue += epsilon;
-        // Re-round after adding epsilon to maintain clean ticks if possible
-        if (memoryUnitIsGB.value) {
-            yAxisTopValue = Math.ceil(yAxisTopValue * 100) / 100; // Round to 2 decimal places for GB after epsilon
-        } else {
-            yAxisTopValue = Math.ceil(yAxisTopValue); // Round to next integer for MB after epsilon
-        }
+          const epsilon = requiresGB ? 0.01 : 1;
+          yAxisTopValue += epsilon;
+          yAxisTopValue = requiresGB ? Math.ceil(yAxisTopValue * 100) / 100 : Math.ceil(yAxisTopValue);
       }
-      memoryChartOptions.value.scales.y.max = yAxisTopValue;
-    }
+
+      if (memoryChartOptions.value.scales.y.max !== yAxisTopValue) {
+        memoryChartOptions.value.scales.y.max = yAxisTopValue;
+        memoryChartKey.value++; // 强制重绘以应用新的 max
+      }
   }
 
+  // 网络 Y 轴和单位
+  if (props.serverStatus && networkChartOptions.value.scales?.y) {
+      const historyRxBps = currentNetRxHistory.value;
+      const historyTxBps = currentNetTxHistory.value;
+      const requiresMB = networkRateUnitIsMB.value; // networkChartData computed prop already sets this
+      const divisor = requiresMB ? (1024 * 1024) : 1024;
 
-  // Update Network Chart
-  let currentNetRxRateKB = (newStatus.netRxRate || 0) / 1024;
-  let currentNetTxRateKB = (newStatus.netTxRate || 0) / 1024;
-  let newNetRxData = [...networkChartData.value.datasets[0].data];
-  let newNetTxData = [...networkChartData.value.datasets[1].data];
+      const allNetworkData = [
+          ...historyRxBps.filter((v): v is number => v !== null).map(bps => bps / divisor),
+          ...historyTxBps.filter((v): v is number => v !== null).map(bps => bps / divisor)
+      ];
+      const currentMaxDataPoint = Math.max(...allNetworkData, 0);
 
-  if (!networkRateUnitIsMB.value && (currentNetRxRateKB >= KB_TO_MB_THRESHOLD || currentNetTxRateKB >= KB_TO_MB_THRESHOLD)) {
-    networkRateUnitIsMB.value = true;
-    newNetRxData = newNetRxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(2)));
-    newNetTxData = newNetTxData.map(d => parseFloat((d / KB_TO_MB_THRESHOLD).toFixed(2)));
-    networkChartKey.value++;
-  }
-  
-  let newRxValue, newTxValue;
-  if (networkRateUnitIsMB.value) {
-    newRxValue = parseFloat((currentNetRxRateKB / KB_TO_MB_THRESHOLD).toFixed(2));
-    newTxValue = parseFloat((currentNetTxRateKB / KB_TO_MB_THRESHOLD).toFixed(2));
-  } else {
-    newRxValue = parseFloat(currentNetRxRateKB.toFixed(1));
-    newTxValue = parseFloat(currentNetTxRateKB.toFixed(1));
-  }
-
-  newNetRxData.shift();
-  newNetRxData.push(newRxValue);
-  newNetTxData.shift();
-  newNetTxData.push(newTxValue);
-  
-  networkChartData.value = {
-    ...networkChartData.value,
-    datasets: [
-      { ...networkChartData.value.datasets[0], data: newNetRxData },
-      { ...networkChartData.value.datasets[1], data: newNetTxData },
-    ],
-  };
-
-  if (networkChartOptions.value.scales?.y) {
-    const allNetworkData = [...newNetRxData, ...newNetTxData];
-    const currentMaxDataPoint = Math.max(...allNetworkData, 0);
-
-    let suggestedMax;
-    const baseMultiplier = 1.2; // 20% buffer
-
-    if (currentMaxDataPoint === 0) {
-      // If no data or all data is zero, set a default max based on unit
-      suggestedMax = networkRateUnitIsMB.value ? 5 : 500; // Default 5MB/s or 500KB/s
-    } else {
-      suggestedMax = currentMaxDataPoint * baseMultiplier;
-    }
-
-    // Determine a sensible minimum for the y-axis max based on the unit
-    // This prevents the y-axis from being too small if data values are tiny (e.g., 0.01 MB/s)
-    const absoluteMinMax = networkRateUnitIsMB.value ? 1 : 100; // Min 1MB/s or 100KB/s
-
-    // Ensure suggestedMax is at least the absoluteMinMax
-    suggestedMax = Math.max(suggestedMax, absoluteMinMax);
-
-    // Round up to the next sensible integer for MB/s or a larger step for KB/s for cleaner ticks
-    if (networkRateUnitIsMB.value) {
-      suggestedMax = Math.ceil(suggestedMax); // Round up to the next whole number for MB/s
-    } else {
-      // For KB/s, round up to the nearest 50 or 100 for cleaner ticks
-      if (suggestedMax <= 100) { // if max is very low (e.g. 10KB/s), round to 10s or 20s
-        suggestedMax = Math.ceil(suggestedMax / 10) * 10;
-        if (suggestedMax === 0 && currentMaxDataPoint > 0) suggestedMax = 10; // ensure at least 10 if there's data
-      } else if (suggestedMax <= 500) {
-        suggestedMax = Math.ceil(suggestedMax / 50) * 50; // Round to nearest 50 if under 500KB/s
+      let suggestedMax;
+      const baseMultiplier = 1.2;
+      if (currentMaxDataPoint === 0) {
+          suggestedMax = requiresMB ? 5 : 500;
       } else {
-        suggestedMax = Math.ceil(suggestedMax / 100) * 100; // Round to nearest 100 if over 500KB/s
+          suggestedMax = currentMaxDataPoint * baseMultiplier;
       }
-    }
-    
-    // Final safety check: if there was some data, max should not be zero.
-    if (currentMaxDataPoint > 0 && suggestedMax === 0) {
-        suggestedMax = networkRateUnitIsMB.value ? 1 : (allNetworkData.some(d => d > 0 && d < 10) ? 10 : 100) ;
-    }
-    
-    // If all data points are zero, ensure a minimum default axis.
-    if (currentMaxDataPoint === 0 && suggestedMax === 0) {
-        suggestedMax = networkRateUnitIsMB.value ? 1 : 100;
-    }
 
-    if (networkChartOptions.value.scales.y.max !== suggestedMax) {
-      networkChartOptions.value.scales.y.max = suggestedMax;
-      networkChartKey.value++; // Force re-render if max value changed
-    }
+      const absoluteMinMax = requiresMB ? 1 : 100;
+      suggestedMax = Math.max(suggestedMax, absoluteMinMax);
+
+      if (requiresMB) {
+          suggestedMax = Math.ceil(suggestedMax);
+      } else {
+          if (suggestedMax <= 100) {
+              suggestedMax = Math.ceil(suggestedMax / 10) * 10;
+              if (suggestedMax === 0 && currentMaxDataPoint > 0) suggestedMax = 10;
+          } else if (suggestedMax <= 500) {
+              suggestedMax = Math.ceil(suggestedMax / 50) * 50;
+          } else {
+              suggestedMax = Math.ceil(suggestedMax / 100) * 100;
+          }
+      }
+
+      if (currentMaxDataPoint > 0 && suggestedMax === 0) {
+          suggestedMax = requiresMB ? 1 : (allNetworkData.some(d => d > 0 && d < 10 / divisor) ? 10 : 100);
+      }
+      if (currentMaxDataPoint === 0 && suggestedMax === 0) {
+          suggestedMax = requiresMB ? 1 : 100;
+      }
+
+       if (networkChartOptions.value.scales.y.max !== suggestedMax) {
+           networkChartOptions.value.scales.y.max = suggestedMax;
+           networkChartKey.value++; // 强制重绘以应用新的 max
+       }
   }
 };
 
-watch(() => props.serverStatus, (newStatus) => {
-  updateCharts(newStatus);
-}, { deep: true, immediate: true });
+// --- 监听 props.serverStatus 的变化，仅用于更新 Y 轴范围和单位 ---
+// 数据本身由 computed 属性从 store 获取
+watch(() => props.serverStatus, () => {
+    updateAxisAndUnits();
+}, { deep: true, immediate: true }); // immediate: true 确保初始加载时设置好轴
+
+// 移除监听 activeSessionId 的 watcher 和 resetChartData 函数
 
 onMounted(() => {
-  // Initial setup handled by watch immediate
+  // 初始轴和单位设置由 watch immediate 处理
 });
 
 </script>

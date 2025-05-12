@@ -18,9 +18,27 @@ export interface StatusMonitorDependencies {
  */
 export function createStatusMonitorManager(sessionId: string, wsDeps: StatusMonitorDependencies) {
     const { onMessage, isConnected } = wsDeps;
+    const MAX_HISTORY_POINTS = 60; // 图表显示的点数
 
     const serverStatus = ref<ServerStatus | null>(null);
     const statusError = ref<string | null>(null); // 存储状态获取错误
+
+    // --- 历史数据存储 ---
+    // 初始化为包含60个 null 或 0 的数组，这样图表初始时有占位
+    const cpuHistory = ref<(number | null)[]>(Array(MAX_HISTORY_POINTS).fill(null));
+    const memUsedHistory = ref<(number | null)[]>(Array(MAX_HISTORY_POINTS).fill(null)); // Store memUsed in MB
+    const netRxHistory = ref<(number | null)[]>(Array(MAX_HISTORY_POINTS).fill(null)); // Store rate in Bytes/sec
+    const netTxHistory = ref<(number | null)[]>(Array(MAX_HISTORY_POINTS).fill(null)); // Store rate in Bytes/sec
+
+    // --- 辅助函数：更新历史数据数组 ---
+    const updateHistory = (historyRef: Ref<(number | null)[]>, newValue: number | undefined) => {
+        const currentHistory = historyRef.value;
+        currentHistory.shift(); // 移除最旧的数据点
+        // 如果新值无效（undefined 或 null），推入 null，否则推入数字
+        currentHistory.push((newValue === undefined || newValue === null || isNaN(newValue)) ? null : newValue);
+        historyRef.value = [...currentHistory]; // 触发响应式更新
+    };
+
 
     // --- WebSocket 消息处理 ---
     const handleStatusUpdate = (payload: MessagePayload, message?: WebSocketMessage) => {
@@ -29,12 +47,20 @@ export function createStatusMonitorManager(sessionId: string, wsDeps: StatusMoni
             return; // 忽略不属于此会话的消息
         }
 
-        // console.debug(`[会话 ${sessionId}][状态监控模块] 收到 status_update:`, JSON.stringify(payload)); // 添加日志
-        if (payload && payload.status) {
-            serverStatus.value = payload.status;
+        // console.debug(`[会话 ${sessionId}][状态监控模块] 收到 status_update:`, JSON.stringify(payload));
+        if (payload?.status) {
+            const newStatus: ServerStatus = payload.status;
+            serverStatus.value = newStatus;
             statusError.value = null; // 收到有效状态时清除错误
+
+            // 更新历史数据
+            updateHistory(cpuHistory, newStatus.cpuPercent);
+            updateHistory(memUsedHistory, newStatus.memUsed);
+            updateHistory(netRxHistory, newStatus.netRxRate);
+            updateHistory(netTxHistory, newStatus.netTxRate);
+
         } else {
-            console.warn(`[会话 ${sessionId}][状态监控模块] 收到缺少 payload.status 的 status_update 消息`);
+            console.warn(`[会话 ${sessionId}][状态监控模块] 收到无效的 status_update 消息`);
             // 可以选择设置一个错误状态，表明数据格式不正确
             // statusError.value = '收到的状态数据格式无效';
         }
@@ -113,11 +139,17 @@ export function createStatusMonitorManager(sessionId: string, wsDeps: StatusMoni
 
     // --- 暴露接口 ---
     return {
-        serverStatus: readonly(serverStatus), // 只读状态
-        statusError: readonly(statusError),   // 只读错误状态
-        registerStatusHandlers,       // 暴露注册函数，以便在需要时可以重新注册
-        unregisterAllStatusHandlers,  // 暴露注销函数，以便在需要时可以手动注销
-        cleanup,                      // 暴露清理函数，在会话关闭时调用
+        serverStatus: readonly(serverStatus), // 当前状态
+        statusError: readonly(statusError),   // 错误状态
+        // --- 暴露历史数据 ---
+        cpuHistory: readonly(cpuHistory),
+        memUsedHistory: readonly(memUsedHistory),
+        netRxHistory: readonly(netRxHistory),
+        netTxHistory: readonly(netTxHistory),
+        // --- 控制函数 ---
+        registerStatusHandlers,
+        unregisterAllStatusHandlers,
+        cleanup,
     };
 }
 

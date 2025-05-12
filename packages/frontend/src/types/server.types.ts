@@ -8,8 +8,13 @@ export interface ServerStatus {
     diskUsed?: number; // KB
     diskTotal?: number; // KB
     cpuModel?: string;
-    // 可以根据后端实际发送的数据添加更多字段
-    // 例如：swapPercent?, swapUsed?, swapTotal?, netRxRate?, netTxRate?, netInterface?, osName?, loadAvg?, timestamp?
+    swapPercent?: number;
+    swapUsed?: number; // MB
+    swapTotal?: number; // MB
+    netRxRate?: number; // Bytes/sec
+    netTxRate?: number; // Bytes/sec
+    netInterface?: string;
+    osName?: string;
 }
 
 // 可以根据需要添加其他与服务器或连接状态相关的类型

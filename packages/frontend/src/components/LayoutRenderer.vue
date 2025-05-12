@@ -159,12 +159,9 @@ const componentProps = computed(() => {
          // FileManager 可能也需要转发事件，例如文件操作相关的，暂时省略
       };
     case 'statusMonitor':
-       // 仅当有活动会话时才返回实际 props，否则返回空对象
-       if (!currentActiveSession) return {};
+       // 始终渲染，传递 activeSessionId
        return {
-         sessionId: props.activeSessionId ?? '', // 确保 sessionId 不为 null
-         serverStatus: currentActiveSession.statusMonitorManager.serverStatus.value, // 此时 currentActiveSession 必不为 null
-         statusError: currentActiveSession.statusMonitorManager.statusError.value, // 此时 currentActiveSession 必不为 null
+         activeSessionId: props.activeSessionId, // 传递 activeSessionId
          class: 'pane-content',
        };
     case 'editor':
@@ -253,17 +250,11 @@ const sidebarProps = computed(() => (paneName: PaneName | null, side: 'left' | '
        return baseProps; // Return only base props if no active session
      }
    case 'statusMonitor':
-     // Only provide props if there's an active session
-     if (activeSession.value) {
-       return {
-         ...baseProps,
-         sessionId: activeSession.value.sessionId, // Pass session ID
-         serverStatus: activeSession.value.statusMonitorManager.serverStatus.value,
-         statusError: activeSession.value.statusMonitorManager.statusError.value,
-       };
-     } else {
-       return baseProps; // Return only base props if no active session
-     }
+     // 始终渲染，传递 activeSessionId
+     return {
+       ...baseProps,
+       activeSessionId: props.activeSessionId, // 传递 activeSessionId
+     };
     // Add cases for other components if they need specific props or event forwarding in the sidebar
     // case 'commandHistory': return { ...baseProps, onExecuteCommand: (cmd: string) => emit('sendCommand', cmd) };
     // case 'quickCommands': return { ...baseProps, onExecuteCommand: (cmd: string) => emit('sendCommand', cmd) };
@@ -493,20 +484,13 @@ onMounted(() => {
                 </template>
                 <!-- StatusMonitor -->
                 <template v-else-if="layoutNode.component === 'statusMonitor'">
-                     <component
-                       v-if="activeSession"
-                       :is="currentMainComponent"
-                       :key="activeSessionId"
-                       v-bind="componentProps"
-                       class="flex-grow overflow-auto"
-                     />
-                     <div v-else class="flex-grow flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4">
-                      <div class="flex flex-col items-center justify-center p-8 w-full h-full">
-                        <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                        <span class="text-lg font-medium text-text-secondary mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                        <div class="text-xs text-text-secondary mt-2">{{ t('layout.noActiveSession.message') }}</div>
-                      </div>
-                    </div>
+                     <keep-alive>
+                        <component
+                          :is="currentMainComponent"
+                          v-bind="componentProps"
+                          class="flex-grow overflow-auto"
+                        />
+                     </keep-alive>
                 </template>
                 <!-- Other Panes -->
                 <template v-else-if="currentMainComponent">
@@ -547,26 +531,22 @@ onMounted(() => {
         <KeepAlive>
             <div :key="`left-sidebar-content-${activeLeftSidebarPane ?? 'none'}`" class="relative flex flex-col flex-grow overflow-hidden pt-10"> <!-- Added pt-10 -->
                 <component
-                    v-if="currentLeftSidebarComponent && activeLeftSidebarPane && (!['fileManager', 'statusMonitor'].includes(activeLeftSidebarPane) || activeSession)"
-                    :is="currentLeftSidebarComponent"
-                    :key="`left-comp-${activeLeftSidebarPane}`"
-                    v-bind="sidebarProps(activeLeftSidebarPane, 'left')"
-                    class="flex flex-col flex-grow">
-                </component>
-                <div v-else-if="activeLeftSidebarPane === 'fileManager' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
-                  <div class="flex flex-col items-center justify-center p-8">
-                    <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                    <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                    <div class="text-xs mt-2">{{ t('layout.noActiveSession.fileManagerSidebar') }}</div>
-                  </div>
-                </div>
-                <div v-else-if="activeLeftSidebarPane === 'statusMonitor' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
-                  <div class="flex flex-col items-center justify-center p-8">
-                    <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                    <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                    <div class="text-xs mt-2">{{ t('layout.noActiveSession.statusMonitorSidebar') }}</div>
-                  </div>
-                </div>
+      
+                        v-if="currentLeftSidebarComponent && activeLeftSidebarPane && (activeLeftSidebarPane === 'statusMonitor' || activeLeftSidebarPane !== 'fileManager' || activeSession)"
+                        :is="currentLeftSidebarComponent"
+                        :key="`left-comp-${activeLeftSidebarPane}`"
+                        v-bind="sidebarProps(activeLeftSidebarPane, 'left')"
+                        class="flex flex-col flex-grow">
+                    </component>
+                     <!-- 'fileManager' 且无 activeSession 的提示 -->
+                    <div v-else-if="activeLeftSidebarPane === 'fileManager' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
+                      <div class="flex flex-col items-center justify-center p-8">
+                        <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
+                        <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
+                        <div class="text-xs mt-2">{{ t('layout.noActiveSession.fileManagerSidebar') }}</div>
+                      </div>
+                    </div>
+                    <!-- 移除 statusMonitor 的 v-else-if -->
                  <div v-else class="flex flex-col flex-grow">
                  </div>
             </div>
@@ -583,26 +563,21 @@ onMounted(() => {
         <KeepAlive>
             <div :key="`right-sidebar-content-${activeRightSidebarPane ?? 'none'}`" class="relative flex flex-col flex-grow overflow-hidden pt-10"> <!-- Added pt-10 -->
                 <component
-                    v-if="currentRightSidebarComponent && activeRightSidebarPane && (!['fileManager', 'statusMonitor'].includes(activeRightSidebarPane) || activeSession)"
-                    :is="currentRightSidebarComponent"
-                    :key="`right-comp-${activeRightSidebarPane}`"
-                    v-bind="sidebarProps(activeRightSidebarPane, 'right')"
-                    class="flex flex-col flex-grow">
-                </component>
-                <div v-else-if="activeRightSidebarPane === 'fileManager' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
-                  <div class="flex flex-col items-center justify-center p-8">
-                    <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                    <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                    <div class="text-xs mt-2">{{ t('layout.noActiveSession.fileManagerSidebar') }}</div>
-                  </div>
-                </div>
-                <div v-else-if="activeRightSidebarPane === 'statusMonitor' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
-                  <div class="flex flex-col items-center justify-center p-8">
-                    <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
-                    <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
-                    <div class="text-xs mt-2">{{ t('layout.noActiveSession.statusMonitorSidebar') }}</div>
-                  </div>
-                </div>
+                        v-if="currentRightSidebarComponent && activeRightSidebarPane && (activeRightSidebarPane === 'statusMonitor' || activeRightSidebarPane !== 'fileManager' || activeSession)"
+                        :is="currentRightSidebarComponent"
+                        :key="`right-comp-${activeRightSidebarPane}`"
+                        v-bind="sidebarProps(activeRightSidebarPane, 'right')"
+                        class="flex flex-col flex-grow">
+                    </component>
+                     <!-- 'fileManager' 且无 activeSession 的提示 -->
+                    <div v-else-if="activeRightSidebarPane === 'fileManager' && !activeSession" class="flex flex-col flex-grow justify-center items-center text-center text-text-secondary p-4">
+                      <div class="flex flex-col items-center justify-center p-8">
+                        <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
+                        <span class="text-lg font-medium mb-2">{{ t('layout.noActiveSession.title') }}</span>
+                        <div class="text-xs mt-2">{{ t('layout.noActiveSession.fileManagerSidebar') }}</div>
+                      </div>
+                    </div>
+                    <!-- 移除 statusMonitor 的 v-else-if -->
                  <div v-else class="flex flex-col flex-grow">
                  </div>
             </div>
