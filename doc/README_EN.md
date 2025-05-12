@@ -119,19 +119,19 @@ sudo systemctl restart docker
 ### 2️⃣ Start the Service
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3️⃣ Update
 Note: Running with docker-compose does not require pulling the source code unless you plan to build it yourself. Simply execute the following commands in the project directory to update.
 ```bash
-docker-compose down
+docker compose down
 ```
 ```bash
-docker-compose pull
+docker compose pull
 ```
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 ## 📚 Usage Guide
 
