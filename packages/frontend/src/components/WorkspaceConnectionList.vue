@@ -984,11 +984,13 @@ const cancelEditingTag = () => {
       :connection="selectedRdpConnection"
       @close="closeRdpModal"
     /> -->
-   <ManageTagConnectionsModal
-     :tag-info="tagToManage"
-     v-model:visible="showManageTagModal"
-     @saved="handleManageTagModalSaved"
-   />
+   <teleport to="body">
+     <ManageTagConnectionsModal
+       :tag-info="tagToManage"
+       v-model:visible="showManageTagModal"
+       @saved="handleManageTagModalSaved"
+     />
+   </teleport>
  </div>
 </template>
 
