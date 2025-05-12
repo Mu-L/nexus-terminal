@@ -255,6 +255,7 @@ const networkChartOptions = ref<ChartOptions<'line'>>({
     y: {
       beginAtZero: true,
       min: 0,
+      max: 10, // 初始值，将动态更新
       ticks: {
         color: '#9CA3AF',
         callback: function(value) {
@@ -382,13 +383,55 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
 
   if (networkChartOptions.value.scales?.y) {
     const allNetworkData = [...newNetRxData, ...newNetTxData];
-    const minMax = networkRateUnitIsMB.value ? 1 : 10;
-    const maxNetworkRate = Math.max(...allNetworkData, minMax); 
-    const roundingFactor = networkRateUnitIsMB.value ? 1 : 10;
-    const buffer = networkRateUnitIsMB.value ? 1 : 10;
-    const newMax = Math.ceil(maxNetworkRate / roundingFactor) * roundingFactor + buffer;
-    networkChartOptions.value.scales.y.max = Math.max(newMax, Math.ceil(maxNetworkRate) + buffer);
-  } 
+    const currentMaxDataPoint = Math.max(...allNetworkData, 0);
+
+    let suggestedMax;
+    const baseMultiplier = 1.2; // 20% buffer
+
+    if (currentMaxDataPoint === 0) {
+      // If no data or all data is zero, set a default max based on unit
+      suggestedMax = networkRateUnitIsMB.value ? 5 : 500; // Default 5MB/s or 500KB/s
+    } else {
+      suggestedMax = currentMaxDataPoint * baseMultiplier;
+    }
+
+    // Determine a sensible minimum for the y-axis max based on the unit
+    // This prevents the y-axis from being too small if data values are tiny (e.g., 0.01 MB/s)
+    const absoluteMinMax = networkRateUnitIsMB.value ? 1 : 100; // Min 1MB/s or 100KB/s
+
+    // Ensure suggestedMax is at least the absoluteMinMax
+    suggestedMax = Math.max(suggestedMax, absoluteMinMax);
+
+    // Round up to the next sensible integer for MB/s or a larger step for KB/s for cleaner ticks
+    if (networkRateUnitIsMB.value) {
+      suggestedMax = Math.ceil(suggestedMax); // Round up to the next whole number for MB/s
+    } else {
+      // For KB/s, round up to the nearest 50 or 100 for cleaner ticks
+      if (suggestedMax <= 100) { // if max is very low (e.g. 10KB/s), round to 10s or 20s
+        suggestedMax = Math.ceil(suggestedMax / 10) * 10;
+        if (suggestedMax === 0 && currentMaxDataPoint > 0) suggestedMax = 10; // ensure at least 10 if there's data
+      } else if (suggestedMax <= 500) {
+        suggestedMax = Math.ceil(suggestedMax / 50) * 50; // Round to nearest 50 if under 500KB/s
+      } else {
+        suggestedMax = Math.ceil(suggestedMax / 100) * 100; // Round to nearest 100 if over 500KB/s
+      }
+    }
+    
+    // Final safety check: if there was some data, max should not be zero.
+    if (currentMaxDataPoint > 0 && suggestedMax === 0) {
+        suggestedMax = networkRateUnitIsMB.value ? 1 : (allNetworkData.some(d => d > 0 && d < 10) ? 10 : 100) ;
+    }
+    
+    // If all data points are zero, ensure a minimum default axis.
+    if (currentMaxDataPoint === 0 && suggestedMax === 0) {
+        suggestedMax = networkRateUnitIsMB.value ? 1 : 100;
+    }
+
+    if (networkChartOptions.value.scales.y.max !== suggestedMax) {
+      networkChartOptions.value.scales.y.max = suggestedMax;
+      networkChartKey.value++; // Force re-render if max value changed
+    }
+  }
 };
 
 watch(() => props.serverStatus, (newStatus) => {
