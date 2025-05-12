@@ -384,7 +384,7 @@ const updateCharts = (newStatus: ServerStatusData | null) => {
     const roundingFactor = networkRateUnitIsMB.value ? 1 : 10;
     const buffer = networkRateUnitIsMB.value ? 1 : 10;
     networkChartOptions.value.scales.y.max = Math.ceil(maxNetworkRate / roundingFactor) * roundingFactor + buffer;
-  }
+  } 
 };
 
 watch(() => props.serverStatus, (newStatus) => {

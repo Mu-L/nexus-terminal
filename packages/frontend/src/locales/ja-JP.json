@@ -713,7 +713,8 @@
             "appearance": "外観設定",
             "security": "セキュリティ設定",
             "system": "システム設定",
-            "about": "バージョン情報"
+            "about": "バージョン情報",
+            "dataManagement": "データ管理"
         },
         "changePassword": {
             "confirmPassword": "新しいパスワードを再入力:",
@@ -1038,6 +1039,11 @@
                 "rateLimit": "GitHub API レート制限。後でもう一度お試しください"
             }
         }
+    },
+    "exportConnections": {
+        "title": "接続データのエクスポート",
+        "decryptKeyInfo": "解凍パスワードは、data/.env ファイル内の ENCRYPTION_KEY です。このファイルを安全に保管してください。",
+        "buttonText": "エクスポートを開始"
     },
     "setup": {
         "confirmPassword": "パスワードを再入力",

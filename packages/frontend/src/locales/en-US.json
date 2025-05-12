@@ -478,8 +478,14 @@
       "security": "Security Settings",
       "appearance": "Appearance Settings",
       "system": "System Settings",
-      "about": "About"
+      "about": "About",
+      "dataManagement": "Data Management"
     },
+      "exportConnections": {
+        "title": "Export Connection Data",
+        "decryptKeyInfo": "The decryption password is the ENCRYPTION_KEY in your data/.env file. Please keep this file secure.",
+        "buttonText": "Start Export"
+      },
     
       "timezone": {
         "title": "Timezone Settings",
