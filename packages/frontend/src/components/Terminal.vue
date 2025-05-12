@@ -28,6 +28,7 @@ let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let searchAddon: SearchAddon | null = null; // *** 添加 searchAddon 变量 ***
 let resizeObserver: ResizeObserver | null = null;
+let observedElement: HTMLElement | null = null; // +++ Store the observed element +++
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
 let selectionListenerDisposable: IDisposable | null = null; // +++ 提升声明并添加类型 +++
 // const fontSize = ref(14); // 移除本地字体大小状态，将由 store 管理
@@ -169,12 +170,15 @@ onMounted(() => {
 
     // 监听终端大小变化 (通过 ResizeObserver) - 主要处理浏览器窗口大小变化等
     if (terminalRef.value) {
-        const container = terminalRef.value; // 捕获引用
+        observedElement = terminalRef.value; // +++ Store the element to be observed +++
         resizeObserver = new ResizeObserver((entries) => {
+            // Only process if the terminal is active
+            if (!props.isActive || !terminal) return;
+
             const entry = entries[0];
             const { height, width } = entry.contentRect; // 获取宽度和高度
             // console.log(`[Terminal ${props.sessionId}] ResizeObserver triggered. Size: ${width}x${height}, isActive: ${props.isActive}`);
-            if (height > 0 && width > 0 && terminal) { // 确保宽度和高度都有效，并且终端实例存在
+            if (height > 0 && width > 0) { // 确保宽度和高度都有效
                 try {
                   // *** 恢复：立即调用 fit() 来适应前端容器 ***
                   fitAddon?.fit();
@@ -185,26 +189,55 @@ onMounted(() => {
                  }
             }
         });
-        resizeObserver.observe(container);
+        // Observe only if initially active (or becomes active later)
+        if (props.isActive) {
+            resizeObserver.observe(observedElement);
+            console.log(`[Terminal ${props.sessionId}] Initial observe.`);
+        }
     }
 
-    // 监听 isActive prop 的变化，当标签变为活动时立即 fit 并发送 resize
-    watch(() => props.isActive, (newValue) => {
-        if (newValue && terminal && terminalRef.value) {
-            // 当标签变为活动时，等待 DOM 更新和短暂延时后执行 fit
-            console.log(`[Terminal ${props.sessionId}] 标签变为活动状态，准备调整尺寸。`); // 日志改为中文
-            nextTick(() => {
-                // 添加短暂延时，确保元素完全可见且渲染稳定
-                setTimeout(() => {
-                    // 再次检查终端实例是否存在且容器可见
-                    if (terminal && terminalRef.value && terminalRef.value.offsetHeight > 0) {
-                         console.log(`[Terminal ${props.sessionId}] 执行延时后的 fit 和 resize。`); // 日志改为中文
-                        fitAndEmitResizeNow(terminal);
-                    } else {
-                         console.log(`[Terminal ${props.sessionId}] 延时后检查：终端不可见或已销毁，跳过 fit。`); // 日志改为中文
-                    }
-                }, 50); // 50ms 延时，可以根据需要调整
-            });
+    // 监听 isActive prop 的变化
+    watch(() => props.isActive, (newValue, oldValue) => {
+        console.log(`[Terminal ${props.sessionId}] isActive changed from ${oldValue} to ${newValue}`);
+        if (resizeObserver && observedElement) {
+            if (newValue) {
+                // --- Become Active ---
+                console.log(`[Terminal ${props.sessionId}] Becoming active. Observing element and fitting.`);
+                // Start observing
+                try {
+                    resizeObserver.observe(observedElement);
+                } catch (e) {
+                     console.warn(`[Terminal ${props.sessionId}] Error observing element:`, e);
+                }
+                // Perform fit after a delay to ensure visibility and layout stability
+                nextTick(() => {
+                    setTimeout(() => {
+                        // Re-check if still active and terminal exists
+                        if (props.isActive && terminal && terminalRef.value && terminalRef.value.offsetHeight > 0) {
+                            console.log(`[Terminal ${props.sessionId}] Executing delayed fit and resize.`);
+                            fitAndEmitResizeNow(terminal);
+                            // Also ensure focus when becoming active
+                            terminal.focus();
+                        } else {
+                            console.log(`[Terminal ${props.sessionId}] Skipped delayed fit (inactive, destroyed, or not visible).`);
+                        }
+                    }, 50); // 50ms delay
+                });
+            } else {
+                // --- Become Inactive ---
+                console.log(`[Terminal ${props.sessionId}] Becoming inactive. Unobserving element.`);
+                // Stop observing
+                try {
+                    resizeObserver.unobserve(observedElement);
+                } catch (e) {
+                     console.warn(`[Terminal ${props.sessionId}] Error unobserving element:`, e);
+                }
+                // Optionally clear debounce timer if resize was pending for this inactive terminal
+                // (debouncedEmitResize already checks isActive, so maybe not strictly needed)
+                // if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+            }
+        } else {
+            console.warn(`[Terminal ${props.sessionId}] Cannot handle isActive change: resizeObserver or observedElement missing.`);
         }
     });
 
@@ -448,10 +481,22 @@ onMounted(() => {
 
 // 组件卸载前清理资源
 onBeforeUnmount(() => {
-  if (resizeObserver && terminalRef.value) {
-      resizeObserver.unobserve(terminalRef.value);
+  // Ensure observer is cleaned up
+  if (resizeObserver && observedElement) {
+      try {
+          resizeObserver.unobserve(observedElement);
+          console.log(`[Terminal ${props.sessionId}] Unobserved on unmount.`);
+      } catch (e) {
+          console.warn(`[Terminal ${props.sessionId}] Error unobserving on unmount:`, e);
+      }
+      resizeObserver.disconnect(); // Fully disconnect observer
+      console.log(`[Terminal ${props.sessionId}] ResizeObserver disconnected.`);
   }
+  resizeObserver = null;
+  observedElement = null;
+
   if (terminal) {
+    console.log(`[Terminal ${props.sessionId}] Disposing terminal instance.`);
     terminal.dispose();
     terminal = null;
   }
