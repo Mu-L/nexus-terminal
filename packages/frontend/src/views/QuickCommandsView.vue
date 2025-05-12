@@ -105,7 +105,9 @@
                             </div>
                             <!-- Actions (Structure remains the same) -->
                             <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
-                                <span class="text-xs bg-border px-1.5 py-0.5 rounded mr-2 text-text-secondary" :title="t('quickCommands.usageCount', '使用次数')">{{ cmd.usage_count }}</span>
+                                <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
+                                    <i class="fas fa-copy text-sm"></i>
+                                </button>
                                 <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
                                     <i class="fas fa-edit text-sm"></i>
                                 </button>
@@ -135,7 +137,9 @@
                     </div>
                     <!-- Actions -->
                     <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
-                        <span class="text-xs bg-border px-1.5 py-0.5 rounded mr-2 text-text-secondary" :title="t('quickCommands.usageCount', '使用次数')">{{ cmd.usage_count }}</span>
+                        <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
+                            <i class="fas fa-copy text-sm"></i>
+                        </button>
                         <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
                             <i class="fas fa-edit text-sm"></i>
                         </button>
@@ -362,7 +366,7 @@ const handleSearchInputBlur = () => {
 
 // 切换排序方式 (Action remains the same, store handles the logic change)
 const toggleSortBy = () => {
-    const newSortBy = sortBy.value === 'name' ? 'usage_count' : 'name';
+    const newSortBy = sortBy.value === 'name' ? 'last_used' : 'name';
     quickCommandsStore.setSortBy(newSortBy);
 };
 
@@ -392,12 +396,12 @@ const toggleGroup = (groupName: string) => {
 const sortButtonTitle = computed(() => {
   return sortBy.value === 'name'
     ? t('quickCommands.sortByName', '按名称排序')
-    : t('quickCommands.sortByUsage', '按使用频率排序');
+    : t('quickCommands.sortByLastUsed', '按最近使用排序');
 });
 
 const sortButtonIcon = computed(() => {
   // 使用 Font Awesome 图标示例
-  return sortBy.value === 'name' ? 'fas fa-sort-alpha-down' : 'fas fa-sort-numeric-down';
+  return sortBy.value === 'name' ? 'fas fa-sort-alpha-down' : 'fas fa-clock';
 });
 
 
@@ -419,6 +423,17 @@ const closeForm = () => {
 const confirmDelete = (command: QuickCommandFE) => {
   if (window.confirm(t('quickCommands.confirmDelete', { name: command.name || command.command }))) {
     quickCommandsStore.deleteQuickCommand(command.id);
+  }
+};
+
+// 复制命令到剪贴板
+const copyCommand = async (command: string) => {
+  try {
+    await navigator.clipboard.writeText(command);
+    uiNotificationsStore.showSuccess(t('commandHistory.copied', '已复制到剪贴板'));
+  } catch (err) {
+    console.error('复制命令失败:', err);
+    uiNotificationsStore.showError(t('commandHistory.copyFailed', '复制失败'));
   }
 };
 

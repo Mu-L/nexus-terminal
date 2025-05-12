@@ -19,7 +19,7 @@ export interface QuickCommandFE { // Renamed from QuickCommand if necessary
 }
 
 // 定义排序类型
-export type QuickCommandSortByType = 'name' | 'usage_count';
+export type QuickCommandSortByType = 'name' | 'usage_count' | 'last_used';
 
 // 定义分组后的数据结构
 export interface GroupedQuickCommands {
@@ -118,6 +118,8 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
             groupData.commands.sort((a, b) => {
                  if (sortBy.value === 'usage_count') {
                      if (b.usage_count !== a.usage_count) return b.usage_count - a.usage_count;
+                 } else if (sortBy.value === 'last_used') {
+                     if (b.updated_at !== a.updated_at) return b.updated_at - a.updated_at;
                  }
                  const nameA = a.name ?? a.command; // Fallback to command if name is null
                  const nameB = b.name ?? b.command;
@@ -140,6 +142,8 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
              untaggedCommands.sort((a, b) => {
                  if (sortBy.value === 'usage_count') {
                      if (b.usage_count !== a.usage_count) return b.usage_count - a.usage_count;
+                 } else if (sortBy.value === 'last_used') {
+                     if (b.updated_at !== a.updated_at) return b.updated_at - a.updated_at;
                  }
                  const nameA = a.name ?? a.command;
                  const nameB = b.name ?? b.command;
