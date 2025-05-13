@@ -168,7 +168,6 @@ export async function handleDockerGetStatus(ws: AuthenticatedWebSocket, sessionI
         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'docker:status:error', payload: { message: 'SSH connection not active.' } }));
         return;
     }
-    console.log(`WebSocket: 处理来自 ${ws.username} (会话: ${sessionId}) 的 docker:get_status 请求 (手动触发)...`);
     try {
         const statusPayload = await fetchRemoteDockerStatus(state);
         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'docker:status:update', payload: statusPayload }));
