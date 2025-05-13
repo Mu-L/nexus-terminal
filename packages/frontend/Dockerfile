@@ -26,6 +26,8 @@ COPY .env ./.env
 
 RUN npm run build --workspace=@nexus-terminal/frontend
 
+RUN ls -Rla /app/packages/frontend/dist
+
 FROM nginx:stable-alpine
 
 
