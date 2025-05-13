@@ -7,8 +7,8 @@ import { useDeviceDetection } from './composables/useDeviceDetection';
 import { useSettingsStore } from './stores/settings.store';
 import { useAppearanceStore } from './stores/appearance.store';
 import { useLayoutStore } from './stores/layout.store';
-import { useFocusSwitcherStore } from './stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
-import { useSessionStore } from './stores/session.store'; // +++ 导入 Session Store +++
+import { useFocusSwitcherStore } from './stores/focusSwitcher.store';
+import { useSessionStore } from './stores/session.store';
 import { storeToRefs } from 'pinia';
 // 导入通知显示组件
 import UINotificationDisplay from './components/UINotificationDisplay.vue';
@@ -72,7 +72,16 @@ onMounted(() => {
   // +++ 添加全局 Alt 键监听器 +++
   window.addEventListener('keydown', handleAltKeyDown); // +++ 监听 keydown 设置状态 +++
   window.addEventListener('keyup', handleGlobalKeyUp);   // +++ 监听 keyup 执行切换 +++
+  
+  // PWA Install Prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('[App.vue] beforeinstallprompt event fired. Browser will handle install prompt.');
+  });
 
+  window.addEventListener('appinstalled', () => {
+    console.log('[App.vue] PWA was installed');
+  });
+  
   // +++ 加载 Header 可见性状态 +++
   layoutStore.loadHeaderVisibility();
 });
@@ -250,6 +259,8 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
   return rect.width > 0 && rect.height > 0;
 };
 
+
+
 </script>
 
 <template>
@@ -279,6 +290,7 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
             </svg>
           </a>
+          <!-- PWA Install Button - REMOVED FROM HERE -->
           <a href="#" @click.prevent="openStyleCustomizer" :title="t('nav.customizeStyle')" class="px-2 py-2 rounded-md text-lg text-icon hover:text-icon-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out"><i class="fas fa-paint-brush"></i></a>
           <RouterLink v-if="!isAuthenticated" to="/login" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap">{{ t('nav.login') }}</RouterLink>
           <a href="#" v-if="isAuthenticated" @click.prevent="handleLogout" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap">{{ t('nav.logout') }}</a>
@@ -327,6 +339,7 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
       @close="sessionStore.closeVncModal()"
     />
 
+
   </div>
 </template>
 
@@ -336,14 +349,12 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
   flex-direction: column;
   min-height: 100vh;
   font-family: var(--font-family-sans-serif); /* 使用字体变量 */
-  /* background-color: var(--app-bg-color); */ /* 移除容器背景色，让 body 背景透出来 */
 }
 
-/* Removed header, nav, nav-left, nav-right, nav a, nav a:hover, nav a.router-link-exact-active, .nav-underline, and specific icon/login/logout link styles as they are now handled by Tailwind classes */
 
 main {
   flex-grow: 1;
-  /* padding: var(--base-padding); */ /* Keep padding removed from main */
+
 }
 
 </style>
