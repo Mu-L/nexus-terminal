@@ -102,7 +102,6 @@ export const requestStartSshSuspend = (sessionId: string): void => {
       // join('\n') 会在行间添加换行符，如果最后一行是空字符串，末尾不会有多余的 \n
       // 如果最后一行非空，则自然以该行结束。
 
-      console.log(`[${t('term.sshSuspend')}] 已获取会话 ${sessionId} 的初始屏幕缓冲区内容 (处理后)，长度: ${initialBuffer.length}, 最后非空行索引: ${lastNonEmptyLineIndex}`);
     } else {
       console.warn(`[${t('term.sshSuspend')}] 未能获取会话 ${sessionId} 的终端实例以提取初始缓冲区。`);
     }

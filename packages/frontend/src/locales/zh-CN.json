@@ -305,6 +305,7 @@
     "title": "文件编辑器"
   },
   "fileManager": {
+    "modalTitle": "文件管理器",
     "currentPath": "当前路径",
     "loading": "正在加载目录...",
     "emptyDirectory": "目录为空",
@@ -1128,6 +1129,9 @@
       "quickCommands": "快捷指令",
       "dockerManager": "Docker 管理器",
       "suspendedSshSessions": "挂起会话管理"
+    },
+    "panes": {
+      "suspendedSshSessions": "挂起会话管理器"
     },
     "noActiveSession": {
       "title": "无活动会话",

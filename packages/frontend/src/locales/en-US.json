@@ -305,10 +305,8 @@
 "fileEditor": {
     "title": "File Editor"
   },
-"fileEditor": {
-    "title": "File Editor"
-  },
   "fileManager": {
+    "modalTitle": "File Manager",
     "currentPath": "Current Path",
     "loading": "Loading directory...",
     "emptyDirectory": "Directory is empty",
@@ -1128,6 +1126,9 @@
       "quickCommands": "Quick Commands",
       "dockerManager": "Docker Manager",
       "suspendedSshSessions": "Suspended Sessions Management"
+    },
+    "panes": {
+      "suspendedSshSessions": "Suspended Session Manager"
     },
     "noActiveSession": {
       "title": "No Active Session",

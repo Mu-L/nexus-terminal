@@ -316,6 +316,7 @@
     "title": "ファイルエディタ"
   },
     "fileManager": {
+        "modalTitle": "ファイルマネージャー",
         "actions": {
             "cancel": "キャンセル",
             "cdToTerminal": "ターミナルのディレクトリを現在のパスに変更",
@@ -512,7 +513,11 @@
             "fileManager": "ファイルマネージャー",
             "quickCommands": "クイックコマンド",
             "statusMonitor": "ステータスモニター",
-            "terminal": "ターミナル"
+            "terminal": "ターミナル",
+            "suspendedSshSessions": "中断されたセッション管理"
+        },
+        "panes": {
+            "suspendedSshSessions": "中断されたセッション管理者"
         }
     },
     "layoutConfigurator": {
