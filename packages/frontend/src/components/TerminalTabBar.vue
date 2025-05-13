@@ -406,7 +406,7 @@ onBeforeUnmount(() => {
         ghost-class="opacity-50"
         drag-class="opacity-75"
         animation="150"
-        :disabled="props.isMobile" <!-- 在移动端禁用拖拽 -->
+        :disabled="props.isMobile"
       >
         <template #item="{ element: session }">
           <li
