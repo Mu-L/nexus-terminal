@@ -1,4 +1,5 @@
 {
+
   "appName": "星枢终端",
   "projectName": "星枢终端",
   "slogan": "星垂平野阔，枢动万端通",
@@ -300,7 +301,11 @@
       "reconnectingMsg": "正在尝试重新连接..."
     }
   },
+"fileEditor": {
+    "title": "文件编辑器"
+  },
   "fileManager": {
+    "modalTitle": "文件管理器",
     "currentPath": "当前路径",
     "loading": "正在加载目录...",
     "emptyDirectory": "目录为空",
@@ -502,6 +507,17 @@
     "deleteFailed": "标签 \"{name}\" 删除失败: {error}"
   },
   "settings": {
+    "popupFileManager": {
+      "title": "弹窗文件管理器",
+      "enableLabel": "启用弹窗文件管理器",
+      "description": "启用后，命令输入栏将显示文件管理器按钮，点击可打开弹窗式文件管理器。",
+      "success": {
+        "saved": "弹窗文件管理器设置已保存。"
+      },
+      "error": {
+        "saveFailed": "保存弹窗文件管理器设置失败。"
+      }
+    },
     "title": "设置",
     "category": {
       "security": "安全设置",
@@ -887,11 +903,21 @@
       }
     },
     "exportConnections": {
-      "title": "导出连接数据",
-      "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
-      "buttonText": "开始导出"
-  }
-},
+        "title": "导出连接数据",
+        "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
+        "buttonText": "开始导出"
+    },
+    "tabs": {
+      "security": "安全",
+      "ipControl": "IP 管控",
+      "workspace": "工作区",
+      "system": "系统",
+      "dataManagement": "数据管理",
+      "appearance": "外观",
+      "about": "关于"
+    },
+    "loading": "加载中..."
+  },
 
 "notificationController": {
       "errorFetchSettings": "获取通知设置失败",
@@ -1103,6 +1129,9 @@
       "quickCommands": "快捷指令",
       "dockerManager": "Docker 管理器",
       "suspendedSshSessions": "挂起会话管理"
+    },
+    "panes": {
+      "suspendedSshSessions": "挂起会话管理器"
     },
     "noActiveSession": {
       "title": "无活动会话",

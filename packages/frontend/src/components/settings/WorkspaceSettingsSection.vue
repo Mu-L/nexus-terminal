@@ -21,6 +21,26 @@
          </form>
       </div>
       <hr class="border-border/50">
+      <!-- Popup File Manager -->
+      <div class="settings-section-content">
+         <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.popupFileManager.title') }}</h3>
+         <form @submit.prevent="handleUpdateShowPopupFileManager" class="space-y-4">
+           <div class="flex items-center">
+             <input type="checkbox" id="showPopupFileManager" v-model="showPopupFileManagerLocal"
+                    class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
+             <label for="showPopupFileManager" class="text-sm text-foreground cursor-pointer select-none">{{ t('settings.popupFileManager.enableLabel') }}</label>
+           </div>
+           <small class="block mt-1 text-xs text-text-secondary">{{ t('settings.popupFileManager.description') }}</small>
+           <div class="flex items-center justify-between">
+              <button type="submit"
+                      class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
+                {{ t('common.save') }}
+              </button>
+              <p v-if="showPopupFileManagerMessage" :class="['text-sm', showPopupFileManagerSuccess ? 'text-success' : 'text-error']">{{ showPopupFileManagerMessage }}</p>
+           </div>
+         </form>
+      </div>
+      <hr class="border-border/50">
       <!-- Share Tabs -->
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.shareEditorTabs.title') }}</h3>
@@ -268,6 +288,12 @@ const {
   terminalEnableRightClickPasteMessage, // NEW
   terminalEnableRightClickPasteSuccess, // NEW
   handleUpdateTerminalRightClickPasteSetting, // NEW
+  // Popup File Manager
+  showPopupFileManagerLocal,
+  // showPopupFileManagerLoading, // Not used
+  showPopupFileManagerMessage,
+  showPopupFileManagerSuccess,
+  handleUpdateShowPopupFileManager,
 } = useWorkspaceSettings();
 </script>
 

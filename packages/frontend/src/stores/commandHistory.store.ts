@@ -67,7 +67,6 @@ export const useCommandHistoryStore = defineStore('commandHistory', () => {
         try {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
-                console.log('[CmdHistoryStore] Loading history from cache.');
                 historyList.value = JSON.parse(cachedData); // 缓存中已是降序
                 isLoading.value = false; // 先显示缓存
             } else {

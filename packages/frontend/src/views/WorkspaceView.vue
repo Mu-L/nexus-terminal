@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, computed, ref } from 'vue';
+import { onMounted, onBeforeUnmount, computed, ref, shallowRef, type PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useBreakpoints, breakpointsTailwind } from '@vueuse/core'; // +++ 引入 useBreakpoints +++
+import { useBreakpoints, breakpointsTailwind } from '@vueuse/core';
 import { useLayoutStore } from '../stores/layout.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import AddConnectionFormComponent from '../components/AddConnectionForm.vue';
 import TerminalTabBar from '../components/TerminalTabBar.vue';
 import LayoutRenderer from '../components/LayoutRenderer.vue';
 import LayoutConfigurator from '../components/LayoutConfigurator.vue';
-import RemoteDesktopModal from '../components/RemoteDesktopModal.vue';
-import VncModal from '../components/VncModal.vue'; // +++ 引入 VncModal 组件 +++
-import Terminal from '../components/Terminal.vue'; // +++ 引入 Terminal 组件 +++
-import CommandInputBar from '../components/CommandInputBar.vue'; // +++ 引入 CommandInputBar 组件 +++
-import VirtualKeyboard from '../components/VirtualKeyboard.vue'; // +++ 引入 VirtualKeyboard 组件 +++
+import Terminal from '../components/Terminal.vue';
+import CommandInputBar from '../components/CommandInputBar.vue'; 
+import VirtualKeyboard from '../components/VirtualKeyboard.vue';
+import FileManager from '../components/FileManager.vue'; 
 import { useSessionStore } from '../stores/session.store';
 import type { SessionTabInfoWithStatus, SshTerminalInstance } from '../stores/session/types';
 import { useSettingsStore } from '../stores/settings.store';
 import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
-import type { Terminal as XtermTerminal } from 'xterm'; 
+import type { Terminal as XtermTerminal } from 'xterm';
 import type { ISearchOptions } from '@xterm/addon-search';
 import {
   useWorkspaceEventSubscriber,
   useWorkspaceEventOff,
   type WorkspaceEventPayloads
 } from '../composables/workspaceEvents';
+import type { WebSocketDependencies } from '../composables/useSftpActions'; 
 
 // --- Setup ---
 const { t } = useI18n();
@@ -74,6 +74,16 @@ const showLayoutConfigurator = ref(false); // 控制布局配置器可见性
 const currentSearchTerm = ref(''); // 当前搜索的关键词
 const mobileTerminalRef = ref<InstanceType<typeof Terminal> | null>(null);
 const isVirtualKeyboardVisible = ref(true); // +++ State for virtual keyboard visibility +++
+
+// --- 文件管理器模态框状态 ---
+const showFileManagerModal = ref(false);
+const fileManagerPropsMap = shallowRef<Map<string, {
+  sessionId: string;
+  instanceId: string;
+  dbConnectionId: string;
+  wsDeps: WebSocketDependencies;
+}>>(new Map());
+const currentFileManagerSessionId = ref<string | null>(null);
 
 // --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -154,6 +164,7 @@ onMounted(() => {
   subscribeToWorkspaceEvents('session:closeToRight', (payload) => handleCloseSessionsToRight(payload.targetSessionId));
   subscribeToWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   subscribeToWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
+  subscribeToWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 订阅文件管理器打开请求 +++
 });
 
 onBeforeUnmount(() => {
@@ -196,6 +207,7 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('session:closeToRight', (payload) => handleCloseSessionsToRight(payload.targetSessionId));
   unsubscribeFromWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   unsubscribeFromWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
+  unsubscribeFromWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 取消订阅文件管理器打开请求 +++
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -313,7 +325,6 @@ const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
  // 处理终端大小调整 (用于 Terminal)
  // 注意：LayoutRenderer 内部的 Terminal 组件需要 emit('terminal-resize', sessionId, dims)
  const handleTerminalResize = (payload: { sessionId: string; dims: { cols: number; rows: number } }) => {
-    console.log(`[工作区视图 ${payload.sessionId}] 收到 resize 事件:`, payload.dims);
     sessionStore.sessions.get(payload.sessionId)?.terminalManager.handleTerminalResize(payload.dims);
  };
 
@@ -634,6 +645,66 @@ const toggleVirtualKeyboard = () => {
    tabsToClose.forEach(id => handleCloseEditorTab(id));
  };
 
+// --- 文件管理器模态框处理 ---
+const handleFileManagerOpenRequest = (payload: { sessionId: string }) => {
+  const { sessionId } = payload;
+  const session = sessionStore.sessions.get(sessionId);
+  if (!session) {
+    console.error(`[WorkspaceView] Cannot open file manager: Session ${sessionId} not found.`);
+    // TODO: Show error notification
+    return;
+  }
+
+  // 1. 获取 dbConnectionId
+  const dbConnectionId = session.connectionId;
+  if (!dbConnectionId) {
+    console.error(`[WorkspaceView] Cannot open file manager: Missing dbConnectionId for session ${sessionId}.`);
+    // TODO: Show error notification
+    return;
+  }
+
+  // 2. 获取 wsDeps (从 session.wsManager 获取)
+  if (!session.wsManager) {
+      console.error(`[WorkspaceView] Cannot open file manager: wsManager not found for session ${sessionId}.`);
+      // TODO: Show error notification
+      return;
+  }
+  const wsDeps: WebSocketDependencies = {
+      sendMessage: session.wsManager.sendMessage,
+      onMessage: session.wsManager.onMessage,
+      isConnected: session.wsManager.isConnected,
+      isSftpReady: session.wsManager.isSftpReady,
+  };
+  console.log(`[WorkspaceView] Retrieved wsDeps from session.wsManager for session ${sessionId}.`);
+
+  if (!wsDeps) {
+      // 如果 wsDeps 仍然为 null，则无法继续
+      console.error(`[WorkspaceView] Cannot open file manager: wsDeps are null after attempting retrieval for session ${sessionId}.`);
+      return;
+  }
+
+  // 3. 生成或获取 instanceId
+  const currentProps = fileManagerPropsMap.value.get(sessionId);
+  const instanceId = currentProps ? currentProps.instanceId : `fm-modal-${sessionId}`;
+
+  // 4. 设置 props 并显示模态框
+  const newProps = {
+    sessionId,
+    instanceId,
+    dbConnectionId: String(dbConnectionId), // 确保是 string
+    wsDeps,
+  };
+  fileManagerPropsMap.value.set(sessionId, newProps);
+  currentFileManagerSessionId.value = sessionId;
+  showFileManagerModal.value = true;
+  console.log(`[WorkspaceView] Opening FileManager modal with props for session ${sessionId}:`, newProps);
+};
+
+const closeFileManagerModal = () => {
+  showFileManagerModal.value = false;
+  console.log('[WorkspaceView] FileManager modal hidden (kept alive).');
+};
+
 </script>
 
 <template>
@@ -726,6 +797,32 @@ const toggleVirtualKeyboard = () => {
 
     <!-- RDP Modal is now rendered in App.vue -->
     <!-- VNC Modal is now rendered in App.vue -->
+
+    <!-- FileManager Modal Container -->
+    <div v-show="showFileManagerModal && currentFileManagerSessionId && fileManagerPropsMap.get(currentFileManagerSessionId)" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }" @click.self="closeFileManagerModal">
+      <div class="bg-background rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-border">
+        <div class="flex justify-between items-center p-3 border-b border-border flex-shrink-0 bg-header">
+          <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ currentFileManagerSessionId ? (sessionStore.sessions.get(currentFileManagerSessionId)?.connectionName || currentFileManagerSessionId) : '未知会话' }})</h2>
+          <button @click="closeFileManagerModal" class="text-text-secondary hover:text-foreground transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="flex-grow overflow-hidden">
+          <template v-for="props in fileManagerPropsMap.values()" :key="props.sessionId">
+            <div v-show="props.sessionId === currentFileManagerSessionId" class="h-full">
+              <FileManager
+                :session-id="props.sessionId"
+                :instance-id="props.instanceId"
+                :db-connection-id="props.dbConnectionId"
+                :ws-deps="props.wsDeps"
+                class="h-full"
+              />
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 

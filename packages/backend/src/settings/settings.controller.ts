@@ -41,6 +41,7 @@ export const settingsController = {
           'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
           'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
           'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
+          'showPopupFileManager', // +++ 添加弹窗文件管理器设置键 +++
           'sidebarPaneWidths', // +++ 添加侧边栏宽度对象键 +++
           'fileManagerRowSizeMultiplier', // +++ 添加文件管理器行大小键 +++
           'fileManagerColWidths', // +++ 添加文件管理器列宽键 +++

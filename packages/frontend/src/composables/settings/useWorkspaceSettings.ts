@@ -18,6 +18,7 @@ export function useWorkspaceSettings() {
     terminalScrollbackLimitNumber,
     fileManagerShowDeleteConfirmationBoolean,
     terminalEnableRightClickPasteBoolean, // NEW
+    showPopupFileManagerBoolean, // +++ Import the new getter +++
   } = storeToRefs(settingsStore);
 
   // --- Popup Editor ---
@@ -261,6 +262,30 @@ export function useWorkspaceSettings() {
     }
   };
 
+  // --- Popup File Manager ---
+  const showPopupFileManagerLocal = ref(true);
+  const showPopupFileManagerLoading = ref(false);
+  const showPopupFileManagerMessage = ref('');
+  const showPopupFileManagerSuccess = ref(false);
+
+  const handleUpdateShowPopupFileManager = async () => {
+    showPopupFileManagerLoading.value = true;
+    showPopupFileManagerMessage.value = '';
+    showPopupFileManagerSuccess.value = false;
+    try {
+      const valueToSave = showPopupFileManagerLocal.value ? 'true' : 'false';
+      await settingsStore.updateSetting('showPopupFileManager', valueToSave);
+      showPopupFileManagerMessage.value = t('settings.popupFileManager.success.saved');
+      showPopupFileManagerSuccess.value = true;
+    } catch (error: any) {
+      console.error('更新弹窗文件管理器设置失败:', error);
+      showPopupFileManagerMessage.value = error.message || t('settings.popupFileManager.error.saveFailed');
+      showPopupFileManagerSuccess.value = false;
+    } finally {
+      showPopupFileManagerLoading.value = false;
+    }
+  };
+
   // Watchers to sync local state with store state
   watch(showPopupFileEditorBoolean, (newValue) => { popupEditorEnabled.value = newValue; }, { immediate: true });
   watch(shareFileEditorTabsBoolean, (newValue) => { shareTabsEnabled.value = newValue; }, { immediate: true });
@@ -272,6 +297,7 @@ export function useWorkspaceSettings() {
   watch(terminalScrollbackLimitNumber, (newValue) => { terminalScrollbackLimitLocal.value = newValue; }, { immediate: true });
   watch(fileManagerShowDeleteConfirmationBoolean, (newValue) => { fileManagerShowDeleteConfirmationLocal.value = newValue; }, { immediate: true });
   watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true }); // NEW
+  watch(showPopupFileManagerBoolean, (newValue) => { showPopupFileManagerLocal.value = newValue; }, { immediate: true }); // +++ Watch for popup file manager +++
 
 
   return {
@@ -334,5 +360,12 @@ export function useWorkspaceSettings() {
     terminalEnableRightClickPasteMessage, // NEW
     terminalEnableRightClickPasteSuccess, // NEW
     handleUpdateTerminalRightClickPasteSetting, // NEW
+
+    // Popup File Manager
+    showPopupFileManagerLocal,
+    showPopupFileManagerLoading,
+    showPopupFileManagerMessage,
+    showPopupFileManagerSuccess,
+    handleUpdateShowPopupFileManager,
   };
 }

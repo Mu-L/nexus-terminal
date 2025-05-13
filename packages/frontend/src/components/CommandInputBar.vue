@@ -9,7 +9,8 @@ import { useQuickCommandsStore } from '../stores/quickCommands.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import QuickCommandsModal from './QuickCommandsModal.vue'; // +++ Import the modal component +++
 import SuspendedSshSessionsModal from './SuspendedSshSessionsModal.vue'; // +++ Import the new modal +++
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
+import { useFileEditorStore } from '../stores/fileEditor.store'; // +++ Import File Editor Store +++
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 
 // Disable attribute inheritance as this component has multiple root nodes (div + modal)
 defineOptions({ inheritAttrs: false });
@@ -23,9 +24,10 @@ const settingsStore = useSettingsStore();
 const quickCommandsStore = useQuickCommandsStore();
 const commandHistoryStore = useCommandHistoryStore();
 const sessionStore = useSessionStore(); // +++ 初始化 Session Store +++
+const fileEditorStore = useFileEditorStore(); // +++ Initialize File Editor Store +++
 
 // Get reactive setting from store
-const { commandInputSyncTarget } = storeToRefs(settingsStore);
+const { commandInputSyncTarget, showPopupFileManagerBoolean, showPopupFileEditorBoolean } = storeToRefs(settingsStore); // +++ Import showPopupFileEditorBoolean +++
 // Get reactive state and actions from quick commands store
 const { selectedIndex: quickCommandsSelectedIndex, flatVisibleCommands: quickCommandsFiltered } = storeToRefs(quickCommandsStore);
 const { resetSelection: resetQuickCommandsSelection } = quickCommandsStore;
@@ -298,6 +300,28 @@ const closeSuspendedSshSessionsModal = () => {
   showSuspendedSshSessionsModal.value = false;
 };
 
+// +++ Function to request opening the file manager modal via event bus +++
+const openFileManagerModal = () => {
+  if (activeSessionId.value) {
+    console.log(`[CommandInputBar] Emitting fileManager:openModalRequest for session: ${activeSessionId.value}`);
+    emitWorkspaceEvent('fileManager:openModalRequest', { sessionId: activeSessionId.value });
+  } else {
+    console.warn('[CommandInputBar] Cannot open file manager modal: No active session ID.');
+    // Optionally, show a notification to the user
+  }
+};
+
+// +++ Function to request opening the file editor modal +++
+const openFileEditorModal = () => {
+ if (activeSessionId.value) {
+   console.log(`[CommandInputBar] Triggering popup editor for session: ${activeSessionId.value}`);
+   fileEditorStore.triggerPopup('', activeSessionId.value); // Call store action directly
+ } else {
+   console.warn('[CommandInputBar] Cannot open file editor modal: No active session ID.');
+   // Optionally, show a notification to the user
+ }
+};
+
 // +++ Handler for command execution from the modal +++
 const handleQuickCommandExecute = (command: string) => {
   console.log(`[CommandInputBar] Executing quick command: ${command}`);
@@ -418,6 +442,22 @@ const handleQuickCommandExecute = (command: string) => {
             <i class="fas fa-arrow-down text-base"></i>
           </button>
         </template>
+        <!-- File Manager Button -->
+        <button
+          v-if="showPopupFileManagerBoolean"
+          @click="openFileManagerModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+        >
+          <i class="fas fa-folder text-base"></i>
+        </button>
+        <!-- File Editor Button -->
+        <button
+          v-if="showPopupFileEditorBoolean"
+          @click="openFileEditorModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+        >
+          <i class="fas fa-edit text-base"></i>
+        </button>
         <!-- Note: On mobile, when searching, only the close button (inside toggleSearch button logic) will be effectively visible in this control group -->
       </div>
     </div>
@@ -434,6 +474,7 @@ const handleQuickCommandExecute = (command: string) => {
     :is-visible="showSuspendedSshSessionsModal"
     @close="closeSuspendedSshSessionsModal"
   />
+  <!-- File Manager Modal is now handled by a listener for 'fileManager:openModalRequest' event -->
 </template>
 
 <style scoped>

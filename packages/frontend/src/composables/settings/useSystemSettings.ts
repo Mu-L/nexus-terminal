@@ -163,7 +163,6 @@ export function useSystemSettings() {
     selectedLanguage.value = newVal;
   }, { immediate: true });
 
-
   return {
     // Language
     selectedLanguage,

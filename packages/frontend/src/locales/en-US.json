@@ -1,4 +1,5 @@
 {
+
   "appName": "Nexus Terminal",
   "projectName": "Nexus Terminal",
   "slogan":"Stir the stars, command the terminal.",
@@ -301,7 +302,11 @@
       "reconnectingMsg": "Attempting to reconnect..."
     }
   },
+"fileEditor": {
+    "title": "File Editor"
+  },
   "fileManager": {
+    "modalTitle": "File Manager",
     "currentPath": "Current Path",
     "loading": "Loading directory...",
     "emptyDirectory": "Directory is empty",
@@ -503,6 +508,17 @@
     "deleteFailed": "Failed to delete tag \"{name}\": {error}"
   },
   "settings": {
+    "popupFileManager": {
+      "title": "Popup File Manager",
+      "enableLabel": "Enable Popup File Manager",
+      "description": "When enabled, the file manager button will be displayed in the command input bar, allowing you to open the popup file manager.",
+      "success": {
+        "saved": "Popup File Manager settings saved successfully."
+      },
+      "error": {
+        "saveFailed": "Failed to save Popup File Manager settings."
+      }
+    },
     "title": "Settings",
     "category": {
       "security": "Security Settings",
@@ -890,7 +906,17 @@
         "noReleases": "No releases found",
         "rateLimit": "GitHub API rate limit exceeded, please try again later"
       }
-    }
+    },
+    "tabs": {
+      "security": "Security",
+      "ipControl": "IP Control",
+      "workspace": "Workspace",
+      "system": "System",
+      "dataManagement": "Data Management",
+      "appearance": "Appearance",
+      "about": "About"
+    },
+    "loading": "Loading..."
   },
 "notificationController": {
       "errorFetchSettings": "Failed to fetch notification settings",
@@ -1100,6 +1126,9 @@
       "quickCommands": "Quick Commands",
       "dockerManager": "Docker Manager",
       "suspendedSshSessions": "Suspended Sessions Management"
+    },
+    "panes": {
+      "suspendedSshSessions": "Suspended Session Manager"
     },
     "noActiveSession": {
       "title": "No Active Session",

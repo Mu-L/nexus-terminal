@@ -26,7 +26,6 @@ export const useQuickCommandTagsStore = defineStore('quickCommandTags', () => {
         try {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
-                console.log('[QuickCmdTagStore] Loading quick command tags from cache.');
                 tags.value = JSON.parse(cachedData);
                 isLoading.value = false;
             } else {
@@ -41,7 +40,6 @@ export const useQuickCommandTagsStore = defineStore('quickCommandTags', () => {
         // 2. 后台获取最新数据
         isLoading.value = true;
         try {
-            console.log('[QuickCmdTagStore] Fetching latest quick command tags from server...');
             // 使用新的 API 端点
             const response = await apiClient.get<QuickCommandTag[]>('/quick-command-tags');
             const freshData = response.data;
@@ -50,11 +48,9 @@ export const useQuickCommandTagsStore = defineStore('quickCommandTags', () => {
             // 3. 对比并更新
             const currentDataString = JSON.stringify(tags.value);
             if (currentDataString !== freshDataString) {
-                console.log('[QuickCmdTagStore] Tags data changed, updating state and cache.');
                 tags.value = freshData;
                 localStorage.setItem(cacheKey, freshDataString);
             } else {
-                console.log('[QuickCmdTagStore] Tags data is up-to-date.');
             }
             error.value = null;
             return true;
