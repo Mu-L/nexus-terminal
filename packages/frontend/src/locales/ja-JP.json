@@ -1080,6 +1080,16 @@
         "decryptKeyInfo": "解凍パスワードは、data/.env ファイル内の ENCRYPTION_KEY です。このファイルを安全に保管してください。",
         "buttonText": "エクスポートを開始"
     },
+    "tabs": {
+      "security": "セキュリティ",
+      "ipControl": "IP制御",
+      "workspace": "ワークスペース",
+      "system": "システム",
+      "dataManagement": "データ管理",
+      "appearance": "外観",
+      "about": "バージョン情報"
+    },
+    "loading": "読み込み中...",
     "setup": {
         "confirmPassword": "パスワードを再入力",
         "confirmPasswordPlaceholder": "パスワードを再入力して確認",

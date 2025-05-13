@@ -887,11 +887,21 @@
       }
     },
     "exportConnections": {
-      "title": "导出连接数据",
-      "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
-      "buttonText": "开始导出"
-  }
-},
+        "title": "导出连接数据",
+        "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
+        "buttonText": "开始导出"
+    },
+    "tabs": {
+      "security": "安全",
+      "ipControl": "IP 管控",
+      "workspace": "工作区",
+      "system": "系统",
+      "dataManagement": "数据管理",
+      "appearance": "外观",
+      "about": "关于"
+    },
+    "loading": "加载中..."
+  },
 
 "notificationController": {
       "errorFetchSettings": "获取通知设置失败",
