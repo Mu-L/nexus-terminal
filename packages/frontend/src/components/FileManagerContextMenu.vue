@@ -26,7 +26,7 @@ const { isMobile } = useDeviceDetection();
 const emit = defineEmits(['item-click', 'close-request']); // 添加 close-request
 
 const handleItemClick = (item: ContextMenuItem) => {
-  if (!item.disabled && item.action) {
+  if (item.action) {
     item.action(); // 只有当 action 存在时才执行
     emit('close-request'); // <-- 发出关闭请求
   }
@@ -78,9 +78,7 @@ onUnmounted(() => {
             @click.stop="handleItemClick(subItem)"
             :class="[
               'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-              subItem.disabled
-                ? 'text-text-secondary cursor-not-allowed opacity-60'
-                : 'hover:bg-primary/10 hover:text-primary'
+              'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
             ]"
           >
             {{ subItem.label }}
@@ -92,9 +90,7 @@ onUnmounted(() => {
           @click.stop="handleItemClick(menuItem)"
           :class="[
             'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-            menuItem.disabled
-              ? 'text-text-secondary cursor-not-allowed opacity-60'
-              : 'hover:bg-primary/10 hover:text-primary'
+            'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
           ]"
         >
           {{ menuItem.label }}
@@ -119,9 +115,7 @@ onUnmounted(() => {
               @click.stop="handleItemClick(subItem)"
               :class="[
                 'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-                subItem.disabled
-                  ? 'text-text-secondary cursor-not-allowed opacity-60'
-                  : 'hover:bg-primary/10 hover:text-primary'
+                'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
               ]"
             >
               {{ subItem.label }}
