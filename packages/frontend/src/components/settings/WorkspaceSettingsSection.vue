@@ -30,7 +30,7 @@
                     class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
              <label for="showPopupFileManager" class="text-sm text-foreground cursor-pointer select-none">{{ t('settings.popupFileManager.enableLabel') }}</label>
            </div>
-           <small class="block mt-1 text-xs text-text-secondary">{{ t('settings.popupFileManager.description') }}</small>
+           <!-- <small class="block mt-1 text-xs text-text-secondary">{{ t('settings.popupFileManager.description') }}</small> -->
            <div class="flex items-center justify-between">
               <button type="submit"
                       class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
