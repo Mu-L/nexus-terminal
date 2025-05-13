@@ -432,8 +432,27 @@ const copyCommand = async (command: string) => {
     await navigator.clipboard.writeText(command);
     uiNotificationsStore.showSuccess(t('commandHistory.copied', '已复制到剪贴板'));
   } catch (err) {
-    console.error('复制命令失败:', err);
-    uiNotificationsStore.showError(t('commandHistory.copyFailed', '复制失败'));
+    console.error('使用Clipboard API复制命令失败:', err);
+    // 备用方案：使用临时文本区域和execCommand
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = command;
+      textarea.style.position = 'fixed'; // 避免滚动到页面底部
+      textarea.style.opacity = '0'; // 隐藏文本区域
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (successful) {
+        uiNotificationsStore.showSuccess(t('commandHistory.copied', '已复制到剪贴板'));
+      } else {
+        uiNotificationsStore.showError(t('commandHistory.copyFailed', '复制失败'));
+      }
+    } catch (fallbackErr) {
+      console.error('备用复制方法也失败:', fallbackErr);
+      uiNotificationsStore.showError(t('commandHistory.copyFailed', '复制失败'));
+    }
   }
 };
 
