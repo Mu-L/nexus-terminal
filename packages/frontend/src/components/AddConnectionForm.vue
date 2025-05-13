@@ -137,7 +137,6 @@ const handleHostIconMouseLeave = () => {
            </button>
          </div>
          <div v-if="isScriptModeActive" class="mt-4">
-           <label for="conn-script-input" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.scriptModeInputLabel', '连接脚本 (每行一个)') }}</label>
            <textarea
              id="conn-script-input"
              v-model="scriptInputText"
