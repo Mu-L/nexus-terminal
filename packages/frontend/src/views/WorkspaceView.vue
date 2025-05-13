@@ -699,8 +699,8 @@ const handleFileManagerOpenRequest = (payload: { sessionId: string }) => {
 
 const closeFileManagerModal = () => {
   showFileManagerModal.value = false;
-  fileManagerProps.value = null; // 清理 props
-  console.log('[WorkspaceView] FileManager modal closed.');
+  // fileManagerProps.value = null; // 不再清理 props，以实现保活
+  console.log('[WorkspaceView] FileManager modal hidden (kept alive).');
 };
 
 </script>
@@ -797,7 +797,7 @@ const closeFileManagerModal = () => {
     <!-- VNC Modal is now rendered in App.vue -->
 
     <!-- FileManager Modal -->
-    <div v-if="showFileManagerModal && fileManagerProps" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }">
+    <div v-if="fileManagerProps" v-show="showFileManagerModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }" @click.self="closeFileManagerModal">
       <div class="bg-background rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-border">
         <div class="flex justify-between items-center p-3 border-b border-border flex-shrink-0 bg-header">
           <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ fileManagerProps.sessionId }})</h2>
