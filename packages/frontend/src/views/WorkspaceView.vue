@@ -77,12 +77,13 @@ const isVirtualKeyboardVisible = ref(true); // +++ State for virtual keyboard vi
 
 // --- 文件管理器模态框状态 ---
 const showFileManagerModal = ref(false);
-const fileManagerProps = shallowRef<null | {
+const fileManagerPropsMap = shallowRef<Map<string, {
   sessionId: string;
   instanceId: string;
   dbConnectionId: string;
   wsDeps: WebSocketDependencies;
-}>(null);
+}>>(new Map());
+const currentFileManagerSessionId = ref<string | null>(null);
 
 // --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -683,23 +684,25 @@ const handleFileManagerOpenRequest = (payload: { sessionId: string }) => {
       return;
   }
 
-  // 3. 生成 instanceId
-  const instanceId = `fm-modal-${sessionId}-${Date.now()}`;
+  // 3. 生成或获取 instanceId
+  const currentProps = fileManagerPropsMap.value.get(sessionId);
+  const instanceId = currentProps ? currentProps.instanceId : `fm-modal-${sessionId}`;
 
   // 4. 设置 props 并显示模态框
-  fileManagerProps.value = {
+  const newProps = {
     sessionId,
     instanceId,
     dbConnectionId: String(dbConnectionId), // 确保是 string
     wsDeps,
   };
+  fileManagerPropsMap.value.set(sessionId, newProps);
+  currentFileManagerSessionId.value = sessionId;
   showFileManagerModal.value = true;
-  console.log(`[WorkspaceView] Opening FileManager modal with props:`, fileManagerProps.value);
+  console.log(`[WorkspaceView] Opening FileManager modal with props for session ${sessionId}:`, newProps);
 };
 
 const closeFileManagerModal = () => {
   showFileManagerModal.value = false;
-  // fileManagerProps.value = null; // 不再清理 props，以实现保活
   console.log('[WorkspaceView] FileManager modal hidden (kept alive).');
 };
 
@@ -796,23 +799,27 @@ const closeFileManagerModal = () => {
     <!-- RDP Modal is now rendered in App.vue -->
     <!-- VNC Modal is now rendered in App.vue -->
 
-    <!-- FileManager Modal -->
-    <div v-if="fileManagerProps" v-show="showFileManagerModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }" @click.self="closeFileManagerModal">
+    <!-- FileManager Modal Container -->
+    <div v-show="showFileManagerModal && currentFileManagerSessionId && fileManagerPropsMap.get(currentFileManagerSessionId)" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }" @click.self="closeFileManagerModal">
       <div class="bg-background rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-border">
         <div class="flex justify-between items-center p-3 border-b border-border flex-shrink-0 bg-header">
-          <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ fileManagerProps.sessionId }})</h2>
+          <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ currentFileManagerSessionId }})</h2>
           <button @click="closeFileManagerModal" class="text-text-secondary hover:text-foreground transition-colors">
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
         <div class="flex-grow overflow-hidden">
-          <FileManager
-            :session-id="fileManagerProps.sessionId"
-            :instance-id="fileManagerProps.instanceId"
-            :db-connection-id="fileManagerProps.dbConnectionId"
-            :ws-deps="fileManagerProps.wsDeps"
-            class="h-full"
-          />
+          <template v-for="props in fileManagerPropsMap.values()" :key="props.sessionId">
+            <div v-show="props.sessionId === currentFileManagerSessionId" class="h-full">
+              <FileManager
+                :session-id="props.sessionId"
+                :instance-id="props.instanceId"
+                :db-connection-id="props.dbConnectionId"
+                :ws-deps="props.wsDeps"
+                class="h-full"
+              />
+            </div>
+          </template>
         </div>
       </div>
     </div>

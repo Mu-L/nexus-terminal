@@ -424,24 +424,6 @@ const handleQuickCommandExecute = (command: string) => {
           <i v-if="!isSearching" class="fas fa-search text-base"></i>
           <i v-else class="fas fa-times text-base"></i>
         </button>
-        <!-- File Manager Button -->
-        <button
-          v-if="showPopupFileManagerBoolean"
-          @click="openFileManagerModal"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
-          :title="t('fileManager.title', '文件管理器')"
-        >
-          <i class="fas fa-folder text-base"></i>
-        </button>
-        <!-- File Editor Button -->
-        <button
-          v-if="showPopupFileEditorBoolean"
-          @click="openFileEditorModal"
-          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
-          :title="t('fileEditor.title', '文件编辑器')"
-        >
-          <i class="fas fa-edit text-base"></i>
-        </button>
 
         <!-- Search navigation buttons (Hide on mobile when searching) -->
         <template v-if="isSearching && !props.isMobile"> <!-- +++ Add !props.isMobile condition +++ -->
@@ -460,6 +442,24 @@ const handleQuickCommandExecute = (command: string) => {
             <i class="fas fa-arrow-down text-base"></i>
           </button>
         </template>
+        <!-- File Manager Button -->
+        <button
+          v-if="showPopupFileManagerBoolean"
+          @click="openFileManagerModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+          :title="t('fileManager.title', '文件管理器')"
+        >
+          <i class="fas fa-folder text-base"></i>
+        </button>
+        <!-- File Editor Button -->
+        <button
+          v-if="showPopupFileEditorBoolean"
+          @click="openFileEditorModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+          :title="t('fileEditor.title', '文件编辑器')"
+        >
+          <i class="fas fa-edit text-base"></i>
+        </button>
         <!-- Note: On mobile, when searching, only the close button (inside toggleSearch button logic) will be effectively visible in this control group -->
       </div>
     </div>
