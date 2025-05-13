@@ -2,7 +2,7 @@
   <div class="p-4 bg-background text-foreground min-h-screen"> <!-- Outer container -->
     <div class="max-w-7xl mx-auto"> <!-- Inner container for max-width -->
       <!-- Tabs Navigation -->
-      <div class="mb-6 flex space-x-1 sticky top-0 bg-background z-10 py-2">
+      <div class="mb-6 flex space-x-1 bg-background z-10 py-2">
         <button
           v-for="tab in tabs"
           :key="tab.key"
@@ -109,10 +109,10 @@ const { t } = useI18n();
 
 // Define tabs for settings sections
 const tabs = ref([
-  { key: 'security', label: t('settings.tabs.security', '安全') },
-  { key: 'ipControl', label: t('settings.tabs.ipControl', 'IP 管控') },
   { key: 'workspace', label: t('settings.tabs.workspace', '工作区') },
   { key: 'system', label: t('settings.tabs.system', '系统') },
+  { key: 'security', label: t('settings.tabs.security', '安全') },
+  { key: 'ipControl', label: t('settings.tabs.ipControl', 'IP 管控') },
   { key: 'dataManagement', label: t('settings.tabs.dataManagement', '数据管理') },
   { key: 'appearance', label: t('settings.tabs.appearance', '外观') },
   { key: 'about', label: t('settings.tabs.about', '关于') },
