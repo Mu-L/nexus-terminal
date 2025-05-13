@@ -1,4 +1,5 @@
 {
+
   "appName": "星枢终端",
   "projectName": "星枢终端",
   "slogan": "星垂平野阔，枢动万端通",
@@ -502,6 +503,17 @@
     "deleteFailed": "标签 \"{name}\" 删除失败: {error}"
   },
   "settings": {
+    "popupFileManager": {
+      "title": "弹窗文件管理器",
+      "enableLabel": "启用弹窗文件管理器",
+      "description": "启用后，命令输入栏将显示文件管理器按钮，点击可打开弹窗式文件管理器。",
+      "success": {
+        "saved": "弹窗文件管理器设置已保存。"
+      },
+      "error": {
+        "saveFailed": "保存弹窗文件管理器设置失败。"
+      }
+    },
     "title": "设置",
     "category": {
       "security": "安全设置",

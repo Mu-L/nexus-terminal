@@ -25,7 +25,7 @@ const commandHistoryStore = useCommandHistoryStore();
 const sessionStore = useSessionStore(); // +++ 初始化 Session Store +++
 
 // Get reactive setting from store
-const { commandInputSyncTarget } = storeToRefs(settingsStore);
+const { commandInputSyncTarget, showPopupFileManagerBoolean } = storeToRefs(settingsStore); // +++ Import showPopupFileManagerBoolean +++
 // Get reactive state and actions from quick commands store
 const { selectedIndex: quickCommandsSelectedIndex, flatVisibleCommands: quickCommandsFiltered } = storeToRefs(quickCommandsStore);
 const { resetSelection: resetQuickCommandsSelection } = quickCommandsStore;
@@ -298,6 +298,17 @@ const closeSuspendedSshSessionsModal = () => {
   showSuspendedSshSessionsModal.value = false;
 };
 
+// +++ Function to request opening the file manager modal via event bus +++
+const openFileManagerModal = () => {
+  if (activeSessionId.value) {
+    console.log(`[CommandInputBar] Emitting fileManager:openModalRequest for session: ${activeSessionId.value}`);
+    emitWorkspaceEvent('fileManager:openModalRequest', { sessionId: activeSessionId.value });
+  } else {
+    console.warn('[CommandInputBar] Cannot open file manager modal: No active session ID.');
+    // Optionally, show a notification to the user
+  }
+};
+
 // +++ Handler for command execution from the modal +++
 const handleQuickCommandExecute = (command: string) => {
   console.log(`[CommandInputBar] Executing quick command: ${command}`);
@@ -400,6 +411,15 @@ const handleQuickCommandExecute = (command: string) => {
           <i v-if="!isSearching" class="fas fa-search text-base"></i>
           <i v-else class="fas fa-times text-base"></i>
         </button>
+        <!-- File Manager Button -->
+        <button
+          v-if="showPopupFileManagerBoolean"
+          @click="openFileManagerModal"
+          class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
+          :title="t('fileManager.title', '文件管理器')"
+        >
+          <i class="fas fa-folder text-base"></i>
+        </button>
 
         <!-- Search navigation buttons (Hide on mobile when searching) -->
         <template v-if="isSearching && !props.isMobile"> <!-- +++ Add !props.isMobile condition +++ -->
@@ -434,6 +454,7 @@ const handleQuickCommandExecute = (command: string) => {
     :is-visible="showSuspendedSshSessionsModal"
     @close="closeSuspendedSshSessionsModal"
   />
+  <!-- File Manager Modal is now handled by a listener for 'fileManager:openModalRequest' event -->
 </template>
 
 <style scoped>

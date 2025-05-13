@@ -36,6 +36,7 @@ interface SettingsState {
   maxLoginAttempts?: string;
   loginBanDuration?: string;
   showPopupFileEditor?: string; // 'true' or 'false'
+  showPopupFileManager?: string; // 'true' or 'false' - NEW: 弹窗文件管理器
   shareFileEditorTabs?: string; // 'true' or 'false'
   ipWhitelistEnabled?: string; // 添加 IP 白名单启用状态 'true' or 'false'
   autoCopyOnSelect?: string; // 'true' or 'false' - 终端选中自动复制
@@ -113,6 +114,10 @@ export const useSettingsStore = defineStore('settings', () => {
       // --- 设置默认值 (如果后端未返回) ---
       if (settings.value.showPopupFileEditor === undefined) {
           settings.value.showPopupFileEditor = 'true';
+      }
+      // +++ 添加 showPopupFileManager 默认值 (改为 false) +++
+      if (settings.value.showPopupFileManager === undefined) {
+          settings.value.showPopupFileManager = 'false'; // 默认禁用弹窗文件管理器
       }
       if (settings.value.shareFileEditorTabs === undefined) {
           settings.value.shareFileEditorTabs = 'true';
@@ -371,7 +376,7 @@ export const useSettingsStore = defineStore('settings', () => {
     // 移除外观相关的键检查
     const allowedKeys: Array<keyof SettingsState> = [
         'language', 'ipWhitelist', 'maxLoginAttempts', 'loginBanDuration',
-        'showPopupFileEditor', 'shareFileEditorTabs', 'ipWhitelistEnabled',
+        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++ 添加 showPopupFileManager +++
         'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
         'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
         'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
@@ -466,7 +471,7 @@ export const useSettingsStore = defineStore('settings', () => {
      // 移除外观相关的键检查
     const allowedKeys: Array<keyof SettingsState> = [
         'language', 'ipWhitelist', 'maxLoginAttempts', 'loginBanDuration',
-        'showPopupFileEditor', 'shareFileEditorTabs', 'ipWhitelistEnabled',
+        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++ 添加 showPopupFileManager +++
         'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
         'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
         'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
@@ -663,7 +668,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const showPopupFileEditorBoolean = computed(() => {
       return settings.value.showPopupFileEditor !== 'false';
   });
-
+ 
+  // +++ Getter for popup file manager setting, returning boolean +++
+  const showPopupFileManagerBoolean = computed(() => {
+      return settings.value.showPopupFileManager !== 'false'; // Default to true
+  });
+ 
   // Getter for sharing setting, returning boolean
   const shareFileEditorTabsBoolean = computed(() => {
       return settings.value.shareFileEditorTabs !== 'false';
@@ -791,6 +801,7 @@ export const useSettingsStore = defineStore('settings', () => {
     error,
     language,
     showPopupFileEditorBoolean,
+    showPopupFileManagerBoolean, // +++ 暴露弹窗文件管理器 getter +++
     shareFileEditorTabsBoolean,
     ipWhitelistEnabled, // 暴露 IP 白名单启用状态
     ipBlacklistEnabledBoolean, // <-- NEW: 暴露 IP 黑名单启用状态 getter

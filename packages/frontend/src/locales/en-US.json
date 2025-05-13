@@ -1,4 +1,5 @@
 {
+
   "appName": "Nexus Terminal",
   "projectName": "Nexus Terminal",
   "slogan":"Stir the stars, command the terminal.",
@@ -503,6 +504,17 @@
     "deleteFailed": "Failed to delete tag \"{name}\": {error}"
   },
   "settings": {
+    "popupFileManager": {
+      "title": "Popup File Manager",
+      "enableLabel": "Enable Popup File Manager",
+      "description": "When enabled, the file manager button will be displayed in the command input bar, allowing you to open the popup file manager.",
+      "success": {
+        "saved": "Popup File Manager settings saved successfully."
+      },
+      "error": {
+        "saveFailed": "Failed to save Popup File Manager settings."
+      }
+    },
     "title": "Settings",
     "category": {
       "security": "Security Settings",

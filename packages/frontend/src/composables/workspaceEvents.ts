@@ -45,6 +45,7 @@ export type WorkspaceEventPayloads = {
   // UI Interaction Events
   'ui:openLayoutConfigurator': void;
   // 'ui:toggleVirtualKeyboard': void; // 如果决定迁移 CommandInputBar 的这个事件
+  'fileManager:openModalRequest': { sessionId: string }; // 请求打开文件管理器模态框
 
   // Suspended SSH Session Events
   'suspendedSession:actionCompleted': void; // Emitted when a resume/remove action is completed
