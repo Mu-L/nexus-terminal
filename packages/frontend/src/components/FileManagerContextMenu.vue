@@ -2,6 +2,7 @@
 import { ref, type PropType } from 'vue';
 import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu'; // 导入菜单项类型
 import { onUnmounted } from 'vue';
+import { useDeviceDetection } from '../composables/useDeviceDetection';
 
 defineProps({
   isVisible: {
@@ -17,6 +18,8 @@ defineProps({
     required: true,
   },
 });
+
+const { isMobile } = useDeviceDetection();
 
 // 隐藏菜单的逻辑由 useFileManagerContextMenu 中的全局点击监听器处理
 // 但我们仍然需要触发菜单项的 action，并通知父组件关闭菜单
@@ -67,9 +70,27 @@ onUnmounted(() => {
     <ul class="list-none p-1 m-0">
       <template v-for="(menuItem, index) in items" :key="index">
         <li v-if="menuItem.separator" class="border-t border-border/50 my-1 mx-1"></li>
+        <!-- 如果是移动设备且有子菜单，则平铺子菜单 -->
+        <template v-else-if="isMobile && menuItem.submenu && menuItem.submenu.length > 0">
+          <li
+            v-for="(subItem, subIndex) in menuItem.submenu"
+            :key="`${index}-${subIndex}`"
+            @click.stop="handleItemClick(subItem)"
+            :class="[
+              'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+              subItem.disabled
+                ? 'text-text-secondary cursor-not-allowed opacity-60'
+                : 'hover:bg-primary/10 hover:text-primary'
+            ]"
+          >
+            {{ subItem.label }}
+          </li>
+        </template>
+        <!-- 否则，按原有逻辑渲染一级菜单或带子菜单的一级菜单 -->
         <li
-          v-else-if="!menuItem.submenu"
+          v-else-if="!menuItem.submenu || (menuItem.submenu && !isMobile)"
           @click.stop="handleItemClick(menuItem)"
+          v-show="!isMobile || !menuItem.submenu"
           :class="[
             'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
             menuItem.disabled
@@ -80,7 +101,7 @@ onUnmounted(() => {
           {{ menuItem.label }}
         </li>
         <li
-          v-else
+          v-if="menuItem.submenu && !isMobile"
           class="px-4 py-1.5 text-foreground text-sm flex items-center justify-between transition-colors duration-150 rounded mx-1 hover:bg-primary/10 hover:text-primary relative"
           @mouseenter="showSubmenu(menuItem.label)"
           @mouseleave="hideSubmenu()"
