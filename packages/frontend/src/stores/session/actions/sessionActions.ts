@@ -64,6 +64,7 @@ export const openNewSession = (
       activeEditorTabId: ref(null),
       commandInputContent: ref(''),
       isMarkedForSuspend: false,
+      createdAt: Date.now(),
       disposables: [],
   };
 

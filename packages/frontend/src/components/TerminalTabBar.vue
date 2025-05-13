@@ -293,6 +293,10 @@ onBeforeUnmount(() => {
 const handleSessionsUpdate = (newSessions: SessionTabInfoWithStatus[]) => {
   // v-model handles updating draggableSessions.value automatically
   emit('update:sessions', newSessions);
+  // 保存用户自定义顺序到本地存储
+  const sessionOrder = newSessions.map(session => session.sessionId);
+  localStorage.setItem('sessionOrder', JSON.stringify(sessionOrder));
+  console.log('[TabBar] 已保存用户自定义标签顺序到本地存储');
 };
 const toggleHeader = () => {
   if (isWorkspaceRoute.value) {
