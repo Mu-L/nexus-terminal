@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect, type PropType, readonly, defineExpose, shallowRef } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect, type PropType, readonly, defineExpose, shallowRef, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router'; 
+import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia'; 
 import { createSftpActionsManager, type WebSocketDependencies } from '../composables/useSftpActions';
 import { useFileUploader } from '../composables/useFileUploader';
@@ -44,6 +44,10 @@ const props = defineProps({
     type: Object as PropType<WebSocketDependencies>,
     required: true,
   },
+  isMobile: {
+    type: Boolean,
+    default: false
+  }
 });
 
 // --- 核心 Composables ---
@@ -651,6 +655,7 @@ const {
   isConnected: props.wsDeps.isConnected,
   isSftpReady: props.wsDeps.isSftpReady,
   clipboardState: readonly(clipboardState), // +++ 传递剪贴板状态 (只读) +++
+  isMobile: toRef(props, 'isMobile'), // +++ 传递 isMobile prop 作为 ref +++
   t,
   // --- 传递回调函数 ---
   // 修改：确保在调用前检查 currentSftpManager.value
@@ -1322,7 +1327,7 @@ const handleOpenEditorClick = () => {
             <!-- Path Bar -->
             <div class="flex items-center bg-background border border-border rounded px-1.5 py-0.5 overflow-hidden min-w-[100px] flex-shrink">
               <span v-show="!isEditingPath" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2">
-                {{ t('fileManager.currentPath') }}:
+                <span v-if="!props.isMobile">{{ t('fileManager.currentPath') }}:</span>
                 <strong
                   @click="startPathEdit"
                   :title="t('fileManager.editPathTooltip')"
@@ -1358,9 +1363,10 @@ const handleOpenEditorClick = () => {
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
               :title="t('fileManager.actions.openEditor', 'Open Popup Editor')"
               class="flex items-center gap-1 px-2.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:bg-header hover:enabled:border-primary hover:enabled:text-primary"
+              :class="{ 'px-1.5': props.isMobile }"
             >
               <i class="far fa-edit text-sm"></i> <!-- 使用编辑图标 -->
-              <span>{{ t('fileManager.actions.openEditor', 'Open Editor') }}</span> <!-- 添加 i18n key -->
+              <span v-if="!props.isMobile">{{ t('fileManager.actions.openEditor', 'Open Editor') }}</span> <!-- 添加 i18n key -->
             </button>
             <!-- 上传按钮 -->
             <button
@@ -1368,27 +1374,30 @@ const handleOpenEditorClick = () => {
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
               :title="t('fileManager.actions.uploadFile')"
               class="flex items-center gap-1 px-2.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:bg-header hover:enabled:border-primary hover:enabled:text-primary"
+              :class="{ 'px-1.5': props.isMobile }"
             >
               <i class="fas fa-upload text-sm"></i>
-              <span>{{ t('fileManager.actions.upload') }}</span>
+              <span v-if="!props.isMobile">{{ t('fileManager.actions.upload') }}</span>
             </button>
             <button
               @click="handleNewFolderContextMenuClick"
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
               :title="t('fileManager.actions.newFolder')"
               class="flex items-center gap-1 px-2.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:bg-header hover:enabled:border-primary hover:enabled:text-primary"
+              :class="{ 'px-1.5': props.isMobile }"
             >
               <i class="fas fa-folder-plus text-sm"></i>
-              <span>{{ t('fileManager.actions.newFolder') }}</span>
+              <span v-if="!props.isMobile">{{ t('fileManager.actions.newFolder') }}</span>
             </button>
             <button
               @click="handleNewFileContextMenuClick"
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
               :title="t('fileManager.actions.newFile')"
               class="flex items-center gap-1 px-2.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:bg-header hover:enabled:border-primary hover:enabled:text-primary"
+              :class="{ 'px-1.5': props.isMobile }"
             >
               <i class="far fa-file-alt text-sm"></i>
-              <span>{{ t('fileManager.actions.newFile') }}</span>
+              <span v-if="!props.isMobile">{{ t('fileManager.actions.newFile') }}</span>
             </button>
          </div>
      </div>

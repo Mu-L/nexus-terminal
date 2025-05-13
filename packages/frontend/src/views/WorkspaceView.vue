@@ -807,13 +807,14 @@ const closeFileManagerModal = () => {
           </button>
         </div>
         <div class="flex-grow overflow-hidden">
-          <template v-for="props in fileManagerPropsMap.values()" :key="props.sessionId">
-            <div v-show="props.sessionId === currentFileManagerSessionId" class="h-full">
+          <template v-for="propsData in fileManagerPropsMap.values()" :key="`${propsData.sessionId}-${isMobile}`">
+            <div v-show="propsData.sessionId === currentFileManagerSessionId" class="h-full">
               <FileManager
-                :session-id="props.sessionId"
-                :instance-id="props.instanceId"
-                :db-connection-id="props.dbConnectionId"
-                :ws-deps="props.wsDeps"
+                :session-id="propsData.sessionId"
+                :instance-id="propsData.instanceId"
+                :db-connection-id="propsData.dbConnectionId"
+                :ws-deps="propsData.wsDeps"
+                :is-mobile="isMobile"
                 class="h-full"
               />
             </div>
