@@ -126,7 +126,6 @@ const {
     isLoading: settingsLoading,
     error: settingsError,
     language: storeLanguage,
-    captchaSettings, // <-- Import CAPTCHA settings state
 } = storeToRefs(settingsStore);
 
 
