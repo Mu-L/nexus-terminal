@@ -88,9 +88,8 @@ onUnmounted(() => {
         </template>
         <!-- 否则，按原有逻辑渲染一级菜单或带子菜单的一级菜单 -->
         <li
-          v-else-if="!menuItem.submenu || (menuItem.submenu && !isMobile)"
+          v-else-if="!menuItem.submenu"
           @click.stop="handleItemClick(menuItem)"
-          v-show="!isMobile || !menuItem.submenu"
           :class="[
             'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
             menuItem.disabled
