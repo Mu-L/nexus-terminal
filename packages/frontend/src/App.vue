@@ -2,8 +2,8 @@
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useBreakpoints, breakpointsTailwind } from '@vueuse/core'; // +++ Import useBreakpoints +++
 import { useAuthStore } from './stores/auth.store';
+import { useDeviceDetection } from './composables/useDeviceDetection';
 import { useSettingsStore } from './stores/settings.store';
 import { useAppearanceStore } from './stores/appearance.store';
 import { useLayoutStore } from './stores/layout.store';
@@ -36,8 +36,7 @@ const { isStyleCustomizerVisible } = storeToRefs(appearanceStore);
 const { isLayoutVisible, isHeaderVisible } = storeToRefs(layoutStore); // 添加 isHeaderVisible
 const { isConfiguratorVisible: isFocusSwitcherVisible } = storeToRefs(focusSwitcherStore);
 const { isRdpModalOpen, rdpConnectionInfo, isVncModalOpen, vncConnectionInfo } = storeToRefs(sessionStore); // +++ 获取 RDP 和 VNC 状态 +++
-const breakpoints = useBreakpoints(breakpointsTailwind); // +++ Initialize Breakpoints +++
-const isMobile = breakpoints.smaller('md'); // +++ Define isMobile +++
+const { isMobile } = useDeviceDetection();
 
 const route = useRoute();
 const navRef = ref<HTMLElement | null>(null);
@@ -302,7 +301,7 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
     <UINotificationDisplay />
 
     <!-- 根据设置条件渲染全局文件编辑器弹窗 -->
-    <FileEditorOverlay v-if="showPopupFileEditorBoolean" />
+    <FileEditorOverlay v-if="showPopupFileEditorBoolean" :is-mobile="isMobile" />
 
     <!-- 条件渲染样式自定义器，使用 store 的状态和方法 -->
     <StyleCustomizer v-if="isStyleCustomizerVisible" @close="closeStyleCustomizer" />

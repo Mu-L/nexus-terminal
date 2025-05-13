@@ -4,18 +4,23 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import MonacoEditor from './MonacoEditor.vue';
 import FileEditorTabs from './FileEditorTabs.vue';
-import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store'; 
+import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useSettingsStore } from '../stores/settings.store';
-import { useSessionStore } from '../stores/session.store'; 
+import { useSessionStore } from '../stores/session.store';
 
 
 const { t } = useI18n();
 const fileEditorStore = useFileEditorStore();
 const settingsStore = useSettingsStore();
-const sessionStore = useSessionStore(); 
+const sessionStore = useSessionStore();
 
 // --- 本地状态控制弹窗显示 ---
 const isVisible = ref(false);
+
+// 接收 isMobile 属性
+const props = defineProps<{
+  isMobile?: boolean;
+}>();
 
 // --- 从 Store 获取状态 ---
 // 全局 Store (用于共享模式和触发器)
@@ -83,10 +88,22 @@ const minHeight = 300; // 最小高度
 const encodingSelectRef = ref<HTMLSelectElement | null>(null); // +++ Ref for the select element +++
 
 // --- 计算属性，用于模板绑定 ---
-const popupStyle = computed(() => ({
-    width: `${popupWidthPx.value}px`,
-    height: `${popupHeightPx.value}px`,
-}));
+const popupStyle = computed(() => {
+    if (props.isMobile) {
+        return {
+            width: '100vw',
+            height: '100vh',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            borderRadius: '0',
+        };
+    } else {
+        return {
+            width: `${popupWidthPx.value}px`,
+            height: `${popupHeightPx.value}px`,
+        };
+    }
+});
 
 // --- 动态计算属性 (根据模式选择数据源) ---
 
@@ -580,22 +597,55 @@ onBeforeUnmount(() => {
   position: relative; /* 为拖拽手柄定位 */
 }
 
+/* 移动设备上布满屏幕 */
+@media (max-width: 768px) {
+  .editor-popup {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  .editor-header {
+    padding: 1.5rem 2.5rem 0.5rem 1rem; /* 增加顶部内边距以确保关闭按钮可见 */
+  }
+  .editor-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+    margin-top: 1rem;
+  }
+}
+
+/* 适配横向旋转 */
+@media (orientation: landscape) and (max-width: 1024px) {
+  .editor-popup {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+}
+
 /* 标签栏区域 (FileEditorTabs 组件将放在这里) */
 /* .file-tabs-container { ... } */
 
 .editor-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 0.5rem 1rem;
   background-color: #333;
   border-bottom: 1px solid #555;
   font-size: 0.9em;
   flex-shrink: 0;
+  position: relative;
 }
 .editor-header-placeholder {
-    justify-content: space-between; /* 保持关闭按钮在右侧 */
+    flex-direction: column;
+    align-items: flex-start;
     color: #888;
+    position: relative;
 }
 
 .modified-indicator {
@@ -611,6 +661,10 @@ onBeforeUnmount(() => {
   font-size: 1.2em;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 10;
 }
 .close-editor-btn:hover {
   color: white;
@@ -647,6 +701,10 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     gap: 0.8rem; /* 稍微减小间距以容纳下拉菜单 */
+    flex-wrap: wrap;
+    max-width: 100%;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
 }
 
 .save-btn {

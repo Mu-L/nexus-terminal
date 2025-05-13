@@ -2,8 +2,8 @@
 import { onMounted, onBeforeUnmount, computed, ref, shallowRef, type PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useBreakpoints, breakpointsTailwind } from '@vueuse/core';
 import { useLayoutStore } from '../stores/layout.store';
+import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import AddConnectionFormComponent from '../components/AddConnectionForm.vue';
 import TerminalTabBar from '../components/TerminalTabBar.vue';
@@ -36,8 +36,7 @@ const layoutStore = useLayoutStore();
 const commandHistoryStore = useCommandHistoryStore();
 const connectionsStore = useConnectionsStore(); 
 const { isHeaderVisible } = storeToRefs(layoutStore);
-const breakpoints = useBreakpoints(breakpointsTailwind); // +++ 初始化 Breakpoints +++
-const isMobile = breakpoints.smaller('md'); // +++ 定义 isMobile (小于 md 断点) +++
+const { isMobile } = useDeviceDetection();
 
 // --- 从 Store 获取响应式状态和 Getters ---
 const { sessionTabsWithStatus, activeSessionId, activeSession, isRdpModalOpen, rdpConnectionInfo, isVncModalOpen, vncConnectionInfo } = storeToRefs(sessionStore); // 使用 storeToRefs 获取 RDP 和 VNC 状态
