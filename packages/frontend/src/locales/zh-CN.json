@@ -301,6 +301,9 @@
       "reconnectingMsg": "正在尝试重新连接..."
     }
   },
+"fileEditor": {
+    "title": "文件编辑器"
+  },
   "fileManager": {
     "currentPath": "当前路径",
     "loading": "正在加载目录...",

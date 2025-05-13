@@ -302,6 +302,12 @@
       "reconnectingMsg": "Attempting to reconnect..."
     }
   },
+"fileEditor": {
+    "title": "File Editor"
+  },
+"fileEditor": {
+    "title": "File Editor"
+  },
   "fileManager": {
     "currentPath": "Current Path",
     "loading": "Loading directory...",

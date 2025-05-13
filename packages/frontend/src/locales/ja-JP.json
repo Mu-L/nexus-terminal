@@ -312,6 +312,9 @@
         },
         "waitingForSsh": "SSH接続を待機中..."
     },
+"fileEditor": {
+    "title": "ファイルエディタ"
+  },
     "fileManager": {
         "actions": {
             "cancel": "キャンセル",
