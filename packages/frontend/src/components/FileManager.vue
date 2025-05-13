@@ -1410,20 +1410,6 @@ const handleOpenEditorClick = () => {
               <i class="fas fa-upload text-sm"></i>
               <span v-if="!props.isMobile">{{ t('fileManager.actions.upload') }}</span>
             </button>
-            <!-- 多选模式切换按钮 (仅移动端) -->
-            <button
-              v-if="props.isMobile"
-              @click="toggleMultiSelectMode"
-              :title="isMultiSelectMode ? t('fileManager.actions.exitMultiSelect', 'Exit Multi-Select Mode') : t('fileManager.actions.multiSelect', 'Enter Multi-Select Mode')"
-              class="flex items-center gap-1 px-1.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="{
-                'hover:bg-header hover:border-primary hover:text-primary': !isMultiSelectMode,
-                'bg-primary text-white border-primary': isMultiSelectMode
-              }"
-            >
-              <i class="fas fa-check-square text-sm"></i>
-            </button>
-            <!-- 移除多选复选框，保留原有的多选模式切换按钮 -->
             <button
               @click="handleNewFolderContextMenuClick"
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
@@ -1443,6 +1429,19 @@ const handleOpenEditorClick = () => {
             >
               <i class="far fa-file-alt text-sm"></i>
               <span v-if="!props.isMobile">{{ t('fileManager.actions.newFile') }}</span>
+            </button>
+            <!-- 多选模式切换按钮 (仅移动端) -->
+            <button
+              v-if="props.isMobile"
+              @click="toggleMultiSelectMode"
+              :title="isMultiSelectMode ? t('fileManager.actions.exitMultiSelect', 'Exit Multi-Select Mode') : t('fileManager.actions.multiSelect', 'Enter Multi-Select Mode')"
+              class="flex items-center gap-1 px-1.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="{
+                'hover:bg-header hover:border-primary hover:text-primary': !isMultiSelectMode,
+                'bg-primary text-white border-primary': isMultiSelectMode
+              }"
+            >
+              <i class="fas fa-check-square text-sm"></i>
             </button>
          </div>
      </div>
