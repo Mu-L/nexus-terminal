@@ -403,9 +403,10 @@ onBeforeUnmount(() => {
         tag="ul"
         class="flex list-none p-0 m-0 h-full flex-shrink-0"
         @update:modelValue="handleSessionsUpdate"
-ghost-class="opacity-50"
+        ghost-class="opacity-50"
         drag-class="opacity-75"
-animation="150"
+        animation="150"
+        :disabled="props.isMobile" <!-- 在移动端禁用拖拽 -->
       >
         <template #item="{ element: session }">
           <li
