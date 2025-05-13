@@ -255,14 +255,12 @@ export function handleSshResize(ws: AuthenticatedWebSocket, payload: any): void 
 
 // 处理会话恢复后的状态监控启动
 export function handleSshResumeSuccess(sessionId: string): void {
-    console.log(`[状态DEBUG] [SSH Handler ${sessionId}] 会话恢复成功，准备启动状态轮询`);
     const state = clientStates.get(sessionId);
     if (state && state.sshClient) {
         statusMonitorService.startStatusPolling(sessionId);
-        console.log(`[状态DEBUG] [SSH Handler ${sessionId}] 已为恢复的会话调用 startStatusPolling`);
         // 如果 Docker 状态也需要恢复，可以在这里添加
         // startDockerStatusPolling(sessionId);
     } else {
-        console.error(`[状态DEBUG] [SSH Handler ${sessionId}] 无法为恢复的会话启动状态轮询：未找到会话状态或 SSH 客户端。`);
+        console.error(`[SSH Handler ${sessionId}] 无法为恢复的会话启动状态轮询：未找到会话状态或 SSH 客户端。`);
     }
 }
