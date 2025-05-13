@@ -391,12 +391,12 @@ export const useSettingsStore = defineStore('settings', () => {
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
-        'showConnectionTags', // NEW
-        'showQuickCommandTags', // NEW
-        'layoutLocked', // NEW
-        'terminalScrollbackLimit', // NEW
-        'fileManagerShowDeleteConfirmation', // NEW
-        'terminalEnableRightClickPaste' // NEW
+        'showConnectionTags', 
+        'showQuickCommandTags', 
+        'layoutLocked', 
+        'terminalScrollbackLimit', 
+        'fileManagerShowDeleteConfirmation', 
+        'terminalEnableRightClickPaste' 
       ];
       if (!allowedKeys.includes(key)) {
           console.error(`[SettingsStore] 尝试更新不允许的设置键: ${key}`);
@@ -486,12 +486,12 @@ export const useSettingsStore = defineStore('settings', () => {
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
-        'showConnectionTags', // NEW
-        'showQuickCommandTags', // NEW
-        'layoutLocked', // NEW
-        'terminalScrollbackLimit', // NEW
-        'fileManagerShowDeleteConfirmation', // NEW
-        'terminalEnableRightClickPaste' // NEW
+        'showConnectionTags', 
+        'showQuickCommandTags', 
+        'layoutLocked', 
+        'terminalScrollbackLimit', 
+        'fileManagerShowDeleteConfirmation', 
+        'terminalEnableRightClickPaste' 
       ];
       const filteredUpdates: Partial<SettingsState> = {};
       let languageUpdate: string | undefined = undefined;

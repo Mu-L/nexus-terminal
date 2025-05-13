@@ -17,7 +17,7 @@ export function useWorkspaceSettings() {
     showQuickCommandTagsBoolean,
     terminalScrollbackLimitNumber,
     fileManagerShowDeleteConfirmationBoolean,
-    terminalEnableRightClickPasteBoolean, // NEW
+    terminalEnableRightClickPasteBoolean, 
     showPopupFileManagerBoolean, // +++ Import the new getter +++
   } = storeToRefs(settingsStore);
 
@@ -296,7 +296,7 @@ export function useWorkspaceSettings() {
   watch(showQuickCommandTagsBoolean, (newValue) => { showQuickCommandTagsLocal.value = newValue; }, { immediate: true });
   watch(terminalScrollbackLimitNumber, (newValue) => { terminalScrollbackLimitLocal.value = newValue; }, { immediate: true });
   watch(fileManagerShowDeleteConfirmationBoolean, (newValue) => { fileManagerShowDeleteConfirmationLocal.value = newValue; }, { immediate: true });
-  watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true }); // NEW
+  watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true }); 
   watch(showPopupFileManagerBoolean, (newValue) => { showPopupFileManagerLocal.value = newValue; }, { immediate: true }); // +++ Watch for popup file manager +++
 
 
@@ -355,11 +355,11 @@ export function useWorkspaceSettings() {
     fileManagerShowDeleteConfirmationSuccess,
     handleUpdateFileManagerDeleteConfirmation,
 
-    terminalEnableRightClickPasteLocal, // NEW
-    terminalEnableRightClickPasteLoading, // NEW
-    terminalEnableRightClickPasteMessage, // NEW
-    terminalEnableRightClickPasteSuccess, // NEW
-    handleUpdateTerminalRightClickPasteSetting, // NEW
+    terminalEnableRightClickPasteLocal, 
+    terminalEnableRightClickPasteLoading, 
+    terminalEnableRightClickPasteMessage, 
+    terminalEnableRightClickPasteSuccess, 
+    handleUpdateTerminalRightClickPasteSetting, 
 
     // Popup File Manager
     showPopupFileManagerLocal,

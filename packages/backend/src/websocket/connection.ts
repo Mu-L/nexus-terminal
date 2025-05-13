@@ -33,7 +33,8 @@ import { handleRdpProxyConnection } from './handlers/rdp.handler';
 import {
     handleSshConnect,
     handleSshInput,
-    handleSshResize
+    handleSshResize,
+    handleSshResumeSuccess
 } from './handlers/ssh.handler';
 import {
     handleDockerGetStatus,
@@ -256,6 +257,9 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                     } else {
                                         // console.warn(`[WebSocket Handler][${type}] WebSocket 在发送 SSH_SUSPEND_RESUMED_NOTIF 前已关闭 (会话 ${newFrontendSessionId})。`);
                                     }
+
+                                    // 在成功恢复并通知前端后，调用 handleSshResumeSuccess 启动状态监控
+                                    handleSshResumeSuccess(newFrontendSessionId);
 
                                 } else {
                                     // console.warn(`[WebSocket Handler][${type}] sshSuspendService.resumeSession 返回 null，无法恢复会话 ${suspendSessionId}。`);
