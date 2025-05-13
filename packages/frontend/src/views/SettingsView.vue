@@ -10,7 +10,9 @@
           :class="['px-4 py-2 text-sm font-medium rounded-md focus:outline-none transition-colors duration-150 ease-in-out',
                    activeTab === tab.key ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground']"
         >
-          {{ tab.label }}
+          <span class="relative flex items-center" :class="{'text-warning': tab.key === 'about' && isUpdateAvailable}">
+            {{ tab.label }}
+          </span>
         </button>
       </div>
 
@@ -90,22 +92,24 @@ import { useSettingsStore } from '../stores/settings.store';
 import { useAppearanceStore } from '../stores/appearance.store'; // 导入外观 store
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
+import { useVersionCheck } from '../composables/settings/useVersionCheck';
 import ChangePasswordForm from '../components/settings/ChangePasswordForm.vue';
 import PasskeyManagement from '../components/settings/PasskeyManagement.vue';
 import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue';
-import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue'; 
-import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue'; 
-import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue'; 
-import AboutSection from '../components/settings/AboutSection.vue'; 
-import WorkspaceSettingsSection from '../components/settings/WorkspaceSettingsSection.vue'; 
-import SystemSettingsSection from '../components/settings/SystemSettingsSection.vue'; 
-import DataManagementSection from '../components/settings/DataManagementSection.vue'; 
-import AppearanceSection from '../components/settings/AppearanceSection.vue'; 
+import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue';
+import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue';
+import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue';
+import AboutSection from '../components/settings/AboutSection.vue';
+import WorkspaceSettingsSection from '../components/settings/WorkspaceSettingsSection.vue';
+import SystemSettingsSection from '../components/settings/SystemSettingsSection.vue';
+import DataManagementSection from '../components/settings/DataManagementSection.vue';
+import AppearanceSection from '../components/settings/AppearanceSection.vue';
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const appearanceStore = useAppearanceStore(); // 实例化外观 store
 const { t } = useI18n();
+const { isUpdateAvailable, checkLatestVersion } = useVersionCheck();
 
 // Define tabs for settings sections
 const tabs = ref([
@@ -133,6 +137,7 @@ const {
 onMounted(async () => {
   // await fetchIpBlacklist(); // REMOVED - Handled by useIpBlacklist.ts onMounted
   await settingsStore.loadCaptchaSettings(); // <-- Load CAPTCHA settings
+  await checkLatestVersion(); // 检查版本更新
 });
 
 </script>
