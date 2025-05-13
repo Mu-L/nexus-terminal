@@ -117,6 +117,7 @@ const sortDirection = ref<'asc' | 'desc'>('asc');
 // const isFetchingInitialPath = ref(false); // 通过 isLoading 和 !initialLoadDone 推断
 const isEditingPath = ref(false);
 const searchQuery = ref(''); // 搜索查询 ref
+const isMultiSelectMode = ref(false); // 多选模式状态 (主要用于移动端)
 const isSearchActive = ref(false); // 控制搜索框激活状态
 const searchInputRef = ref<HTMLInputElement | null>(null); // 搜索输入框 ref
 const pathInputRef = ref<HTMLInputElement | null>(null);
@@ -249,6 +250,15 @@ const handleItemAction = (item: FileListItem) => {
         // 修改：使用 currentSftpManager.value.loadDirectory
         currentSftpManager.value.loadDirectory(newPath);
     } else if (item.attrs.isFile) {
+        // 在移动端多选模式下，不打开文件而是选择它
+        if (props.isMobile && isMultiSelectMode.value) {
+            if (selectedItems.value.has(item.filename)) {
+                selectedItems.value.delete(item.filename);
+            } else {
+                selectedItems.value.add(item.filename);
+            }
+            return;
+        }
         // 修改：使用 currentSftpManager.value 的 currentPath 和 joinPath
         const filePath = currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
         const fileInfo: FileInfo = { name: item.filename, fullPath: filePath };
@@ -270,17 +280,39 @@ const handleItemAction = (item: FileListItem) => {
     }
 };
 
+// 切换多选模式 (主要用于移动端)
+const toggleMultiSelectMode = () => {
+    isMultiSelectMode.value = !isMultiSelectMode.value;
+    if (!isMultiSelectMode.value) {
+        clearSelection(); // 退出多选模式时清空选择
+    }
+    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Multi-select mode: ${isMultiSelectMode.value ? 'enabled' : 'disabled'}`);
+};
+
 // 实例化选择 Composable (需要 filteredFileList 和 handleItemAction)
 const {
   selectedItems, // 使用 Composable 返回的 selectedItems
   lastClickedIndex, // 获取 lastClickedIndex 以传递给 ContextMenu
-  handleItemClick, // 使用 Composable 返回的 handleItemClick
+  handleItemClick: originalHandleItemClick, // 使用 Composable 返回的 handleItemClick
   clearSelection, // 获取清空选择的方法
 } = useFileManagerSelection({
   // 传递当前显示的列表 (已排序和过滤)
   displayedFileList: filteredFileList, // 现在 filteredFileList 已定义
   onItemAction: handleItemAction, // 传递动作回调
 });
+
+// 自定义 handleItemClick 函数以支持移动端多选模式
+const handleItemClick = (event: MouseEvent, item: FileListItem, forceMultiSelect = false) => {
+  if (props.isMobile && (isMultiSelectMode.value || forceMultiSelect)) {
+    if (selectedItems.value.has(item.filename)) {
+      selectedItems.value.delete(item.filename);
+    } else {
+      selectedItems.value.add(item.filename);
+    }
+    return;
+  }
+  originalHandleItemClick(event, item);
+};
 
 
 // --- 操作模态框辅助函数 ---
@@ -1378,6 +1410,20 @@ const handleOpenEditorClick = () => {
               <i class="fas fa-upload text-sm"></i>
               <span v-if="!props.isMobile">{{ t('fileManager.actions.upload') }}</span>
             </button>
+            <!-- 多选模式切换按钮 (仅移动端) -->
+            <button
+              v-if="props.isMobile"
+              @click="toggleMultiSelectMode"
+              :title="isMultiSelectMode ? t('fileManager.actions.exitMultiSelect', 'Exit Multi-Select Mode') : t('fileManager.actions.multiSelect', 'Enter Multi-Select Mode')"
+              class="flex items-center gap-1 px-1.5 py-1 bg-background border border-border rounded text-foreground text-xs transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="{
+                'hover:bg-header hover:border-primary hover:text-primary': !isMultiSelectMode,
+                'bg-primary text-white border-primary': isMultiSelectMode
+              }"
+            >
+              <i class="fas fa-check-square text-sm"></i>
+            </button>
+            <!-- 移除多选复选框，保留原有的多选模式切换按钮 -->
             <button
               @click="handleNewFolderContextMenuClick"
               :disabled="!currentSftpManager || !props.wsDeps.isConnected.value"
@@ -1533,7 +1579,7 @@ const handleOpenEditorClick = () => {
             <tr v-for="(item, index) in filteredFileList"
                 :key="item.filename"
                 :draggable="item.filename !== '..'" @dragstart="handleDragStart(item)" @dragend="handleDragEnd"
-                @click="handleItemClick($event, item)"
+                @click="handleItemClick($event, item, props.isMobile && isMultiSelectMode)"
                 class="transition-colors duration-150 select-none"
                 :class="[
                     { 'cursor-pointer': item.attrs.isDirectory || item.attrs.isFile },
@@ -1594,3 +1640,5 @@ const handleOpenEditorClick = () => {
 <style scoped>
 /* Scoped styles removed for Tailwind CSS refactoring */
 </style>
+
+
