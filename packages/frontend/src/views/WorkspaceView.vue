@@ -72,7 +72,7 @@ const showLayoutConfigurator = ref(false); // 控制布局配置器可见性
 // --- 搜索状态 ---
 const currentSearchTerm = ref(''); // 当前搜索的关键词
 const mobileTerminalRef = ref<InstanceType<typeof Terminal> | null>(null);
-const isVirtualKeyboardVisible = ref(true); // +++ State for virtual keyboard visibility +++
+const isVirtualKeyboardVisible = ref(false); 
 
 // --- 文件管理器模态框状态 ---
 const showFileManagerModal = ref(false);
