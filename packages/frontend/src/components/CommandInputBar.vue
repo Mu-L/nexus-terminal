@@ -444,7 +444,7 @@ const handleQuickCommandExecute = (command: string) => {
         </template>
         <!-- File Manager Button -->
         <button
-          v-if="showPopupFileManagerBoolean"
+          v-if="showPopupFileManagerBoolean || props.isMobile"
           @click="openFileManagerModal"
           class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
         >
@@ -452,7 +452,7 @@ const handleQuickCommandExecute = (command: string) => {
         </button>
         <!-- File Editor Button -->
         <button
-          v-if="showPopupFileEditorBoolean"
+          v-if="showPopupFileEditorBoolean || props.isMobile"
           @click="openFileEditorModal"
           class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
         >
