@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect, type PropType, readonly, defineExpose, shallowRef, toRef } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect, type PropType, readonly, defineExpose, shallowRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia'; 
@@ -655,7 +655,6 @@ const {
   isConnected: props.wsDeps.isConnected,
   isSftpReady: props.wsDeps.isSftpReady,
   clipboardState: readonly(clipboardState), // +++ 传递剪贴板状态 (只读) +++
-  isMobile: toRef(props, 'isMobile'), // +++ 传递 isMobile prop 作为 ref +++
   t,
   // --- 传递回调函数 ---
   // 修改：确保在调用前检查 currentSftpManager.value
