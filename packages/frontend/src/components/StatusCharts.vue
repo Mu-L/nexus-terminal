@@ -110,7 +110,7 @@ const memoryUnitIsGB = ref(false);
 // const memoryChartTitle = ref('内存使用情况 (MB)'); // Will be replaced by i18n
 
 
-const initialLabels = Array.from({ length: MAX_DATA_POINTS }, (_, i) => `-${(MAX_DATA_POINTS - 1 - i)}s`);
+const initialLabels = Array.from({ length: MAX_DATA_POINTS }, () => '');
 
 // --- 计算属性：从 Store 获取当前会话的历史数据 ---
 const currentSessionStatusManager = computed(() => {
