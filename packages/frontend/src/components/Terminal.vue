@@ -148,14 +148,12 @@ const handleContextMenuPaste = async (event: MouseEvent) => {
 const addContextMenuListener = () => {
   if (terminalRef.value) {
     terminalRef.value.addEventListener('contextmenu', handleContextMenuPaste);
-    console.log(`[Terminal ${props.sessionId}] Right-click paste listener added.`);
   }
 };
 
 const removeContextMenuListener = () => {
   if (terminalRef.value) {
     terminalRef.value.removeEventListener('contextmenu', handleContextMenuPaste);
-    console.log(`[Terminal ${props.sessionId}] Right-click paste listener removed.`);
   }
 };
 // --- 右键粘贴功能结束 ---
@@ -245,7 +243,6 @@ onMounted(() => {
                     setTimeout(() => {
                         // Re-check if still active and terminal exists
                         if (props.isActive && terminal && terminalRef.value && terminalRef.value.offsetHeight > 0) {
-                            console.log(`[Terminal ${props.sessionId}] Executing delayed fit and resize.`);
                             fitAndEmitResizeNow(terminal);
                             // Also ensure focus when becoming active
                             terminal.focus();

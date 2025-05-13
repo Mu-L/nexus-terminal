@@ -101,13 +101,6 @@ export const useAppearanceStore = defineStore('appearance', () => {
             ]);
             appearanceSettings.value = settingsResponse.data;
             allTerminalThemes.value = themesResponse.data; // 更新 allTerminalThemes
-            console.log('[AppearanceStore LOG] 外观设置已加载 (原始数据):', JSON.stringify(settingsResponse.data)); // 添加原始数据日志
-            console.log(`[AppearanceStore LOG] 从后端加载的 terminalBackgroundEnabled 原始值: ${settingsResponse.data.terminalBackgroundEnabled}`); // 专门记录该值
-            console.log('[AppearanceStore] 所有终端主题列表已加载:', allTerminalThemes.value);
- 
-            // --- 后端返回的 activeTerminalThemeId 已经是 number | null ---
-            // 前端不再需要设置默认主题 ID 的逻辑，后端初始化时会保证它不为 NULL
-            // 如果后端返回 null (理论上不应发生，除非初始化失败)，则 currentTerminalTheme 计算属性会回退到 defaultXtermTheme
 
             // 应用加载的 UI 主题
             applyUiTheme(currentUiTheme.value);
@@ -486,7 +479,6 @@ export const useAppearanceStore = defineStore('appearance', () => {
         for (const [key, value] of Object.entries(theme)) {
             root.style.setProperty(key, value);
         }
-        console.log('[AppearanceStore] UI 主题已应用:', theme);
     }
 
     /**

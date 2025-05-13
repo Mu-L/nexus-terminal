@@ -325,7 +325,6 @@ const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
  // 处理终端大小调整 (用于 Terminal)
  // 注意：LayoutRenderer 内部的 Terminal 组件需要 emit('terminal-resize', sessionId, dims)
  const handleTerminalResize = (payload: { sessionId: string; dims: { cols: number; rows: number } }) => {
-    console.log(`[工作区视图 ${payload.sessionId}] 收到 resize 事件:`, payload.dims);
     sessionStore.sessions.get(payload.sessionId)?.terminalManager.handleTerminalResize(payload.dims);
  };
 
@@ -803,7 +802,7 @@ const closeFileManagerModal = () => {
     <div v-show="showFileManagerModal && currentFileManagerSessionId && fileManagerPropsMap.get(currentFileManagerSessionId)" class="fixed inset-0 flex items-center justify-center z-50 p-4" :style="{ backgroundColor: 'var(--overlay-bg-color)' }" @click.self="closeFileManagerModal">
       <div class="bg-background rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-border">
         <div class="flex justify-between items-center p-3 border-b border-border flex-shrink-0 bg-header">
-          <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ currentFileManagerSessionId }})</h2>
+          <h2 class="text-lg font-semibold text-foreground">{{ t('fileManager.modalTitle', '文件管理器') }} ({{ currentFileManagerSessionId ? (sessionStore.sessions.get(currentFileManagerSessionId)?.connectionName || currentFileManagerSessionId) : '未知会话' }})</h2>
           <button @click="closeFileManagerModal" class="text-text-secondary hover:text-foreground transition-colors">
             <i class="fas fa-times text-xl"></i>
           </button>

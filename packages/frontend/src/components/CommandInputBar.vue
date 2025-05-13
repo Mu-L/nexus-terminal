@@ -447,7 +447,6 @@ const handleQuickCommandExecute = (command: string) => {
           v-if="showPopupFileManagerBoolean"
           @click="openFileManagerModal"
           class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
-          :title="t('fileManager.title', '文件管理器')"
         >
           <i class="fas fa-folder text-base"></i>
         </button>
@@ -456,7 +455,6 @@ const handleQuickCommandExecute = (command: string) => {
           v-if="showPopupFileEditorBoolean"
           @click="openFileEditorModal"
           class="flex-shrink-0 flex items-center justify-center w-8 h-8 border border-border/50 rounded-lg text-text-secondary transition-colors duration-200 hover:bg-border hover:text-foreground"
-          :title="t('fileEditor.title', '文件编辑器')"
         >
           <i class="fas fa-edit text-base"></i>
         </button>

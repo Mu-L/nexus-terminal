@@ -250,7 +250,6 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
         try {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
-                console.log(`[QuickCmdStore] Loading commands from cache.`);
                 // 确保解析后的数据符合 QuickCommandFE 结构 (特别是 tagIds)
                 const parsedData = JSON.parse(cachedData) as QuickCommandFE[];
                 // 基本验证，确保 tagIds 是数组
@@ -291,7 +290,6 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
                 quickCommandsList.value = freshData;
                 localStorage.setItem(cacheKey, freshDataString); // 更新缓存
             } else {
-                console.log('[QuickCmdStore] Commands data is up-to-date.');
             }
             error.value = null;
         } catch (err: any) {

@@ -24,7 +24,6 @@ export const useTagsStore = defineStore('tags', () => {
         try {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
-                console.log('[TagsStore] Loading tags from cache.');
                 tags.value = JSON.parse(cachedData);
                 isLoading.value = false; // 先显示缓存
             } else {
@@ -39,7 +38,6 @@ export const useTagsStore = defineStore('tags', () => {
         // 2. 后台获取最新数据
         isLoading.value = true; // 标记正在后台获取
         try {
-            console.log('[TagsStore] Fetching latest tags from server...');
             const response = await apiClient.get<TagInfo[]>('/tags');
             const freshData = response.data;
             const freshDataString = JSON.stringify(freshData);
@@ -47,7 +45,6 @@ export const useTagsStore = defineStore('tags', () => {
             // 3. 对比并更新
             const currentDataString = JSON.stringify(tags.value);
             if (currentDataString !== freshDataString) {
-                console.log('[TagsStore] Tags data changed, updating state and cache.');
                 tags.value = freshData;
                 localStorage.setItem(cacheKey, freshDataString); // 更新缓存
             } else {

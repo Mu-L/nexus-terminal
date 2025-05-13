@@ -90,7 +90,6 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
         console.log(`[SSH ${sessionId}] handleTerminalResize called with:`, dimensions);
         // 只有在连接状态下才发送 resize 命令给后端
         if (isConnected.value) {
-            console.log(`[SSH ${sessionId}] Sending ssh:resize to backend:`, dimensions);
             sendMessage({ type: 'ssh:resize', sessionId, payload: dimensions });
         } else {
             console.log(`[SSH ${sessionId}] WebSocket not connected, skipping ssh:resize.`);

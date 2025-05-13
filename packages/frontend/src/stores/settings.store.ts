@@ -208,7 +208,6 @@ export const useSettingsStore = defineStore('settings', () => {
       try {
           if (settings.value.fileManagerColWidths) {
               loadedFmWidths = JSON.parse(settings.value.fileManagerColWidths);
-              console.log(`[SettingsStore] Successfully parsed fileManagerColWidths JSON: ${JSON.stringify(loadedFmWidths)}`);
               if (typeof loadedFmWidths !== 'object' || loadedFmWidths === null) {
                   console.warn('[SettingsStore] Invalid fileManagerColWidths format loaded, resetting.');
                   loadedFmWidths = {};
