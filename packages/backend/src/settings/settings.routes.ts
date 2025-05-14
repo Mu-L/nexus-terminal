@@ -68,8 +68,13 @@ router.put('/show-quick-command-tags', settingsController.setShowQuickCommandTag
 // +++ 导出所有连接路由 +++
 // GET /api/v1/settings/export-connections - 导出所有连接为加密的 ZIP 文件
 router.get('/export-connections', settingsController.exportAllConnections);
-
-
+ 
+// +++ 显示状态监视器IP地址路由 +++
+// GET /api/v1/settings/show-status-monitor-ip-address - 获取设置
+router.get('/show-status-monitor-ip-address', settingsController.getShowStatusMonitorIpAddress);
+// PUT /api/v1/settings/show-status-monitor-ip-address - 更新设置
+router.put('/show-status-monitor-ip-address', settingsController.setShowStatusMonitorIpAddress);
+ 
 export default router;
 
 // +++ CAPTCHA 配置路由 (需要认证更新) +++

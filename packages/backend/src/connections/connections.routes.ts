@@ -11,11 +11,11 @@ import {
     testUnsavedConnection,
     exportConnections,
     importConnections,
-    getRdpSessionToken, // Import the new controller function
-    getVncSessionToken, // Import the VNC session token controller function
-    cloneConnection, // +++ Import the clone controller function +++
-    // updateConnectionTags, // No longer directly used by primary flow
-    addTagToConnections // +++ Import the new controller function for adding tag to multiple connections +++
+    getRdpSessionToken, 
+    getVncSessionToken, 
+    cloneConnection, 
+    
+    addTagToConnections 
 } from './connections.controller';
 
 const router = Router();

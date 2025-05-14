@@ -2,9 +2,9 @@ import { Database } from 'sqlite3';
 import * as schemaSql from './schema';
 import * as appearanceRepository from '../repositories/appearance.repository';
 import * as terminalThemeRepository from '../repositories/terminal-theme.repository';
-import * as settingsRepository from '../repositories/settings.repository'; // <-- Import settings repository
+import * as settingsRepository from '../repositories/settings.repository'; 
 import { presetTerminalThemes } from '../config/preset-themes-definition';
-import { runDb } from './connection'; // Import runDb for init functions
+import { runDb } from './connection'; 
 
 /**
  * Interface describing a database table definition for initialization.
@@ -12,12 +12,12 @@ import { runDb } from './connection'; // Import runDb for init functions
 export interface TableDefinition {
     name: string;
     sql: string;
-    init?: (db: Database) => Promise<void>; // Optional initialization function
+    init?: (db: Database) => Promise<void>; 
 }
 
-// --- Initialization Functions ---
 
-// Remove the old initSettingsTable function, as the logic is now in the repository
+
+
 
 /**
  * Initializes preset terminal themes.

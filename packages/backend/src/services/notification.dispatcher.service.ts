@@ -1,4 +1,4 @@
-import notificationProcessorService, { ProcessedNotification } from './notification.processor.service'; // 导入导出的接口
+import notificationProcessorService, { ProcessedNotification } from './notification.processor.service';
 import { NotificationChannelType, NotificationChannelConfig } from '../types/notification.types';
 
 // 1. 定义通知发送器接口

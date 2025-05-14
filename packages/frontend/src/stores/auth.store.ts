@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
-import router from '../router'; // 引入 router 用于重定向
-import { setLocale } from '../i18n'; // 导入 setLocale
+import apiClient from '../utils/apiClient'; 
+import router from '../router'; 
+import { setLocale } from '../i18n'; 
 
 // 扩展的用户信息接口，包含 2FA 状态和语言偏好
 interface UserInfo {

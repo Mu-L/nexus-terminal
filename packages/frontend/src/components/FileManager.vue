@@ -646,7 +646,7 @@ const triggerDownloadDirectory = (item: FileListItem) => {
 
 
 
-// +++ 添加压缩/解压处理函数 +++
+// +++ 压缩/解压处理函数 +++
 const handleCompress = (items: FileListItem[], format: CompressFormat) => {
   if (!currentSftpManager.value) {
     console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot compress: SFTP manager not available.`);
@@ -800,7 +800,7 @@ watch(sortDirection, () => {
 const saveLayoutSettings = () => {
   // 确保 colWidths.value 是普通对象，而不是 Proxy
   const widthsToSave = JSON.parse(JSON.stringify(colWidths.value));
-  // +++ 添加日志：记录保存的值 +++
+  // +++ 日志：记录保存的值 +++
   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Triggering saveLayoutSettings: multiplier=${rowSizeMultiplier.value}, widths=${JSON.stringify(widthsToSave)}`);
   settingsStore.updateFileManagerLayoutSettings(rowSizeMultiplier.value, widthsToSave);
 };
@@ -819,7 +819,7 @@ watchEffect(() => {
   const storeMultiplier = fileManagerRowSizeMultiplierNumber.value;
   const storeWidths = fileManagerColWidthsObject.value;
 
-  // +++ 添加日志：记录从 store 获取的值 +++
+  // +++ 日志：记录从 store 获取的值 +++
   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] watchEffect triggered. Store values: multiplier=${storeMultiplier}, widths=${JSON.stringify(storeWidths)}`);
 
   // 只有当 store 加载完成并提供了有效值时才更新
@@ -829,7 +829,7 @@ watchEffect(() => {
     const currentWidthsString = JSON.stringify(colWidths.value);
     const storeWidthsString = JSON.stringify(storeWidths);
 
-    // +++ 添加日志：记录当前值和 store 值，以及是否更新 +++
+    // +++ 日志：记录当前值和 store 值，以及是否更新 +++
     console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Comparing values: Current Multiplier=${currentMultiplier}, Store Multiplier=${storeMultiplier}. Update needed: ${storeMultiplier !== currentMultiplier}`);
     console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Comparing values: Current Widths=${currentWidthsString}, Store Widths=${storeWidthsString}. Update needed: ${storeWidthsString !== currentWidthsString}`);
 
@@ -851,7 +851,7 @@ watchEffect(() => {
       console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Column widths updated from store: ${JSON.stringify(updatedWidths)}`);
     }
   } else {
-    // +++ 添加日志：记录等待 store 加载 +++
+    // +++ 日志：记录等待 store 加载 +++
     console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Waiting for valid layout settings from store... Store Multiplier=${storeMultiplier}, Store Widths Keys=${Object.keys(storeWidths).length}`);
   }
 });
@@ -1103,7 +1103,7 @@ const stopResize = () => {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         // +++ 在调整结束后保存列宽 +++
-        // +++ 添加日志：记录触发保存 +++
+        // +++ 日志：记录触发保存 +++
         console.log(`[FileManager ${props.sessionId}-${props.instanceId}] stopResize triggered saveLayoutSettings.`);
         saveLayoutSettings();
     }
@@ -1240,7 +1240,7 @@ const handleWheel = (event: WheelEvent) => {
         // console.log(`Row size multiplier: ${rowSizeMultiplier.value}`); // 调试日志
         // +++ 在行大小变化后保存设置 +++
         if (rowSizeMultiplier.value !== oldMultiplier) {
-            // +++ 添加日志：记录触发保存 +++
+            // +++ 日志：记录触发保存 +++
             console.log(`[FileManager ${props.sessionId}-${props.instanceId}] handleWheel triggered saveLayoutSettings.`);
             saveLayoutSettings();
         }

@@ -562,7 +562,7 @@ const clearSearch = () => {
   searchAddon?.clearDecorations();
 };
 
-// +++ 添加 clear 方法 +++
+// +++  clear 方法 +++
 const clear = () => {
   terminal?.clear();
 };

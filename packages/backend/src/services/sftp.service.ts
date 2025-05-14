@@ -1,9 +1,9 @@
-import { Client, SFTPWrapper, Stats, WriteStream } from 'ssh2'; // Import WriteStream (Removed Dirent)
+import { Client, SFTPWrapper, Stats, WriteStream } from 'ssh2';
 import { WebSocket } from 'ws';
-import { ClientState, AuthenticatedWebSocket } from '../websocket/types'; // 导入统一的 ClientState 和 AuthenticatedWebSocket
-import * as pathModule from 'path'; // +++ Import path module +++
-import * as jschardet from 'jschardet'; // +++ Import jschardet +++
-import * as iconv from 'iconv-lite'; // +++ Import iconv-lite +++
+import { ClientState, AuthenticatedWebSocket } from '../websocket/types';
+import * as pathModule from 'path'; 
+import * as jschardet from 'jschardet'; 
+import * as iconv from 'iconv-lite';
 // +++ 导入新类型 +++
 import {
     SftpCompressRequestPayload,

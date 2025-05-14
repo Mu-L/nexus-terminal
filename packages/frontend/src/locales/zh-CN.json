@@ -810,6 +810,10 @@
         "terminalRightClickPasteSuccess": "终端右键粘贴设置已保存。",
         "terminalRightClickPasteError": "保存终端右键粘贴设置失败。"
     },
+    "statusMonitorShowIp": {
+      "title": "状态监视器显示IP地址",
+      "enableLabel": "在状态监视器中显示IP地址"
+    },
     "terminalScrollback": {
       "title": "终端回滚行数",
       "limitLabel": "最大行数",
@@ -941,6 +945,7 @@
     "cancel": "取消",
     "save": "保存",
     "saving": "保存中...",
+    "saved": "已保存",
     "testing": "测试中...",
     "edit": "编辑",
     "delete": "删除",
@@ -963,7 +968,8 @@
     "sortDescending": "降序",
     "restore": "还原",
     "minimize": "最小化",
-    "send":"发送"
+    "send":"发送",
+    "copied": "已复制到剪贴板"
   },
   "layoutConfigurator": {
     "title": "布局管理器",

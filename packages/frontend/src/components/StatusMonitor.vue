@@ -25,6 +25,19 @@
 
     <!-- 状态网格 -->
     <div v-else class="status-grid grid gap-3">
+      <!-- IP 地址 (如果启用) -->
+      <div v-if="statusMonitorShowIpBoolean && activeSessionId && sessionIpAddress" class="status-item grid grid-cols-[auto_1fr] items-center gap-3">
+        <label class="font-semibold text-text-secondary text-left whitespace-nowrap">IP:</label>
+        <div class="flex items-center">
+          <span
+            class="ip-address-value truncate text-left cursor-pointer hover:text-primary transition-colors"
+            :title="sessionIpAddress"
+            @click="copyIpToClipboard(sessionIpAddress)">
+            {{ sessionIpAddress }}
+          </span>
+        </div>
+      </div>
+
       <!-- CPU 型号 -->
       <div class="status-item grid grid-cols-[auto_1fr] items-center gap-3">
         <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.cpuModelLabel') }}</label>
@@ -122,9 +135,17 @@ import { useI18n } from 'vue-i18n';
 import StatusCharts from './StatusCharts.vue';
 import { useSessionStore } from '../stores/session.store'; // 注入 sessionStore
 import { storeToRefs } from 'pinia'; // 导入 storeToRefs
+import { useSettingsStore } from '../stores/settings.store'; //  导入设置 store
+import { useConnectionsStore } from '../stores/connections.store'; // 导入连接 store
+import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // + 导入通知 store
+
 const { t } = useI18n();
 const sessionStore = useSessionStore();
+const settingsStore = useSettingsStore(); //  实例化设置 store
+const connectionsStore = useConnectionsStore(); // 实例化连接 store
+const uiNotificationsStore = useUiNotificationsStore(); // + 实例化通知 store
 const { sessions } = storeToRefs(sessionStore); // 获取响应式的 sessions
+const { statusMonitorShowIpBoolean } = storeToRefs(settingsStore); //  获取 IP 显示设置
 const isSwitchingSession = ref(false);
 
 interface ServerStatus {
@@ -277,5 +298,31 @@ const swapDisplay = computed(() => {
     const percent = `(${(percentVal).toFixed(1)}%)`; // 百分比保留 1 位小数
     return `${formatMemorySize(used)} / ${formatMemorySize(total)} ${percent}`;
 });
+
+const sessionIpAddress = computed(() => {
+  const sessionState = currentSessionState.value;
+  if (sessionState && sessionState.connectionId) {
+    //  直接从 connectionsStore 的 connections 数组中查找
+    const connectionIdAsNumber = parseInt(sessionState.connectionId, 10);
+    if (isNaN(connectionIdAsNumber)) {
+      return null; // 如果 connectionId 不是有效的数字，则返回 null
+    }
+    const connectionInfo = connectionsStore.connections.find(conn => conn.id === connectionIdAsNumber);
+    return connectionInfo?.host || null;
+  }
+  return null;
+});
+
+const copyIpToClipboard = async (ipAddress: string | null) => {
+  if (!ipAddress) return;
+  try {
+    await navigator.clipboard.writeText(ipAddress);
+    uiNotificationsStore.showSuccess(t('common.copied', '已复制!')); // + 使用通知 store 显示消息
+  } catch (err) {
+    console.error('Failed to copy IP address: ', err);
+    uiNotificationsStore.showError(t('statusMonitor.copyIpError', '复制 IP 失败')); // + 可选：显示错误通知
+    // 可以在这里添加一个错误提示，如果需要的话
+  }
+};
 
 </script>

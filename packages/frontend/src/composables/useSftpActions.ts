@@ -1,8 +1,8 @@
-import { ref, readonly, reactive, computed, type Ref, type ComputedRef } from 'vue'; // 引入 reactive 和 computed
+import { ref, readonly, reactive, computed, type Ref, type ComputedRef } from 'vue'; 
 import type { FileListItem, FileAttributes, EditorFileContent, SftpReadFileSuccessPayload, SftpReadFileRequestPayload } from '../types/sftp.types';
 import type { WebSocketMessage, MessagePayload, MessageHandler } from '../types/websocket.types';
-// 导入 UI 通知 store
-import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // 更正导入
+
+import { useUiNotificationsStore } from '../stores/uiNotifications.store'; 
 
 /**
  * @interface WebSocketDependencies

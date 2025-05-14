@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineEmits } from 'vue'; // +++ Import ref +++
+import { ref, defineEmits } from 'vue'; 
 
 const emit = defineEmits<{
   (e: 'send-key', keySequence: string): void;

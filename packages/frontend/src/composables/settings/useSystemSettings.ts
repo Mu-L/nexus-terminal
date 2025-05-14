@@ -2,7 +2,7 @@ import { ref, watch } from 'vue';
 import { useSettingsStore } from '../../stores/settings.store';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { availableLocales } from '../../i18n'; // 导入可用语言列表
+import { availableLocales } from '../../i18n'; 
 
 export function useSystemSettings() {
   const settingsStore = useSettingsStore();

@@ -33,7 +33,8 @@ const DEFAULT_STATUS_MONITOR_INTERVAL_SECONDS = 3; // 默认状态监控间隔
 const IP_BLACKLIST_ENABLED_KEY = 'ipBlacklistEnabled'; // IP 黑名单启用设置键
 const SHOW_CONNECTION_TAGS_KEY = 'showConnectionTags'; // 连接标签显示设置键
 const SHOW_QUICK_COMMAND_TAGS_KEY = 'showQuickCommandTags'; // 快捷指令标签显示设置键
-
+const SHOW_STATUS_MONITOR_IP_ADDRESS_KEY = 'showStatusMonitorIpAddress'; // 状态监视器IP显示设置键
+ 
 export const settingsService = {
   /**
    * 获取所有设置项
@@ -127,7 +128,7 @@ export const settingsService = {
       // 出错时返回默认值 true (安全起见，默认启用)
       return true;
     }
-  }, // *** 确保这里有逗号 ***
+  }, 
 
   /**
    * 获取焦点切换顺序
@@ -190,7 +191,7 @@ export const settingsService = {
       console.error(`[Service] Error calling settingsRepository.setSetting for key ${FOCUS_SEQUENCE_KEY}:`, error);
       throw new Error('Failed to save focus switcher sequence.');
     }
-  }, // *** 确保这里有逗号 ***
+  }, 
 
   /**
    * 获取导航栏可见性设置
@@ -208,7 +209,7 @@ export const settingsService = {
       // 出错时返回默认值 true
       return true;
     }
-  }, // *** 确保这里有逗号 ***
+  }, 
 
   /**
    * 设置导航栏可见性
@@ -225,7 +226,7 @@ export const settingsService = {
       console.error(`[Service] Error calling settingsRepository.setSetting for key ${NAV_BAR_VISIBLE_KEY}:`, error);
       throw new Error('Failed to save nav bar visibility setting.');
     }
-  }, // *** 确保这里有逗号 ***
+  }, 
 
  /**
   * 获取布局树设置
@@ -241,7 +242,7 @@ export const settingsService = {
      console.error(`[Service] Error getting layout tree setting (key: ${LAYOUT_TREE_KEY}):`, error);
      return null; // 出错时返回 null
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  /**
   * 设置布局树
@@ -265,7 +266,7 @@ export const settingsService = {
      console.error(`[Service] Error calling settingsRepository.setSetting for key ${LAYOUT_TREE_KEY}:`, error);
      throw new Error('Failed to save layout tree setting.');
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  /**
   * 获取终端选中自动复制设置
@@ -283,7 +284,7 @@ export const settingsService = {
      // 出错时返回默认值 false
      return false;
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  /**
   * 设置终端选中自动复制
@@ -300,7 +301,7 @@ export const settingsService = {
      console.error(`[Service] Error calling settingsRepository.setSetting for key ${AUTO_COPY_ON_SELECT_KEY}:`, error);
      throw new Error('Failed to save auto copy on select setting.');
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  /**
   * 获取状态监控轮询间隔 (秒)
@@ -327,7 +328,7 @@ export const settingsService = {
    }
    // 返回默认值
    return DEFAULT_STATUS_MONITOR_INTERVAL_SECONDS;
- }, // *** 确保这里有逗号 ***
+ }, 
 
  /**
   * 设置状态监控轮询间隔 (秒)
@@ -349,7 +350,7 @@ export const settingsService = {
      console.error(`[Service] Error calling settingsRepository.setSetting for key ${STATUS_MONITOR_INTERVAL_SECONDS_KEY}:`, error);
      throw new Error('Failed to save status monitor interval setting.');
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  // --- Sidebar Config Specific Functions ---
 
@@ -493,9 +494,9 @@ export const settingsService = {
      return valueStr !== 'false';
    } catch (error) {
      console.error(`[Service] Error getting show connection tags setting (key: ${SHOW_CONNECTION_TAGS_KEY}):`, error);
-     return true; // 默认返回 true
+     return true; 
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  async setShowConnectionTags(enabled: boolean): Promise<void> {
    console.log(`[Service] setShowConnectionTags called with: ${enabled}`);
@@ -508,7 +509,7 @@ export const settingsService = {
      console.error(`[Service] Error calling settingsRepository.setSetting for key ${SHOW_CONNECTION_TAGS_KEY}:`, error);
      throw new Error('Failed to save show connection tags setting.');
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  // --- Show Quick Command Tags ---
  async getShowQuickCommandTags(): Promise<boolean> {
@@ -520,9 +521,9 @@ export const settingsService = {
      return valueStr !== 'false';
    } catch (error) {
      console.error(`[Service] Error getting show quick command tags setting (key: ${SHOW_QUICK_COMMAND_TAGS_KEY}):`, error);
-     return true; // 默认返回 true
+     return true; 
    }
- }, // *** 确保这里有逗号 ***
+ }, 
 
  async setShowQuickCommandTags(enabled: boolean): Promise<void> {
    console.log(`[Service] setShowQuickCommandTags called with: ${enabled}`);
@@ -535,6 +536,29 @@ export const settingsService = {
      console.error(`[Service] Error calling settingsRepository.setSetting for key ${SHOW_QUICK_COMMAND_TAGS_KEY}:`, error);
      throw new Error('Failed to save show quick command tags setting.');
    }
- } // <-- No comma after the last method
+ }, 
+
+ // --- Show Status Monitor IP Address ---
+ async getShowStatusMonitorIpAddress(): Promise<boolean> {
+   console.log(`[Service] Attempting to get setting for key: ${SHOW_STATUS_MONITOR_IP_ADDRESS_KEY}`);
+   try {
+     const valueStr = await settingsRepository.getSetting(SHOW_STATUS_MONITOR_IP_ADDRESS_KEY);
+     // 默认显示 (true)，所以只有当值为 'false' 时才返回 false
+     return valueStr !== 'false';
+   } catch (error) {
+     console.error(`[Service] Error getting show status monitor IP address setting (key: ${SHOW_STATUS_MONITOR_IP_ADDRESS_KEY}):`, error);
+     return true; 
+   }
+ },
+
+ async setShowStatusMonitorIpAddress(enabled: boolean): Promise<void> {
+   try {
+     const valueStr = String(enabled);
+     await settingsRepository.setSetting(SHOW_STATUS_MONITOR_IP_ADDRESS_KEY, valueStr);
+   } catch (error) {
+     console.error(`[Service] Error calling settingsRepository.setSetting for key ${SHOW_STATUS_MONITOR_IP_ADDRESS_KEY}:`, error);
+     throw new Error('Failed to save show status monitor IP address setting.');
+   }
+ }
 
 }; // <-- End of settingsService object definition

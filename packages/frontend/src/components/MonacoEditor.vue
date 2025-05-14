@@ -6,7 +6,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, defineExpose } from 'vue';
 import * as monaco from 'monaco-editor';
 
-const localFontSize = ref(14); //  添加本地字体大小状态，默认 14
+const localFontSize = ref(14); // 本地字体大小状态，默认 14
 
 const props = defineProps({
   modelValue: { 

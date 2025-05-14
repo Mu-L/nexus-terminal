@@ -1,10 +1,10 @@
-import { ref, computed, readonly, watch, nextTick } from 'vue'; // Import nextTick
+import { ref, computed, readonly, watch, nextTick } from 'vue'; 
 import { defineStore } from 'pinia';
 import { useI18n } from 'vue-i18n';
-import { useSessionStore } from './session.store'; // 导入会话 Store
-import type { SaveStatus, SftpReadFileSuccessPayload } from '../types/sftp.types'; // 移除 SftpReadFileRequestPayload, 因为 readFile 不再需要它
-import * as iconv from '@vscode/iconv-lite-umd'; // +++ 导入 iconv-lite +++
-import { Buffer } from 'buffer/'; // +++ 导入 Buffer (需要安装 buffer 依赖) +++
+import { useSessionStore } from './session.store'; 
+import type { SaveStatus, SftpReadFileSuccessPayload } from '../types/sftp.types'; 
+import * as iconv from '@vscode/iconv-lite-umd'; 
+import { Buffer } from 'buffer/'; 
 
 // --- 类型定义 ---
 // 文件信息，用于打开文件操作

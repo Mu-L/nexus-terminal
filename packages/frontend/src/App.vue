@@ -10,17 +10,11 @@ import { useLayoutStore } from './stores/layout.store';
 import { useFocusSwitcherStore } from './stores/focusSwitcher.store';
 import { useSessionStore } from './stores/session.store';
 import { storeToRefs } from 'pinia';
-// 导入通知显示组件
 import UINotificationDisplay from './components/UINotificationDisplay.vue';
-// 导入文件编辑器弹窗组件
 import FileEditorOverlay from './components/FileEditorOverlay.vue';
-// 导入样式自定义器组件
 import StyleCustomizer from './components/StyleCustomizer.vue';
-// +++ 导入焦点切换配置器组件 +++
 import FocusSwitcherConfigurator from './components/FocusSwitcherConfigurator.vue';
-// +++ 导入 RDP 模态框组件 +++
 import RemoteDesktopModal from './components/RemoteDesktopModal.vue';
-// +++ 导入 VNC 模态框组件 +++
 import VncModal from './components/VncModal.vue';
 
 const { t } = useI18n();
@@ -69,7 +63,7 @@ onMounted(() => {
   // Use setTimeout to ensure styles are applied and elements have dimensions
   setTimeout(updateUnderline, 100);
 
-  // +++ 添加全局 Alt 键监听器 +++
+  // +++ 全局 Alt 键监听器 +++
   window.addEventListener('keydown', handleAltKeyDown); // +++ 监听 keydown 设置状态 +++
   window.addEventListener('keyup', handleGlobalKeyUp);   // +++ 监听 keyup 执行切换 +++
   
@@ -86,7 +80,7 @@ onMounted(() => {
   layoutStore.loadHeaderVisibility();
 });
 
-// +++ 添加卸载钩子以移除监听器 +++
+// +++ 卸载钩子以移除监听器 +++
 onUnmounted(() => {
   window.removeEventListener('keydown', handleAltKeyDown); // +++ 移除 keydown 监听 +++
   window.removeEventListener('keyup', handleGlobalKeyUp);   // +++ 移除 keyup 监听 +++

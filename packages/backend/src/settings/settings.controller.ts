@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { settingsService } from '../services/settings.service';
 import { AuditLogService } from '../services/audit.service';
-import { NotificationService } from '../services/notification.service'; // 添加导入
+import { NotificationService } from '../services/notification.service'; 
 import { ipBlacklistService } from '../services/ip-blacklist.service';
-import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; // Import the new export service
-import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; // <-- Import CAPTCHA types
-import i18next from '../i18n'; // +++ Import i18next +++
+import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; 
+import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; 
+import i18next from '../i18n'; 
 
 const auditLogService = new AuditLogService();
-const notificationService = new NotificationService(); // 添加实例
+const notificationService = new NotificationService(); 
 
 export const settingsController = {
   /**
@@ -39,23 +39,24 @@ export const settingsController = {
           'language', 'ipWhitelist', 'maxLoginAttempts', 'loginBanDuration',
           'showPopupFileEditor', 'shareFileEditorTabs', 'ipWhitelistEnabled',
           'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
-          'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
-          'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
-          'showPopupFileManager', // +++ 添加弹窗文件管理器设置键 +++
-          'sidebarPaneWidths', // +++ 添加侧边栏宽度对象键 +++
-          'fileManagerRowSizeMultiplier', // +++ 添加文件管理器行大小键 +++
-          'fileManagerColWidths', // +++ 添加文件管理器列宽键 +++
-          'commandInputSyncTarget', // +++ 添加命令输入同步目标键 +++
-          'timezone', //  添加时区键
-          'rdpModalWidth', //  添加 RDP 模态框宽度键
-          'rdpModalHeight', //  添加 RDP 模态框高度键
-          'vncModalWidth', //  添加 VNC 模态框宽度键
-          'vncModalHeight', //  添加 VNC 模态框高度键
+          'statusMonitorIntervalSeconds', // +++ 状态监控间隔键 +++
+          'workspaceSidebarPersistent', // +++ 侧边栏固定键 +++
+          'showPopupFileManager', // +++ 弹窗文件管理器设置键 +++
+          'sidebarPaneWidths', // +++ 侧边栏宽度对象键 +++
+          'fileManagerRowSizeMultiplier', // +++ 文件管理器行大小键 +++
+          'fileManagerColWidths', // +++ 文件管理器列宽键 +++
+          'commandInputSyncTarget', // +++ 命令输入同步目标键 +++
+          'timezone', // 时区键
+          'rdpModalWidth', //  RDP 模态框宽度键
+          'rdpModalHeight', //  RDP 模态框高度键
+          'vncModalWidth', //  VNC 模态框宽度键
+          'vncModalHeight', //  VNC 模态框高度键
           'ipBlacklistEnabled', // <-- 添加 IP 黑名单启用键
-          'layoutLocked', // +++ 添加布局锁定键 +++
-          'terminalScrollbackLimit', //  添加终端回滚行数键
-          'fileManagerShowDeleteConfirmation', //  添加文件管理器删除确认键
-          'terminalEnableRightClickPaste' //  添加终端右键粘贴键
+          'layoutLocked', // +++ 布局锁定键 +++
+          'terminalScrollbackLimit', // 终端回滚行数键
+          'fileManagerShowDeleteConfirmation', // 文件管理器删除确认键
+          'terminalEnableRightClickPaste', // 终端右键粘贴键
+          'showStatusMonitorIpAddress' // 添加状态监视器IP显示键 (与服务层和前端统一)
       ];
       const filteredSettings: Record<string, string> = {};
       for (const key in settingsToUpdate) {
@@ -89,9 +90,7 @@ export const settingsController = {
    */
   async getFocusSwitcherSequence(req: Request, res: Response): Promise<void> {
     try {
-      console.log('[控制器] 收到获取焦点切换顺序的请求。');
       const sequence = await settingsService.getFocusSwitcherSequence();
-      console.log('[控制器] 向客户端发送焦点切换顺序:', JSON.stringify(sequence));
       res.json(sequence);
     } catch (error: any) {
       console.error('[控制器] 获取焦点切换顺序时出错:', error);
@@ -103,7 +102,6 @@ export const settingsController = {
    * 设置焦点切换顺序
    */
   async setFocusSwitcherSequence(req: Request, res: Response): Promise<void> {
-    console.log('[控制器] 收到设置焦点切换顺序的请求。');
     try {
       // +++ 修改：获取请求体并验证其是否符合 FocusSwitcherFullConfig 结构 +++
       const fullConfig = req.body;
@@ -121,14 +119,14 @@ export const settingsController = {
         return;
       }
 
-      console.log('[控制器] 使用验证后的完整配置调用 settingsService.setFocusSwitcherSequence...');
+      
       // +++ 传递验证后的 fullConfig 给服务层 +++
       await settingsService.setFocusSwitcherSequence(fullConfig);
-      console.log('[控制器] settingsService.setFocusSwitcherSequence 成功完成。');
+      
 
-      console.log('[控制器] 记录审计操作: FOCUS_SWITCHER_SEQUENCE_UPDATED');
+      
   
-      console.log('[控制器] 发送成功响应。');
+      
       res.status(200).json({ message: '焦点切换顺序已成功更新' });
     } catch (error: any) {
       console.error('[控制器] 设置焦点切换顺序时出错:', error);
@@ -145,9 +143,7 @@ export const settingsController = {
   */
  async getNavBarVisibility(req: Request, res: Response): Promise<void> {
    try {
-     console.log('[控制器] 收到获取导航栏可见性的请求。');
      const isVisible = await settingsService.getNavBarVisibility();
-     console.log(`[控制器] 向客户端发送导航栏可见性: ${isVisible}`);
      res.json({ visible: isVisible });
    } catch (error: any) {
      console.error('[控制器] 获取导航栏可见性时出错:', error);
@@ -159,7 +155,6 @@ export const settingsController = {
   * 设置导航栏可见性
   */
  async setNavBarVisibility(req: Request, res: Response): Promise<void> {
-   console.log('[控制器] 收到设置导航栏可见性的请求。');
    try {
      const { visible } = req.body;
      console.log('[控制器] 请求体 visible:', visible);
@@ -170,12 +165,12 @@ export const settingsController = {
        return;
      }
 
-     console.log('[控制器] 调用 settingsService.setNavBarVisibility...');
+     
      await settingsService.setNavBarVisibility(visible);
-     console.log('[控制器] settingsService.setNavBarVisibility 成功完成。');
+     
 
 
-     console.log('[控制器] 发送成功响应。');
+     
      res.status(200).json({ message: '导航栏可见性已成功更新' });
    } catch (error: any) {
      console.error('[控制器] 设置导航栏可见性时出错:', error);
@@ -188,19 +183,18 @@ export const settingsController = {
    */
   async getLayoutTree(req: Request, res: Response): Promise<void> {
     try {
-      console.log('[控制器] 收到获取布局树的请求。');
       const layoutJson = await settingsService.getLayoutTree();
       if (layoutJson) {
         try {
           const layout = JSON.parse(layoutJson);
-          console.log('[控制器] 向客户端发送布局树。');
+          
           res.json(layout);
         } catch (parseError) {
           console.error('[控制器] 从数据库解析布局树 JSON 失败:', parseError);
           res.status(500).json({ message: '获取布局树失败：存储的数据格式无效' });
         }
       } else {
-        console.log('[控制器] 在设置中未找到布局树，发送 null。');
+        
         res.json(null);
       }
     } catch (error: any) {
@@ -213,7 +207,6 @@ export const settingsController = {
    * 设置布局树
    */
   async setLayoutTree(req: Request, res: Response): Promise<void> {
-    console.log('[控制器] 收到设置布局树的请求。');
     try {
       const layoutTree = req.body;
 
@@ -225,13 +218,13 @@ export const settingsController = {
 
       const layoutJson = JSON.stringify(layoutTree);
 
-      console.log('[控制器] 调用 settingsService.setLayoutTree...');
+      
       await settingsService.setLayoutTree(layoutJson);
-      console.log('[控制器] settingsService.setLayoutTree 成功完成。');
+      
 
       // auditLogService.logAction('LAYOUT_TREE_UPDATED');
 
-      console.log('[控制器] 发送成功响应。');
+      
       res.status(200).json({ message: '布局树已成功更新' });
     } catch (error: any) {
       console.error('[控制器] 设置布局树时出错:', error);
@@ -281,9 +274,7 @@ export const settingsController = {
    */
   async getAutoCopyOnSelect(req: Request, res: Response): Promise<void> {
     try {
-      console.log('[控制器] 收到获取“选中时自动复制”设置的请求。');
       const isEnabled = await settingsService.getAutoCopyOnSelect();
-      console.log(`[控制器] 向客户端发送“选中时自动复制”设置: ${isEnabled}`);
       res.json({ enabled: isEnabled });
     } catch (error: any) {
       console.error('[控制器] 获取终端选中自动复制设置时出错:', error);
@@ -295,7 +286,6 @@ export const settingsController = {
    * 设置终端选中自动复制
    */
   async setAutoCopyOnSelect(req: Request, res: Response): Promise<void> {
-    console.log('[控制器] 收到设置“选中时自动复制”设置的请求。');
     try {
       const { enabled } = req.body;
       console.log('[控制器] 请求体 enabled:', enabled);
@@ -306,12 +296,12 @@ export const settingsController = {
         return;
       }
 
-      console.log('[控制器] 调用 settingsService.setAutoCopyOnSelect...');
+      
       await settingsService.setAutoCopyOnSelect(enabled);
-      console.log('[控制器] settingsService.setAutoCopyOnSelect 成功完成。');
+      
 
 
-      console.log('[控制器] 发送成功响应。');
+      
       res.status(200).json({ message: '终端选中自动复制设置已成功更新' });
     } catch (error: any) {
       console.error('[控制器] 设置终端选中自动复制时出错:', error);
@@ -325,7 +315,6 @@ export const settingsController = {
   */
  async getSidebarConfig(req: Request, res: Response): Promise<void> {
      try {
-         console.log('[控制器] 收到获取侧边栏配置的请求。');
          const config = await settingsService.getSidebarConfig();
          console.log('[控制器] 向客户端发送侧边栏配置:', config);
          res.json(config);
@@ -339,7 +328,6 @@ export const settingsController = {
   * 设置侧栏配置
   */
  async setSidebarConfig(req: Request, res: Response): Promise<void> {
-     console.log('[控制器] 收到设置侧边栏配置的请求。');
      try {
          const configDto: UpdateSidebarConfigDto = req.body;
          console.log('[控制器] 请求体:', configDto);
@@ -352,12 +340,12 @@ export const settingsController = {
              return;
          }
 
-         console.log('[控制器] 调用 settingsService.setSidebarConfig...');
+         
          await settingsService.setSidebarConfig(configDto);
-         console.log('[控制器] settingsService.setSidebarConfig 成功完成。');
+         
 
 
-         console.log('[控制器] 发送成功响应。');
+         
          res.status(200).json({ message: '侧栏配置已成功更新' });
      } catch (error: any) {
          console.error('[控制器] 设置侧栏配置时出错:', error);
@@ -375,7 +363,6 @@ export const settingsController = {
  */
 async getCaptchaConfig(req: Request, res: Response): Promise<void> {
     try {
-        console.log('[控制器] 收到获取 CAPTCHA 配置的请求。');
         const fullConfig = await settingsService.getCaptchaConfig();
 
         const publicConfig = {
@@ -397,7 +384,6 @@ async getCaptchaConfig(req: Request, res: Response): Promise<void> {
  * 设置 CAPTCHA 配置
  */
 async setCaptchaConfig(req: Request, res: Response): Promise<void> {
-    console.log('[控制器] 收到设置 CAPTCHA 配置的请求。');
     try {
         const configDto: UpdateCaptchaSettingsDto = req.body;
         console.log('[控制器] 请求体 (DTO, 密钥已屏蔽):', { ...configDto, hcaptchaSecretKey: '***', recaptchaSecretKey: '***' });
@@ -409,12 +395,12 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
         }
 
 
-        console.log('[控制器] 调用 settingsService.setCaptchaConfig...');
+        
         await settingsService.setCaptchaConfig(configDto);
-        console.log('[控制器] settingsService.setCaptchaConfig 成功完成。');
+        
 
 
-        console.log('[控制器] 发送成功响应。');
+        
         res.status(200).json({ message: 'CAPTCHA 配置已成功更新' });
     } catch (error: any) {
         console.error('[控制器] 设置 CAPTCHA 配置时出错:', error);
@@ -430,9 +416,7 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
  // --- Show Connection Tags ---
  async getShowConnectionTags(req: Request, res: Response): Promise<void> {
    try {
-     console.log('[控制器] 收到获取“显示连接标签”设置的请求。');
      const isEnabled = await settingsService.getShowConnectionTags();
-     console.log(`[控制器] 向客户端发送“显示连接标签”设置: ${isEnabled}`);
      res.json({ enabled: isEnabled });
    } catch (error: any) {
      console.error('[控制器] 获取“显示连接标签”设置时出错:', error);
@@ -441,7 +425,6 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
  }, // *** 确保这里有逗号 ***
 
  async setShowConnectionTags(req: Request, res: Response): Promise<void> {
-   console.log('[控制器] 收到设置“显示连接标签”设置的请求。');
    try {
      const { enabled } = req.body;
      console.log('[控制器] 请求体 enabled:', enabled);
@@ -452,14 +435,14 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
        return;
      }
 
-     console.log('[控制器] 调用 settingsService.setShowConnectionTags...');
+     
      await settingsService.setShowConnectionTags(enabled);
-     console.log('[控制器] settingsService.setShowConnectionTags 成功完成。');
+     
 
      auditLogService.logAction('SETTINGS_UPDATED', { updatedKeys: ['showConnectionTags'] });
      notificationService.sendNotification('SETTINGS_UPDATED', { updatedKeys: ['showConnectionTags'] });
 
-     console.log('[控制器] 发送成功响应。');
+     
      res.status(200).json({ message: '“显示连接标签”设置已成功更新' });
    } catch (error: any) {
      console.error('[控制器] 设置“显示连接标签”时出错:', error);
@@ -470,9 +453,7 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
  // --- Show Quick Command Tags ---
  async getShowQuickCommandTags(req: Request, res: Response): Promise<void> {
    try {
-     console.log('[控制器] 收到获取“显示快捷指令标签”设置的请求。');
      const isEnabled = await settingsService.getShowQuickCommandTags();
-     console.log(`[控制器] 向客户端发送“显示快捷指令标签”设置: ${isEnabled}`);
      res.json({ enabled: isEnabled });
    } catch (error: any) {
      console.error('[控制器] 获取“显示快捷指令标签”设置时出错:', error);
@@ -481,7 +462,6 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
  }, // *** 确保这里有逗号 ***
 
  async setShowQuickCommandTags(req: Request, res: Response): Promise<void> {
-   console.log('[控制器] 收到设置“显示快捷指令标签”设置的请求。');
    try {
      const { enabled } = req.body;
      console.log('[控制器] 请求体 enabled:', enabled);
@@ -492,27 +472,63 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
        return;
      }
 
-     console.log('[控制器] 调用 settingsService.setShowQuickCommandTags...');
+     
      await settingsService.setShowQuickCommandTags(enabled);
-     console.log('[控制器] settingsService.setShowQuickCommandTags 成功完成。');
+     
 
      auditLogService.logAction('SETTINGS_UPDATED', { updatedKeys: ['showQuickCommandTags'] });
      notificationService.sendNotification('SETTINGS_UPDATED', { updatedKeys: ['showQuickCommandTags'] });
 
-     console.log('[控制器] 发送成功响应。');
+     
      res.status(200).json({ message: '“显示快捷指令标签”设置已成功更新' });
    } catch (error: any) {
      console.error('[控制器] 设置“显示快捷指令标签”时出错:', error);
      res.status(500).json({ message: '设置“显示快捷指令标签”失败', error: error.message });
    }
- }, // <-- Add comma here for the new method
+ }, 
+
+ // --- Show Status Monitor IP Address ---
+ async getShowStatusMonitorIpAddress(req: Request, res: Response): Promise<void> {
+   try {
+     const isEnabled = await settingsService.getShowStatusMonitorIpAddress();
+     res.json({ enabled: isEnabled });
+   } catch (error: any) {
+     console.error('[控制器] 获取“显示状态监视器IP地址”设置时出错:', error);
+     res.status(500).json({ message: '获取“显示状态监视器IP地址”设置失败', error: error.message });
+   }
+ },
+
+ async setShowStatusMonitorIpAddress(req: Request, res: Response): Promise<void> {
+   try {
+     const { enabled } = req.body;
+     console.log('[控制器] 请求体 enabled:', enabled);
+
+     if (typeof enabled !== 'boolean') {
+       console.warn('[控制器] 收到无效的 enabled 格式:', enabled);
+       res.status(400).json({ message: '无效的请求体，"enabled" 必须是一个布尔值' });
+       return;
+     }
+
+     
+     await settingsService.setShowStatusMonitorIpAddress(enabled);
+     
+
+     auditLogService.logAction('SETTINGS_UPDATED', { updatedKeys: ['showStatusMonitorIpAddress'] });
+     notificationService.sendNotification('SETTINGS_UPDATED', { updatedKeys: ['showStatusMonitorIpAddress'] });
+
+     
+     res.status(200).json({ message: '“显示状态监视器IP地址”设置已成功更新' });
+   } catch (error: any) {
+     console.error('[控制器] 设置“显示状态监视器IP地址”时出错:', error);
+     res.status(500).json({ message: '设置“显示状态监视器IP地址”失败', error: error.message });
+   }
+ }, // <-- Add comma here
 
  /**
   * 导出所有连接配置为加密的 ZIP 文件
   */
  async exportAllConnections(req: Request, res: Response): Promise<void> {
    try {
-     console.log('[控制器] 收到导出所有连接的请求。');
      const encryptedZipBuffer = await exportConnectionsAsEncryptedZip(true);
 
      res.setHeader('Content-Type', 'application/zip');
@@ -520,7 +536,7 @@ async setCaptchaConfig(req: Request, res: Response): Promise<void> {
      res.send(encryptedZipBuffer);
      
      // auditLogService.logAction('CONNECTIONS_EXPORTED', { userId: (req.user as any)?.id || 'unknown' }); // 移除审计日志
-     console.log('[控制器] 成功发送加密的连接导出文件。');
+     
 
    } catch (error: any) {
      console.error('[控制器] 导出所有连接时出错:', error);

@@ -816,6 +816,10 @@
         "terminalRightClickPasteSuccess": "Terminal right-click paste setting saved.",
         "terminalRightClickPasteError": "Failed to save terminal right-click paste setting."
     },
+    "statusMonitorShowIp": {
+      "title": "Status Monitor: Show IP Address",
+      "enableLabel": "Show IP address in status monitor"
+    },
     "terminalScrollback": {
       "title": "Terminal Scrollback Limit",
       "limitLabel": "Maximum Lines",
@@ -940,6 +944,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving...",
+    "saved": "Saved",
     "testing": "Testing...",
     "edit": "Edit",
     "delete": "Delete",
@@ -962,7 +967,8 @@
     "sortDescending": "Descending",
     "restore": "Restore",
     "minimize": "Minimize",
-    "send":"Send"
+    "send":"Send",
+    "copied": "Copied to clipboard"
   },
   "layoutConfigurator": {
     "title": "Layout Configurator",

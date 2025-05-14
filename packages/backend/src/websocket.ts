@@ -5,8 +5,8 @@ import { initializeHeartbeat } from './websocket/heartbeat';
 import { initializeUpgradeHandler } from './websocket/upgrade';
 import { initializeConnectionHandler } from './websocket/connection';
 import { clientStates } from './websocket/state';
-import { sshSuspendService } from './services/ssh-suspend.service'; // 导入实例
-import { SftpService } from './services/sftp.service'; // +++ 导入 SftpService +++
+import { sshSuspendService } from './services/ssh-suspend.service';
+import { SftpService } from './services/sftp.service';
 import { cleanupClientConnection } from './websocket/utils';
 
 

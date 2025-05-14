@@ -86,10 +86,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'; // Simplified Vue imports
+import { onMounted, ref } from 'vue'; 
 import { useAuthStore } from '../stores/auth.store';
 import { useSettingsStore } from '../stores/settings.store';
-import { useAppearanceStore } from '../stores/appearance.store'; // 导入外观 store
+import { useAppearanceStore } from '../stores/appearance.store'; 
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useVersionCheck } from '../composables/settings/useVersionCheck';

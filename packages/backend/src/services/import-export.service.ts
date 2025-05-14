@@ -1,10 +1,10 @@
 
 import * as ConnectionRepository from '../repositories/connection.repository';
 import * as ProxyRepository from '../repositories/proxy.repository';
-import * as TagService from '../services/tag.service'; // +++ 导入标签服务 +++
+import * as TagService from '../services/tag.service'; 
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
-import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; // For decrypting connection details
-import { getAllDecryptedSshKeys, DecryptedSshKeyDetails } from '../services/ssh_key.service'; // 静态导入, SshKeyData -> DecryptedSshKeyDetails
+import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; 
+import { getAllDecryptedSshKeys, DecryptedSshKeyDetails } from '../services/ssh_key.service'; 
 import archiver from 'archiver';
 archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
 
@@ -13,7 +13,7 @@ archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
 
 interface ImportedConnectionData {
     name: string;
-    type: 'SSH' | 'RDP' | 'VNC'; // Add type field
+    type: 'SSH' | 'RDP' | 'VNC'; 
     host: string;
     port: number;
     username: string;

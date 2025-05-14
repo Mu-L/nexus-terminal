@@ -222,7 +222,27 @@
                <p v-if="terminalEnableRightClickPasteMessage" :class="['text-sm', terminalEnableRightClickPasteSuccess ? 'text-success' : 'text-error']">{{ terminalEnableRightClickPasteMessage }}</p>
             </div>
         </form>
-     </div>
+      </div>
+      <hr class="border-border/50">
+      <!-- Status Monitor Show IP -->
+      <div class="settings-section-content">
+        <h3 class="text-base font-semibold text-foreground mb-3">{{ $t('settings.statusMonitorShowIp.title', '状态监视器 IP 显示') }}</h3>
+        <form @submit.prevent="handleUpdateStatusMonitorShowIpSetting" class="space-y-4">
+            <div class="flex items-center">
+                <input type="checkbox" id="statusMonitorShowIp" v-model="statusMonitorShowIpEnabled"
+                       class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
+                <label for="statusMonitorShowIp" class="text-sm text-foreground cursor-pointer select-none">{{ $t('settings.statusMonitorShowIp.enableLabel', '在状态监视器中显示IP地址') }}</label>
+            </div>
+            <div class="flex items-center justify-between pt-2">
+               <button type="submit"
+                       :disabled="statusMonitorShowIpLoading"
+                       class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
+                 {{ $t('common.save') }}
+               </button>
+               <p v-if="statusMonitorShowIpMessage" :class="['text-sm', statusMonitorShowIpSuccess ? 'text-success' : 'text-error']">{{ statusMonitorShowIpMessage }}</p>
+            </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -283,6 +303,11 @@ const {
   showPopupFileManagerMessage,
   showPopupFileManagerSuccess,
   handleUpdateShowPopupFileManager,
+  statusMonitorShowIpEnabled,
+  statusMonitorShowIpLoading,
+  statusMonitorShowIpMessage,
+  statusMonitorShowIpSuccess,
+  handleUpdateStatusMonitorShowIpSetting,
 } = useWorkspaceSettings();
 </script>
 

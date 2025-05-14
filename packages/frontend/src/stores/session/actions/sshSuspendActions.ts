@@ -1,4 +1,4 @@
-// packages/frontend/src/stores/session/actions/sshSuspendActions.ts
+
 import { v4 as uuidv4 } from 'uuid';
 import { sessions, suspendedSshSessions, isLoadingSuspendedSessions, activeSessionId } from '../state';
 import type {
@@ -8,8 +8,8 @@ import type {
   SshSuspendResumeReqMessage,
   SshSuspendTerminateReqMessage,
   SshSuspendRemoveEntryReqMessage,
-  // SshSuspendEditNameReqMessage, // Removed, using HTTP API
-  // S2C Payloads
+  
+  
   SshMarkedForSuspendAckPayload,
   SshUnmarkedForSuspendAckPayload, 
   SshSuspendListResponsePayload,
@@ -17,19 +17,19 @@ import type {
   SshOutputCachedChunkPayload,
   SshSuspendTerminatedRespPayload,
   SshSuspendEntryRemovedRespPayload,
-  // SshSuspendNameEditedRespPayload, // Removed, using HTTP API
+  
   SshSuspendAutoTerminatedNotifPayload,
-} from '../../../types/websocket.types'; // 路径: packages/frontend/src/types/websocket.types.ts
-import type { WsManagerInstance, SessionState } from '../types'; // 路径: packages/frontend/src/stores/session/types.ts // Re-add WsManagerInstance
-import { closeSession as closeSessionAction, activateSession as activateSessionAction, openNewSession, closeSession } from './sessionActions'; // 使用 openNewSession 和 closeSession
-import { useConnectionsStore } from '../../connections.store'; // 用于获取连接信息
-import { useUiNotificationsStore } from '../../uiNotifications.store'; // 用于显示通知
-import type { SuspendedSshSession } from '../../../types/ssh-suspend.types'; // 路径: packages/frontend/src/types/ssh-suspend.types.ts
-import i18n from '../../../i18n'; // 直接导入 i18n 实例
-import type { ComposerTranslation } from 'vue-i18n'; // 导入 ComposerTranslation 类型
-import apiClient from '../../../utils/apiClient'; // +++ 导入 apiClient +++
+} from '../../../types/websocket.types'; 
+import type { WsManagerInstance, SessionState } from '../types'; 
+import { closeSession as closeSessionAction, activateSession as activateSessionAction, openNewSession, closeSession } from './sessionActions'; 
+import { useConnectionsStore } from '../../connections.store'; 
+import { useUiNotificationsStore } from '../../uiNotifications.store'; 
+import type { SuspendedSshSession } from '../../../types/ssh-suspend.types'; 
+import i18n from '../../../i18n'; 
+import type { ComposerTranslation } from 'vue-i18n'; 
+import apiClient from '../../../utils/apiClient'; 
 
-const t: ComposerTranslation = i18n.global.t; // 从全局 i18n 实例获取 t 函数并显式注解类型
+const t: ComposerTranslation = i18n.global.t; 
 
 // 辅助函数：获取一个可用的 WebSocket 管理器
 // 优先使用当前激活的会话，或者任意一个已连接的 SSH 会话

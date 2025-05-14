@@ -1,18 +1,16 @@
 import { Request, Response } from 'express';
-import { sshSuspendService } from '../services/ssh-suspend.service'; // 导入单例服务
-import { SuspendedSessionInfo } from '../types/ssh-suspend.types'; // 导入类型
+import { sshSuspendService } from '../services/ssh-suspend.service';
+import { SuspendedSessionInfo } from '../types/ssh-suspend.types';
 
 export class SshSuspendController {
-  // private sshSuspendService: SshSuspendService; // 不再需要，直接使用导入的单例
+
 
   constructor() {
-    // this.sshSuspendService = new SshSuspendService(); // 不再需要实例化
-    // 绑定方法到当前实例，以确保 'this' 上下文正确
     this.getSuspendedSshSessions = this.getSuspendedSshSessions.bind(this);
     this.terminateAndRemoveSession = this.terminateAndRemoveSession.bind(this);
     this.removeSessionEntry = this.removeSessionEntry.bind(this);
-    this.editSessionNameHttp = this.editSessionNameHttp.bind(this); // 绑定新方法
-    this.exportSessionLog = this.exportSessionLog.bind(this); // +++ 绑定导出日志方法 +++
+    this.editSessionNameHttp = this.editSessionNameHttp.bind(this); 
+    this.exportSessionLog = this.exportSessionLog.bind(this);
   }
 
   public async getSuspendedSshSessions(req: Request, res: Response): Promise<void> {

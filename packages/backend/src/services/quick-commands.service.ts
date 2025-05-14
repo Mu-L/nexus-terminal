@@ -1,6 +1,6 @@
 import * as QuickCommandsRepository from '../repositories/quick-commands.repository';
-import { QuickCommandWithTags } from '../repositories/quick-commands.repository'; // Import the type with tags
-import * as QuickCommandTagRepository from '../repositories/quick-command-tag.repository'; // Import the new tag repository
+import { QuickCommandWithTags } from '../repositories/quick-commands.repository'; 
+import * as QuickCommandTagRepository from '../repositories/quick-command-tag.repository'; 
 
 // 定义排序类型
 export type QuickCommandSortBy = 'name' | 'usage_count';
@@ -119,7 +119,7 @@ export const assignTagToCommands = async (commandIds: number[], tagId: number): 
 
         // 调用 Repository 函数执行批量关联
         // 注意：这里需要导入 QuickCommandTagRepository
-        console.log(`[Service] assignTagToCommands: Calling repo with commandIds: ${JSON.stringify(commandIds)}, tagId: ${tagId}`); // +++ 添加日志 +++
+        console.log(`[Service] assignTagToCommands: Calling repo with commandIds: ${JSON.stringify(commandIds)}, tagId: ${tagId}`); 
         await QuickCommandTagRepository.addTagToCommands(commandIds, tagId);
         console.log(`[Service] assignTagToCommands: Repo call finished for tag ${tagId}.`); // +++ 修改日志 +++
         // 可以在这里添加额外的业务逻辑，例如发送事件通知等

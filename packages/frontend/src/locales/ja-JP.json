@@ -96,6 +96,7 @@
         "retry": "再試行",
         "save": "保存",
         "saving": "保存中...",
+        "saved": "保存済み",
         "search": "検索",
         "settings": "設定",
         "sortAscending": "昇順",
@@ -104,7 +105,8 @@
         "width": "幅",
         "restore": "元に戻す",
         "minimize": "最小化",
-        "send":"送信する"
+        "send":"送信する",
+        "copied": "クリップボードにコピーしました"
     },
     "connections": {
         "actions": {
@@ -1075,6 +1077,10 @@
         "terminalRightClickPasteSuccess": "ターミナルの右クリック貼り付け設定が保存されました。",
         "terminalRightClickPasteError": "ターミナルの右クリック貼り付け設定の保存に失敗しました。"
         },
+        "statusMonitorShowIp": {
+            "title": "ステータスモニターでIPアドレスを表示",
+            "enableLabel": "ステータスモニターにIPアドレスを表示する"
+          },
         "terminalScrollback": {
           "title": "ターミナルスクロールバック制限",
           "limitLabel": "最大行数",

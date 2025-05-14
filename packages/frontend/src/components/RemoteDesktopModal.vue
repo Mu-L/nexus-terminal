@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed, watchEffect } from 'vue'; 
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings.store';
-import { useConnectionsStore } from '../stores/connections.store'; // +++ Import connections store +++
+import { useConnectionsStore } from '../stores/connections.store'; 
 // @ts-ignore - guacamole-common-js 缺少官方类型定义
 import Guacamole from 'guacamole-common-js';
 import apiClient from '../utils/apiClient';

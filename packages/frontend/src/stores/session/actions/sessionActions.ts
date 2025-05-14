@@ -1,20 +1,20 @@
-// packages/frontend/src/stores/session/actions/sessionActions.ts
+
 
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useConnectionsStore, type ConnectionInfo } from '../../connections.store'; // 路径: packages/frontend/src/stores/connections.store.ts
+import { useConnectionsStore, type ConnectionInfo } from '../../connections.store'; 
 import { sessions, activeSessionId } from '../state';
 import { generateSessionId } from '../utils';
 import type { SessionState, SshTerminalInstance, StatusMonitorInstance, DockerManagerInstance, SftpManagerInstance, WsManagerInstance } from '../types';
 
-// Composables for manager creation - 路径相对于此文件
+
 import { createWebSocketConnectionManager } from '../../../composables/useWebSocketConnection';
 import { createSshTerminalManager, type SshTerminalDependencies } from '../../../composables/useSshTerminal';
 import { createStatusMonitorManager, type StatusMonitorDependencies } from '../../../composables/useStatusMonitor';
 import { createDockerManager, type DockerManagerDependencies } from '../../../composables/useDockerManager';
-import { registerSshSuspendHandlers } from './sshSuspendActions'; // 导入 SSH 挂起处理器注册函数
-// getOrCreateSftpManager 将在 sftpManagerActions.ts 中定义，并在主 store 中协调
+import { registerSshSuspendHandlers } from './sshSuspendActions'; 
+
 
 // --- 辅助函数 (特定于此模块的 actions) ---
 const findConnectionInfo = (connectionId: number | string, connectionsStore: ReturnType<typeof useConnectionsStore>): ConnectionInfo | undefined => {

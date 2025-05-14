@@ -73,7 +73,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useNotificationsStore } from '../stores/notifications.store';
 import { NotificationSetting, NotificationChannelType, NotificationEvent } from '../types/server.types';
-import NotificationSettingForm from './NotificationSettingForm.vue'; // Import the form component
+import NotificationSettingForm from './NotificationSettingForm.vue'; 
 import { useI18n } from 'vue-i18n';
 
 const store = useNotificationsStore();

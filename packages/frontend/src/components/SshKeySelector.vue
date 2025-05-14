@@ -2,10 +2,10 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSshKeysStore } from '../stores/sshKeys.store';
-import SshKeyManagementModal from './SshKeyManagementModal.vue'; // Import the modal
+import SshKeyManagementModal from './SshKeyManagementModal.vue'; 
 
 const props = defineProps<{
-    modelValue: number | null; // The selected ssh_key_id (v-model)
+    modelValue: number | null; 
 }>();
 
 const emit = defineEmits(['update:modelValue']); // Removed 'use-direct-input' event

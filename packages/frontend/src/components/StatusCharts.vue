@@ -40,11 +40,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, type PropType } from 'vue'; // 添加 PropType
+import { ref, watch, onMounted, computed, type PropType } from 'vue'; 
 import { useI18n } from 'vue-i18n';
 import { Line } from 'vue-chartjs';
-import { useSessionStore } from '../stores/session.store'; // 注入 sessionStore
-import { storeToRefs } from 'pinia'; // 导入 storeToRefs
+import { useSessionStore } from '../stores/session.store'; 
+import { storeToRefs } from 'pinia'; 
 import {
   Chart as ChartJS,
   Title,

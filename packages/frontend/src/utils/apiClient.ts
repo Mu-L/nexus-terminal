@@ -1,6 +1,6 @@
 import axios from 'axios';
-import router from '../router'; // 引入 router 用于可能的重定向
-import { useAuthStore } from '../stores/auth.store'; // 引入 auth store 用于检查认证状态和登出
+import router from '../router'; 
+import { useAuthStore } from '../stores/auth.store'; 
 
 // 创建 axios 实例
 const apiClient = axios.create({

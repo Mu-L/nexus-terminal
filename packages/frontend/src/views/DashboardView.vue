@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import AddConnectionForm from '../components/AddConnectionForm.vue'; // +++ 引入表单组件 +++
+import AddConnectionForm from '../components/AddConnectionForm.vue'; 
 import { useConnectionsStore } from '../stores/connections.store';
 import { useAuditLogStore } from '../stores/audit.store';
 import { useSessionStore } from '../stores/session.store';
-import { useTagsStore } from '../stores/tags.store'; // +++ 添加标签 store +++
-import type { TagInfo } from '../stores/tags.store'; // +++ 修正标签类型导入 +++
-// Removed settings store import for sorting
-import type { SortField, SortOrder } from '../stores/settings.store'; // Keep type import
+import { useTagsStore } from '../stores/tags.store'; 
+import type { TagInfo } from '../stores/tags.store'; 
+
+import type { SortField, SortOrder } from '../stores/settings.store'; 
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { ConnectionInfo } from '../stores/connections.store';
-import { storeToRefs } from 'pinia'; // Keep for other stores if needed
+import { storeToRefs } from 'pinia'; 
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, enUS, ja } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
@@ -21,18 +21,18 @@ const router = useRouter();
 const connectionsStore = useConnectionsStore();
 const auditLogStore = useAuditLogStore();
 const sessionStore = useSessionStore();
-const tagsStore = useTagsStore(); // +++ 实例化标签 store +++
-// Removed settings store instantiation
+const tagsStore = useTagsStore(); 
+
 
 const { connections, isLoading: isLoadingConnections } = storeToRefs(connectionsStore);
 const { logs: auditLogs, isLoading: isLoadingLogs, totalLogs } = storeToRefs(auditLogStore);
-const { tags, isLoading: isLoadingTags } = storeToRefs(tagsStore); // +++ 获取标签数据和加载状态 +++
-// Removed refs from settings store
+const { tags, isLoading: isLoadingTags } = storeToRefs(tagsStore); 
 
-// Local state for sorting with localStorage persistence
+
+
 const LS_SORT_BY_KEY = 'dashboard_connections_sort_by';
 const LS_SORT_ORDER_KEY = 'dashboard_connections_sort_order';
-const LS_FILTER_TAG_KEY = 'dashboard_connections_filter_tag'; // +++ 添加标签筛选的 localStorage key +++
+const LS_FILTER_TAG_KEY = 'dashboard_connections_filter_tag'; 
 
 // Initialize with localStorage values or defaults
 const localSortBy = ref<SortField>(localStorage.getItem(LS_SORT_BY_KEY) as SortField || 'last_connected_at');

@@ -24,7 +24,7 @@ export function useSidebarResize({
   const handleMouseDown = (event: MouseEvent) => {
     console.log(`[useSidebarResize] handleMouseDown triggered for side: ${side}`, { sidebar: sidebarRef.value, handle: handleRef.value }); // +++ Add Log +++
     if (!sidebarRef.value || !handleRef.value) {
-       console.log('[useSidebarResize] MouseDown ignored: sidebarRef or handleRef is null.'); // +++ Add Log +++
+       console.log('[useSidebarResize] MouseDown ignored: sidebarRef or handleRef is null.'); 
        return;
     }
 

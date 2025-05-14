@@ -26,15 +26,15 @@ if (dataConfigResultGlobal.error && (dataConfigResultGlobal.error as NodeJS.Errn
 } else if (!dataConfigResultGlobal.error) {
      console.log(`[ENV Init Early] Loaded environment variables from data .env file: ${dataEnvPathGlobal}`);
 }
-// --- 结束环境变量的早期加载 ---
+
 
 import express = require('express');
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import http from 'http';
-// import fs from 'fs'; // Moved up
-// import path from 'path'; // Moved up
+
+
 import crypto from 'crypto';
-// import dotenv from 'dotenv'; // Moved up
+
 import session from 'express-session';
 import sessionFileStore from 'session-file-store';
 import { getDbInstance } from './database/connection';
@@ -50,18 +50,18 @@ import commandHistoryRoutes from './command-history/command-history.routes';
 import quickCommandsRoutes from './quick-commands/quick-commands.routes';
 import terminalThemeRoutes from './terminal-themes/terminal-theme.routes';
 import appearanceRoutes from './appearance/appearance.routes';
-import sshKeysRouter from './ssh_keys/ssh_keys.routes'; // +++ Import SSH Key routes +++
-import quickCommandTagRoutes from './quick-command-tags/quick-command-tag.routes'; // +++ Import Quick Command Tag routes +++
-import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes'; // +++ Import SSH Suspend routes +++
+import sshKeysRouter from './ssh_keys/ssh_keys.routes'; 
+import quickCommandTagRoutes from './quick-command-tags/quick-command-tag.routes'; 
+import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes'; 
 import { initializeWebSocket } from './websocket';
 import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
 
-// --- 初始化通知系统 (导入即初始化单例) ---
-import './services/event.service'; // 确保事件服务被加载
-import './services/notification.processor.service'; // 确保处理器被加载并监听事件
-import './services/notification.dispatcher.service'; // 确保分发器被加载并监听处理器事件
-// --- 结束通知系统初始化 ---
-// --- 环境变量和密钥初始化 ---
+
+import './services/event.service'; 
+import './services/notification.processor.service'; 
+import './services/notification.dispatcher.service'; 
+
+
 
 // --- 全局错误处理 ---
 // 捕获未处理的 Promise Rejection

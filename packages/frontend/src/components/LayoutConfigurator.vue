@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, type Ref, nextTick } from 'vue'; // Import nextTick
+import { ref, computed, watch, type Ref, nextTick } from 'vue'; 
 import { useI18n } from 'vue-i18n';
 import { useLayoutStore, type LayoutNode, type PaneName } from '../stores/layout.store';
-import { useSettingsStore } from '../stores/settings.store'; // +++ Import settings store +++
-import { storeToRefs } from 'pinia'; // +++ Import storeToRefs +++
+import { useSettingsStore } from '../stores/settings.store'; 
+import { storeToRefs } from 'pinia'; 
 import draggable from 'vuedraggable';
 import LayoutNodeEditor from './LayoutNodeEditor.vue';
-// +++ Import a switch component if available, otherwise use checkbox +++
-// Assuming a simple checkbox for now
+
+
 
 // --- Props ---
 const props = defineProps({

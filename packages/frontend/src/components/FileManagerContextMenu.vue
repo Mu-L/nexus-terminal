@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, type PropType } from 'vue';
-import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu'; // 导入菜单项类型
+import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu'; 
 import { onUnmounted } from 'vue';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 

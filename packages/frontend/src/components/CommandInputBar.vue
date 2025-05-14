@@ -2,17 +2,17 @@
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, defineExpose, computed, defineOptions } from 'vue'; // Import defineOptions
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useSessionStore } from '../stores/session.store'; // +++ 导入 Session Store +++
+import { useSessionStore } from '../stores/session.store'; 
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { useQuickCommandsStore } from '../stores/quickCommands.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
-import QuickCommandsModal from './QuickCommandsModal.vue'; // +++ Import the modal component +++
-import SuspendedSshSessionsModal from './SuspendedSshSessionsModal.vue'; // +++ Import the new modal +++
-import { useFileEditorStore } from '../stores/fileEditor.store'; // +++ Import File Editor Store +++
+import QuickCommandsModal from './QuickCommandsModal.vue'; 
+import SuspendedSshSessionsModal from './SuspendedSshSessionsModal.vue'; 
+import { useFileEditorStore } from '../stores/fileEditor.store'; 
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 
-// Disable attribute inheritance as this component has multiple root nodes (div + modal)
+
 defineOptions({ inheritAttrs: false });
 
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++

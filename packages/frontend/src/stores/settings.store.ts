@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
-import { ref, computed } from 'vue'; // 移除 watch
-import i18n, { setLocale, defaultLng, availableLocales } from '../i18n'; // Import i18n instance, setLocale, defaultLng, and availableLocales
+import apiClient from '../utils/apiClient'; 
+import { ref, computed } from 'vue'; 
+import i18n, { setLocale, defaultLng, availableLocales } from '../i18n'; 
 import type { PaneName } from './layout.store';
 import { useAuthStore } from './auth.store';
 import type { ConnectionInfo } from './connections.store';
@@ -62,6 +62,7 @@ interface SettingsState {
   terminalScrollbackLimit?: string; //  终端回滚行数上限 (e.g., '5000', '0' for unlimited)
   fileManagerShowDeleteConfirmation?: string; //  'true' or 'false' - 文件管理器删除确认提示
   terminalEnableRightClickPaste?: string; //  'true' or 'false' - 终端右键粘贴
+  showStatusMonitorIpAddress?: string; // 'true' or 'false' - 状态监视器显示IP地址
   [key: string]: string | undefined;
 }
 
@@ -115,7 +116,7 @@ export const useSettingsStore = defineStore('settings', () => {
       if (settings.value.showPopupFileEditor === undefined) {
           settings.value.showPopupFileEditor = 'true';
       }
-      // +++ 添加 showPopupFileManager 默认值 (改为 false) +++
+      // +++  showPopupFileManager 默认值 (改为 false) +++
       if (settings.value.showPopupFileManager === undefined) {
           settings.value.showPopupFileManager = 'false'; // 默认禁用弹窗文件管理器
       }
@@ -304,6 +305,10 @@ export const useSettingsStore = defineStore('settings', () => {
         settings.value.terminalEnableRightClickPaste = 'true'; // 默认启用右键粘贴
         console.log(`[SettingsStore] terminalEnableRightClickPaste not found, set to default: ${settings.value.terminalEnableRightClickPaste}`);
       }
+      if (settings.value.showStatusMonitorIpAddress === undefined) {
+        settings.value.showStatusMonitorIpAddress = 'false'; // 默认禁用状态监视器显示IP
+        console.log(`[SettingsStore] showStatusMonitorIpAddress not found, set to default: ${settings.value.showStatusMonitorIpAddress}`);
+      }
         
         
       // --- 语言设置 ---
@@ -375,28 +380,29 @@ export const useSettingsStore = defineStore('settings', () => {
     // 移除外观相关的键检查
     const allowedKeys: Array<keyof SettingsState> = [
         'language', 'ipWhitelist', 'maxLoginAttempts', 'loginBanDuration',
-        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++ 添加 showPopupFileManager +++
+        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++  showPopupFileManager +++
         'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
-        'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
-        'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
-        'sidebarPaneWidths', // +++ 添加侧边栏宽度对象键 +++
-        'fileManagerRowSizeMultiplier', // +++ 添加文件管理器行大小键 +++
-        'fileManagerColWidths', // +++ 添加文件管理器列宽键 +++
-        'commandInputSyncTarget', // +++ 添加命令输入同步目标键 +++
-        'timezone', //  添加时区键
-        'rdpModalWidth', //  添加 RDP 模态框宽度键
-        'rdpModalHeight', //  添加 RDP 模态框高度键
-        'vncModalWidth', //  添加 VNC 模态框宽度键
-        'vncModalHeight', //  添加 VNC 模态框高度键
+        'statusMonitorIntervalSeconds', // +++ 状态监控间隔键 +++
+        'workspaceSidebarPersistent', // +++ 侧边栏固定键 +++
+        'sidebarPaneWidths', // +++ 侧边栏宽度对象键 +++
+        'fileManagerRowSizeMultiplier', // +++ 文件管理器行大小键 +++
+        'fileManagerColWidths', // +++ 文件管理器列宽键 +++
+        'commandInputSyncTarget', // +++ 命令输入同步目标键 +++
+        'timezone', // 时区键
+        'rdpModalWidth', //  RDP 模态框宽度键
+        'rdpModalHeight', //  RDP 模态框高度键
+        'vncModalWidth', //  VNC 模态框宽度键
+        'vncModalHeight', //  VNC 模态框高度键
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
-        'showConnectionTags', 
-        'showQuickCommandTags', 
-        'layoutLocked', 
-        'terminalScrollbackLimit', 
-        'fileManagerShowDeleteConfirmation', 
-        'terminalEnableRightClickPaste' 
+        'showConnectionTags',
+        'showQuickCommandTags',
+        'layoutLocked',
+        'terminalScrollbackLimit',
+        'fileManagerShowDeleteConfirmation',
+        'terminalEnableRightClickPaste',
+        'showStatusMonitorIpAddress'
       ];
       if (!allowedKeys.includes(key)) {
           console.error(`[SettingsStore] 尝试更新不允许的设置键: ${key}`);
@@ -470,28 +476,29 @@ export const useSettingsStore = defineStore('settings', () => {
      // 移除外观相关的键检查
     const allowedKeys: Array<keyof SettingsState> = [
         'language', 'ipWhitelist', 'maxLoginAttempts', 'loginBanDuration',
-        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++ 添加 showPopupFileManager +++
+        'showPopupFileEditor', 'showPopupFileManager', 'shareFileEditorTabs', 'ipWhitelistEnabled', // +++  showPopupFileManager +++
         'autoCopyOnSelect', 'dockerStatusIntervalSeconds', 'dockerDefaultExpand',
-        'statusMonitorIntervalSeconds', // +++ 添加状态监控间隔键 +++
-        'workspaceSidebarPersistent', // +++ 添加侧边栏固定键 +++
-        'sidebarPaneWidths', // +++ 添加侧边栏宽度对象键 +++
-        'fileManagerRowSizeMultiplier', // +++ 添加文件管理器行大小键 +++
-        'fileManagerColWidths', // +++ 添加文件管理器列宽键 +++
-        'commandInputSyncTarget', // +++ 添加命令输入同步目标键 +++
-        'timezone', //  添加时区键
-        'rdpModalWidth', //  添加 RDP 模态框宽度键
-        'rdpModalHeight', //  添加 RDP 模态框高度键
-        'vncModalWidth', //  添加 VNC 模态框宽度键
-        'vncModalHeight', //  添加 VNC 模态框高度键
+        'statusMonitorIntervalSeconds', // +++ 状态监控间隔键 +++
+        'workspaceSidebarPersistent', // +++ 侧边栏固定键 +++
+        'sidebarPaneWidths', // +++ 侧边栏宽度对象键 +++
+        'fileManagerRowSizeMultiplier', // +++ 文件管理器行大小键 +++
+        'fileManagerColWidths', // +++ 文件管理器列宽键 +++
+        'commandInputSyncTarget', // +++ 命令输入同步目标键 +++
+        'timezone', // 时区键
+        'rdpModalWidth', //  RDP 模态框宽度键
+        'rdpModalHeight', //  RDP 模态框高度键
+        'vncModalWidth', //  VNC 模态框宽度键
+        'vncModalHeight', //  VNC 模态框高度键
         'ipBlacklistEnabled',
         'dashboardSortBy',
         'dashboardSortOrder',
-        'showConnectionTags', 
-        'showQuickCommandTags', 
-        'layoutLocked', 
-        'terminalScrollbackLimit', 
-        'fileManagerShowDeleteConfirmation', 
-        'terminalEnableRightClickPaste' 
+        'showConnectionTags',
+        'showQuickCommandTags',
+        'layoutLocked',
+        'terminalScrollbackLimit',
+        'fileManagerShowDeleteConfirmation',
+        'terminalEnableRightClickPaste',
+        'showStatusMonitorIpAddress'
       ];
       const filteredUpdates: Partial<SettingsState> = {};
       let languageUpdate: string | undefined = undefined;
@@ -793,6 +800,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const terminalEnableRightClickPasteBoolean = computed(() => {
       return settings.value.terminalEnableRightClickPaste !== 'false'; // Default to true
   });
+
+  const statusMonitorShowIpBoolean = computed(() => {
+    return settings.value.showStatusMonitorIpAddress === 'true';
+  });
  
  return {
     settings, // 只包含通用设置
@@ -838,5 +849,6 @@ export const useSettingsStore = defineStore('settings', () => {
     terminalScrollbackLimitNumber, //  Expose terminal scrollback limit getter
     fileManagerShowDeleteConfirmationBoolean, //  Expose file manager delete confirmation getter
     terminalEnableRightClickPasteBoolean, //  Expose terminal right click paste getter
+    statusMonitorShowIpBoolean, // 暴露状态监视器显示IP getter
   };
   });

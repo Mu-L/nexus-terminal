@@ -1,11 +1,9 @@
-// packages/frontend/src/stores/session/types.ts
+
 
 import type { Ref } from 'vue';
-import type { FileTab as OriginalFileTab } from '../fileEditor.store'; // 路径: packages/frontend/src/stores/fileEditor.store.ts
-import type { WsConnectionStatus } from '../../composables/useWebSocketConnection'; // 路径: packages/frontend/src/composables/useWebSocketConnection.ts
-
-// 从源模块导入 DockerManagerInstance 类型并使用别名
-import type { DockerManagerInstance as OriginalDockerManagerInstance } from '../../composables/useDockerManager'; // 路径: packages/frontend/src/composables/useDockerManager.ts
+import type { FileTab as OriginalFileTab } from '../fileEditor.store'; 
+import type { WsConnectionStatus } from '../../composables/useWebSocketConnection'; 
+import type { DockerManagerInstance as OriginalDockerManagerInstance } from '../../composables/useDockerManager'; 
 
 // 导入工厂函数仅用于通过 ReturnType 推导实例类型
 // 这些导入仅用于类型推断，不在运行时使用

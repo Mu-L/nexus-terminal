@@ -1,7 +1,7 @@
-import { ref, nextTick, type Ref, type ComponentPublicInstance } from 'vue'; // 导入 ComponentPublicInstance
-import type { FileListItem } from '../../types/sftp.types'; // 修正路径
-import { type useI18n } from 'vue-i18n'; // 导入 useI18n 以获取 t 的类型
-import type FileManagerContextMenu from '../../components/FileManagerContextMenu.vue'; // <-- 导入组件类型
+import { ref, nextTick, type Ref, type ComponentPublicInstance } from 'vue'; 
+import type { FileListItem } from '../../types/sftp.types'; 
+import { type useI18n } from 'vue-i18n'; 
+import type FileManagerContextMenu from '../../components/FileManagerContextMenu.vue'; 
 
 // 定义菜单项类型 (可以根据需要扩展)
 export interface ContextMenuItem {
@@ -242,7 +242,7 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         ];
     } else { // Clicked on '..'
         menu = [
-             // +++ 添加粘贴 (可以粘贴到上级目录) +++
+             // +++ 粘贴 (可以粘贴到上级目录) +++
             { label: t('fileManager.actions.paste'), action: onPaste, disabled: !(isConnected.value && isSftpReady.value) || !hasClipboardContent },
             { label: t('fileManager.actions.refresh'), action: onRefresh, disabled: !(isConnected.value && isSftpReady.value) }
         ];

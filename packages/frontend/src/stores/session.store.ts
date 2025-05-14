@@ -1,11 +1,11 @@
-// packages/frontend/src/stores/session.store.ts
+
 
 import { defineStore } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useConnectionsStore, type ConnectionInfo } from './connections.store';
 
-// 从新模块导入状态
+
 import {
   sessions,
   activeSessionId,
@@ -13,30 +13,30 @@ import {
   rdpConnectionInfo,
   isVncModalOpen,
   vncConnectionInfo,
-  // SSH Suspend Mode State
+  
   suspendedSshSessions,
   isLoadingSuspendedSessions,
 } from './session/state';
 
-// 从新模块导入 Getters
+
 import {
   sessionTabs,
   sessionTabsWithStatus,
   activeSession,
 } from './session/getters';
 
-// 从新模块导入 Actions
+
 import * as sessionActions from './session/actions/sessionActions';
 import * as editorActions from './session/actions/editorActions';
 import * as sftpManagerActions from './session/actions/sftpManagerActions';
 import * as modalActions from './session/actions/modalActions';
 import * as commandInputActions from './session/actions/commandInputActions';
-import * as sshSuspendActions from './session/actions/sshSuspendActions'; // 导入 SSH 挂起 Actions
+import * as sshSuspendActions from './session/actions/sshSuspendActions'; 
 
-// 导入需要的类型 (例如 FileInfo 可能会在参数中使用)
+
 import type { FileInfo } from './fileEditor.store';
-// SftpManagerInstance 类型主要在 action 文件内部使用，但如果 store 直接暴露它，则需要导入
-// import type { SftpManagerInstance } from './session/types';
+
+
 
 
 export const useSessionStore = defineStore('session', () => {

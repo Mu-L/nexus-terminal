@@ -181,7 +181,7 @@ export const assignTagToCommands = async (req: Request, res: Response): Promise<
 
     try {
         // 调用 Service 函数处理批量分配
-        console.log(`[Controller] assignTagToCommands: Received commandIds: ${JSON.stringify(commandIds)}, tagId: ${tagId}`); // +++ 添加日志 +++
+        console.log(`[Controller] assignTagToCommands: Received commandIds: ${JSON.stringify(commandIds)}, tagId: ${tagId}`); 
         await QuickCommandsService.assignTagToCommands(commandIds, tagId);
         res.status(200).json({ success: true, message: `标签 ${tagId} 已成功尝试关联到 ${commandIds.length} 个指令。` });
     } catch (error: any) {

@@ -1,16 +1,14 @@
 import { createApp } from 'vue';
-import { createPinia } from 'pinia'; // 引入 Pinia
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'; // 引入持久化插件
+import { createPinia } from 'pinia';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'; 
 import App from './App.vue';
-import router from './router'; // 引入我们创建的 router
-import i18n from './i18n'; // 引入 i18n 实例
-import { useAuthStore } from './stores/auth.store'; // 引入 Auth Store
-import { useSettingsStore } from './stores/settings.store'; // 引入 Settings Store
-import { useAppearanceStore } from './stores/appearance.store'; // 引入 Appearance Store
+import router from './router'; 
+import i18n from './i18n';
+import { useAuthStore } from './stores/auth.store'; 
+import { useSettingsStore } from './stores/settings.store'; 
+import { useAppearanceStore } from './stores/appearance.store'; 
 import './style.css';
-// 导入 Font Awesome CSS
 import '@fortawesome/fontawesome-free/css/all.min.css';
-// 导入 splitpanes CSS
 import 'splitpanes/dist/splitpanes.css';
 
 

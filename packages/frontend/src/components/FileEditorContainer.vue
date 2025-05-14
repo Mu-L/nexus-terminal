@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, type PropType, ref, watch, defineExpose, onMounted, onBeforeUnmount, nextTick } from 'vue'; // 添加 nextTick
 import { useI18n } from 'vue-i18n';
-// import { storeToRefs } from 'pinia'; // 移除 storeToRefs
-import MonacoEditor from './MonacoEditor.vue'; // 导入 Monaco Editor 组件
-import FileEditorTabs from './FileEditorTabs.vue'; // 导入标签栏组件 (路径确认无误)
-// import { useFileEditorStore } from '../stores/fileEditor.store'; // 移除 Store 导入
-import type { FileTab } from '../stores/fileEditor.store'; // 保留类型导入
-import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; // +++ 导入焦点切换 Store +++
-import { useSessionStore } from '../stores/session.store'; // +++ 导入会话 Store +++
-import { useSettingsStore } from '../stores/settings.store'; // +++ 导入设置 Store +++
-import { storeToRefs } from 'pinia'; // +++ 导入 storeToRefs +++
+import MonacoEditor from './MonacoEditor.vue'; 
+import FileEditorTabs from './FileEditorTabs.vue';
+import type { FileTab } from '../stores/fileEditor.store'; 
+import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
+import { useSessionStore } from '../stores/session.store'; 
+import { useSettingsStore } from '../stores/settings.store'; 
+import { storeToRefs } from 'pinia'; 
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
 
 const { t } = useI18n();
@@ -228,7 +226,7 @@ let unregisterFocusFn: (() => void) | null = null; // 保存注销函数
 onMounted(() => {
   // 注册动作并保存返回的注销函数
   unregisterFocusFn = focusSwitcherStore.registerFocusAction('fileEditorActive', focusActiveEditor);
-  // +++ 添加键盘事件监听器 +++
+  // +++ 键盘事件监听器 +++
   window.addEventListener('keydown', handleKeyDown);
 });
 

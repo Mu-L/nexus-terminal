@@ -45,7 +45,7 @@ const {
    closeOtherTabs, // 修正：移除 Global 后缀
    closeTabsToTheRight, // 修正：移除 Global 后缀
    closeTabsToTheLeft, // 修正：移除 Global 后缀
-   changeEncoding: changeGlobalEncoding, // +++ 添加全局编码更改 action +++
+   changeEncoding: changeGlobalEncoding, // +++ 全局编码更改 action +++
 } = fileEditorStore;
 
 // 会话 Store Actions (用于非共享模式)
@@ -58,7 +58,7 @@ const {
    closeOtherTabsInSession,
    closeTabsToTheRightInSession,
    closeTabsToTheLeftInSession,
-   changeEncodingInSession, // +++ 添加会话编码更改 action +++
+   changeEncodingInSession, // +++ 会话编码更改 action +++
 } = sessionStore;
 
 // --- 移除本地文件状态 ---

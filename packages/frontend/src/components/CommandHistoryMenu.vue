@@ -46,12 +46,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useCommandHistoryStore, CommandHistoryEntryFE } from '../stores/commandHistory.store';
-import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // 引入 UI 通知 store
-import { useI18n } from 'vue-i18n'; // 引入 i18n
+import { useUiNotificationsStore } from '../stores/uiNotifications.store'; 
+import { useI18n } from 'vue-i18n'; 
 
 const commandHistoryStore = useCommandHistoryStore();
-const uiNotificationsStore = useUiNotificationsStore(); // 实例化 UI 通知 store
-const { t } = useI18n(); // 使用 i18n
+const uiNotificationsStore = useUiNotificationsStore(); 
+const { t } = useI18n(); 
 const hoveredItemId = ref<number | null>(null);
 const listContainer = ref<HTMLElement | null>(null);
 

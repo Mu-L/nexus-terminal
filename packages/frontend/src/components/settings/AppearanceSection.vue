@@ -17,14 +17,14 @@
 
 <script setup lang="ts">
 import { useSettingsStore } from '../../stores/settings.store';
-import { useAppearanceStore } from '../../stores/appearance.store'; // 导入外观 store
+import { useAppearanceStore } from '../../stores/appearance.store'; 
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useAppearanceSettings } from '../../composables/settings/useAppearanceSettings';
 
 const settingsStore = useSettingsStore();
-const { settings } = storeToRefs(settingsStore); // To ensure v-if="settings" works
-const appearanceStore = useAppearanceStore(); // 实例化外观 store
+const { settings } = storeToRefs(settingsStore); 
+const appearanceStore = useAppearanceStore(); 
 const { t } = useI18n();
 
 const {

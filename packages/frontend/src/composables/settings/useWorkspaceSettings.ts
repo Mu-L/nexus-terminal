@@ -17,8 +17,9 @@ export function useWorkspaceSettings() {
     showQuickCommandTagsBoolean,
     terminalScrollbackLimitNumber,
     fileManagerShowDeleteConfirmationBoolean,
-    terminalEnableRightClickPasteBoolean, 
-    showPopupFileManagerBoolean, // +++ Import the new getter +++
+    terminalEnableRightClickPasteBoolean,
+    showPopupFileManagerBoolean, 
+    statusMonitorShowIpBoolean,
   } = storeToRefs(settingsStore);
 
   // --- Popup Editor ---
@@ -286,6 +287,30 @@ export function useWorkspaceSettings() {
     }
   };
 
+  // --- Status Monitor Show IP ---
+  const statusMonitorShowIpEnabled = ref(false);
+  const statusMonitorShowIpLoading = ref(false);
+  const statusMonitorShowIpMessage = ref('');
+  const statusMonitorShowIpSuccess = ref(false);
+
+  const handleUpdateStatusMonitorShowIpSetting = async () => {
+    statusMonitorShowIpLoading.value = true;
+    statusMonitorShowIpMessage.value = '';
+    statusMonitorShowIpSuccess.value = false;
+    try {
+      const valueToSave = statusMonitorShowIpEnabled.value ? 'true' : 'false';
+      await settingsStore.updateSetting('showStatusMonitorIpAddress', valueToSave);
+      statusMonitorShowIpMessage.value = t('common.saved');
+      statusMonitorShowIpSuccess.value = true;
+    } catch (error: any) {
+      console.error('Failed to update status monitor IP display setting:', error);
+      statusMonitorShowIpMessage.value = error.message || t('settings.statusMonitorShowIp.error.saveFailed', 'Failed to save status monitor IP display setting.'); //  需要添加相应的i18n键
+      statusMonitorShowIpSuccess.value = false;
+    } finally {
+      statusMonitorShowIpLoading.value = false;
+    }
+  };
+
   // Watchers to sync local state with store state
   watch(showPopupFileEditorBoolean, (newValue) => { popupEditorEnabled.value = newValue; }, { immediate: true });
   watch(shareFileEditorTabsBoolean, (newValue) => { shareTabsEnabled.value = newValue; }, { immediate: true });
@@ -296,8 +321,9 @@ export function useWorkspaceSettings() {
   watch(showQuickCommandTagsBoolean, (newValue) => { showQuickCommandTagsLocal.value = newValue; }, { immediate: true });
   watch(terminalScrollbackLimitNumber, (newValue) => { terminalScrollbackLimitLocal.value = newValue; }, { immediate: true });
   watch(fileManagerShowDeleteConfirmationBoolean, (newValue) => { fileManagerShowDeleteConfirmationLocal.value = newValue; }, { immediate: true });
-  watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true }); 
+  watch(terminalEnableRightClickPasteBoolean, (newValue) => { terminalEnableRightClickPasteLocal.value = newValue; }, { immediate: true });
   watch(showPopupFileManagerBoolean, (newValue) => { showPopupFileManagerLocal.value = newValue; }, { immediate: true }); // +++ Watch for popup file manager +++
+  watch(statusMonitorShowIpBoolean, (newValue) => { statusMonitorShowIpEnabled.value = newValue; }, { immediate: true });
 
 
   return {
@@ -367,5 +393,11 @@ export function useWorkspaceSettings() {
     showPopupFileManagerMessage,
     showPopupFileManagerSuccess,
     handleUpdateShowPopupFileManager,
+
+    statusMonitorShowIpEnabled,
+    statusMonitorShowIpLoading,
+    statusMonitorShowIpMessage,
+    statusMonitorShowIpSuccess,
+    handleUpdateStatusMonitorShowIpSetting,
   };
 }

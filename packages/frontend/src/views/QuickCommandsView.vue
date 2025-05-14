@@ -521,7 +521,7 @@ const finishEditingTag = async () => {
 
         if (commandIdsToAssign.length > 0) {
           console.log(`[QuickCmdView] Assigning ${commandIdsToAssign.length} commands to new tag ID: ${newTag.id}`);
-          console.log(`[QuickCmdView] Command IDs to assign: ${JSON.stringify(commandIdsToAssign)}`); // +++ 添加日志 +++
+          console.log(`[QuickCmdView] Command IDs to assign: ${JSON.stringify(commandIdsToAssign)}`); 
           // Call the store action to assign commands to the new tag
           const assignSuccess = await quickCommandsStore.assignCommandsToTagAction(commandIdsToAssign, newTag.id);
           if (assignSuccess) {

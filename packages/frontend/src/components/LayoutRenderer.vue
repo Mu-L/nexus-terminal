@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type { ConnectionInfo } from '../stores/connections.store'; // +++ 导入 ConnectionInfo 类型 +++
+import type { ConnectionInfo } from '../stores/connections.store'; 
 import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n'; // <-- Import useI18n
-// 添加依赖 font-awesome
+import { useI18n } from 'vue-i18n'; 
+
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { Splitpanes, Pane } from 'splitpanes';
 import { useLayoutStore, type LayoutNode, type PaneName } from '../stores/layout.store';
 import { useSessionStore } from '../stores/session.store';
-import { useFileEditorStore } from '../stores/fileEditor.store'; // <-- Import FileEditorStore
-import { useSettingsStore } from '../stores/settings.store'; // +++ Import SettingsStore +++
-import { useSidebarResize } from '../composables/useSidebarResize'; // +++ Import useSidebarResize +++
+import { useFileEditorStore } from '../stores/fileEditor.store'; 
+import { useSettingsStore } from '../stores/settings.store'; 
+import { useSidebarResize } from '../composables/useSidebarResize'; 
 import { storeToRefs } from 'pinia';
-// import { defineEmits } from 'vue'; // --- 移除 ---
+
 
 // --- Props ---
 const props = defineProps({
@@ -267,7 +267,7 @@ const sidebarProps = computed(() => (paneName: PaneName | null, side: 'left' | '
 // --- Methods ---
 // 处理 Splitpanes 大小调整事件
 const handlePaneResize = (eventData: { panes: Array<{ size: number; [key: string]: any }> }) => {
-  // +++ 添加更详细的日志 +++
+  // +++ 更详细的日志 +++
   // +++ Log the entire layoutNode object if ID is undefined +++
   if (props.layoutNode && typeof props.layoutNode.id === 'undefined') {
     console.warn(`[LayoutRenderer DEBUG] handlePaneResize triggered but props.layoutNode.id is undefined. Full layoutNode prop:`, JSON.parse(JSON.stringify(props.layoutNode)));
@@ -291,7 +291,7 @@ const handlePaneResize = (eventData: { panes: Array<{ size: number; [key: string
         size: paneInfo.size
     }));
 
-    // +++ 添加调用 store action 前的日志 +++
+    // +++ 调用 store action 前的日志 +++
     // console.log(`[LayoutRenderer DEBUG] Calling layoutStore.updateNodeSizes for node ID: ${props.layoutNode.id} with sizes:`, JSON.parse(JSON.stringify(childrenSizes)));
     // 调用 store action 来更新节点大小
     layoutStore.updateNodeSizes(props.layoutNode.id, childrenSizes);
