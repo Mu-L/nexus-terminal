@@ -50,51 +50,6 @@
            </div>
          </form>
       </div>
-      <hr class="border-border/50"> <!-- Separator -->
-      <!-- Status Monitor -->
-      <div class="settings-section-content">
-         <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.statusMonitor.title') }}</h3>
-         <form @submit.prevent="handleUpdateStatusMonitorInterval" class="space-y-4">
-           <div>
-             <label for="statusMonitorInterval" class="block text-sm font-medium text-text-secondary mb-1">{{ t('settings.statusMonitor.refreshIntervalLabel') }}</label>
-             <input type="number" id="statusMonitorInterval" v-model.number="statusMonitorIntervalLocal" min="1" step="1" required
-                    class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-             <small class="block mt-1 text-xs text-text-secondary">{{ t('settings.statusMonitor.refreshIntervalHint') }}</small>
-           </div>
-           <div class="flex items-center justify-between">
-              <button type="submit"
-                      class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
-                {{ t('settings.statusMonitor.saveButton') }}
-              </button>
-              <p v-if="statusMonitorMessage" :class="['text-sm', statusMonitorSuccess ? 'text-success' : 'text-error']">{{ statusMonitorMessage }}</p>
-           </div>
-         </form>
-      </div>
-      <hr class="border-border/50"> <!-- Separator -->
-      <!-- Docker -->
-      <div class="settings-section-content">
-         <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.docker.title') }}</h3>
-         <form @submit.prevent="handleUpdateDockerSettings" class="space-y-4">
-           <div>
-             <label for="dockerInterval" class="block text-sm font-medium text-text-secondary mb-1">{{ t('settings.docker.refreshIntervalLabel') }}</label>
-             <input type="number" id="dockerInterval" v-model.number="dockerInterval" min="1" step="1" required
-                    class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-              <small class="block mt-1 text-xs text-text-secondary">{{ t('settings.docker.refreshIntervalHint') }}</small>
-           </div>
-           <div class="flex items-center">
-             <input type="checkbox" id="dockerExpandDefault" v-model="dockerExpandDefault"
-                    class="h-4 w-4 rounded border-border text-primary focus:ring-primary mr-2 cursor-pointer">
-             <label for="dockerExpandDefault" class="text-sm text-foreground cursor-pointer select-none">{{ t('settings.docker.defaultExpandLabel') }}</label>
-           </div>
-           <div class="flex items-center justify-between">
-              <button type="submit"
-                      class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium">
-                {{ t('settings.docker.saveButton') }}
-              </button>
-              <p v-if="dockerSettingsMessage" :class="['text-sm', dockerSettingsSuccess ? 'text-success' : 'text-error']">{{ dockerSettingsMessage }}</p>
-           </div>
-         </form>
-      </div>
     </div>
   </div>
 </template>
@@ -106,37 +61,22 @@ import { storeToRefs } from 'pinia';
 import { useSystemSettings } from '../../composables/settings/useSystemSettings';
 
 const settingsStore = useSettingsStore();
-const { settings } = storeToRefs(settingsStore); // To ensure v-if="settings" works
+const { settings } = storeToRefs(settingsStore); 
 const { t } = useI18n();
 
 const {
   selectedLanguage,
-  // languageLoading, // Not directly used by template
   languageMessage,
   languageSuccess,
   languageNames,
   availableLocales,
   handleUpdateLanguage,
   selectedTimezone,
-  // timezoneLoading,
   timezoneMessage,
   timezoneSuccess,
   commonTimezones,
   handleUpdateTimezone,
-  statusMonitorIntervalLocal,
-  // statusMonitorLoading,
-  statusMonitorMessage,
-  statusMonitorSuccess,
-  handleUpdateStatusMonitorInterval,
-  dockerInterval,
-  dockerExpandDefault,
-  // dockerSettingsLoading,
-  dockerSettingsMessage,
-  dockerSettingsSuccess,
-  handleUpdateDockerSettings,
+
 } = useSystemSettings();
 </script>
 
-<style scoped>
-/* Component-specific styles if needed */
-</style>

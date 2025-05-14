@@ -35,7 +35,7 @@ import { storeToRefs } from 'pinia';
 import { useExportConnections } from '../../composables/settings/useExportConnections';
 
 const settingsStore = useSettingsStore();
-const { settings } = storeToRefs(settingsStore); // To ensure v-if="settings" works
+const { settings } = storeToRefs(settingsStore);
 const { t } = useI18n();
 
 const {
@@ -46,6 +46,3 @@ const {
 } = useExportConnections();
 </script>
 
-<style scoped>
-/* Component-specific styles if needed */
-</style>

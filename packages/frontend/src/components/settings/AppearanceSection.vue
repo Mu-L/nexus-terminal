@@ -32,6 +32,3 @@ const {
 } = useAppearanceSettings();
 </script>
 
-<style scoped>
-/* Component-specific styles if needed */
-</style>
