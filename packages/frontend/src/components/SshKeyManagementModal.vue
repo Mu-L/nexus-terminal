@@ -143,7 +143,7 @@ const cancelForm = () => {
                 </div>
 
                 <!-- Key List -->
-                <div class="flex-grow overflow-y-auto border border-border rounded-md">
+                <div class="flex-grow overflow-y-auto border border-border rounded-md" style="max-height: 50vh;">
                     <table class="min-w-full divide-y divide-border">
                         <thead class="bg-header sticky top-0">
                             <tr>
