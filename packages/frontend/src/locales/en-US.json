@@ -961,7 +961,8 @@
     "sortAscending": "Ascending",
     "sortDescending": "Descending",
     "restore": "Restore",
-    "minimize": "Minimize"
+    "minimize": "Minimize",
+    "send":"Send"
   },
   "layoutConfigurator": {
     "title": "Layout Configurator",
@@ -1100,7 +1101,12 @@
     "reconnectTooltip": "Reconnect to the remote desktop"
   },
   "vncModal": {
-    "title": "VNC Session"
+    "title": "VNC Session",
+    "textInputPlaceholder": "Enter text here to send to VNC",
+    "sendButtonTitle": "Send text to VNC (simulates keyboard input)",
+    "errors": {
+      "simulateInputError": "Error simulating keyboard input: {error}"
+    }
   },
   "commandInputBar": {
     "placeholder": "Enter command and press Enter to send...",

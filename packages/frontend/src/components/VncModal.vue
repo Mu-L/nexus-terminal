@@ -30,6 +30,42 @@ const resizeStartY = ref(0);
 const initialModalWidthForResize = ref(0);
 const initialModalHeightForResize = ref(0);
 const statusMessage = ref('');
+const vncPasteInputText = ref('');
+
+const sendInputTextToVnc = async () => {
+  if (!guacClient.value || connectionStatus.value !== 'connected') {
+    console.warn('[VncModal] Guacamole client not available or not connected to send text.');
+    // Можно добавить сообщение для пользователя здесь, если нужно
+    return;
+  }
+  const textToSend = vncPasteInputText.value;
+  if (!textToSend) {
+    console.log('[VncModal] Paste input is empty, nothing to send.');
+    return;
+  }
+
+  console.log(`[VncModal] Simulating keyboard input for: ${textToSend.substring(0,50)}...`);
+  try {
+    for (const char of textToSend) {
+      const keysym = char.charCodeAt(0); //直接使用字符的 Unicode 码点作为 keysym
+
+      // 确保 keysym 是一个有效的数字，尽管 charCodeAt(0) 总是返回数字
+      if (typeof keysym === 'number' && !isNaN(keysym)) {
+        guacClient.value.sendKeyEvent(1, keysym); // Key press
+        await new Promise(resolve => setTimeout(resolve, 20)); // 短暂延迟
+        guacClient.value.sendKeyEvent(0, keysym); // Key release
+        await new Promise(resolve => setTimeout(resolve, 30)); // 短暂延迟
+      } else {
+        console.warn(`[VncModal] Invalid keysym for character "${char}". Skipping.`);
+      }
+    }
+    console.log('[VncModal] Finished simulating keyboard input.');
+    // vncPasteInputText.value = ''; // 如果希望发送后清空输入框，取消此行注释
+  } catch (err: any) {
+    console.error('[VncModal] Error simulating keyboard input:', err);
+    statusMessage.value = t('vncModal.errors.simulateInputError', { error: err.message });
+  }
+};
 const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
 // Initialize desiredModalWidth and desiredModalHeight from store or defaults
@@ -614,8 +650,31 @@ const stopResize = () => {
          </div>
       </div>
 
-       <div class="p-2 border-t border-border flex-shrink-0 text-xs text-text-secondary bg-header flex items-center justify-end">
-         <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+       <div class="p-2 border-t border-border flex-shrink-0 text-xs text-text-secondary bg-header flex items-center justify-between flex-wrap gap-y-2">
+         <!-- 输入框和发送按钮 -->
+         <div class="flex items-center space-x-2 flex-auto mr-0 sm:mr-4"> <!-- flex-auto to grow, responsive margin -->
+           <input
+             type="text"
+             v-model="vncPasteInputText"
+             :placeholder="t('vncModal.textInputPlaceholder')"
+             class="flex-grow px-2 py-1 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
+             style="min-width: 120px;"
+             @focus="disableVncKeyboard"
+             @blur="enableVncKeyboard"
+             @keydown.enter.prevent="sendInputTextToVnc"
+           />
+           <button
+             @click="sendInputTextToVnc"
+             :disabled="!vncPasteInputText.trim() || connectionStatus !== 'connected'"
+             class="px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+             :title="t('vncModal.sendButtonTitle')"
+           >
+             {{ t('common.send') }}
+           </button>
+         </div>
+
+         <!-- 现有的宽度/高度和重新连接按钮 -->
+         <div class="flex items-center space-x-2 flex-wrap gap-y-1 flex-shrink-0">
             <label for="modal-width" class="text-xs ml-2">{{ t('common.width') }}:</label>
             <input
               id="modal-width"

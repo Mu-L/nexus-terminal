@@ -962,7 +962,8 @@
     "sortAscending": "升序",
     "sortDescending": "降序",
     "restore": "还原",
-    "minimize": "最小化"
+    "minimize": "最小化",
+    "send":"发送"
   },
   "layoutConfigurator": {
     "title": "布局管理器",
@@ -1103,7 +1104,12 @@
     "reconnectTooltip": "重新连接到远程桌面"
   },
   "vncModal": {
-    "title": "VNC 会话"
+    "title": "VNC 会话",
+    "textInputPlaceholder": "在此输入文本以发送到 VNC",
+    "sendButtonTitle": "将文本发送到 VNC (模拟键盘输入)",
+    "errors": {
+      "simulateInputError": "模拟键盘输入时出错: {error}"
+    }
   },
   "commandInputBar": {
     "placeholder": "在此输入命令后按 Enter 发送到终端...",

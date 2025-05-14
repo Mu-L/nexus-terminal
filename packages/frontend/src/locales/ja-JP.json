@@ -103,7 +103,8 @@
         "testing": "テスト中...",
         "width": "幅",
         "restore": "元に戻す",
-        "minimize": "最小化"
+        "minimize": "最小化",
+        "send":"送信する"
     },
     "connections": {
         "actions": {
@@ -696,7 +697,12 @@
         "titlePlaceholder": "リモートデスクトップ接続"
     },
     "vncModal": {
-        "title": "VNCセッション"
+        "title": "VNCセッション",
+        "textInputPlaceholder": "VNC に送信するテキストをここに入力",
+        "sendButtonTitle": "VNC にテキストを送信 (キーボード入力をシミュレート)",
+        "errors": {
+          "simulateInputError": "キーボード入力のシミュレート中にエラーが発生しました: {error}"
+        }
     },
     "settings": {
         "popupFileManager": {
