@@ -371,8 +371,29 @@ export class SftpService {
                  return;
             }
 
+            // 获取文件当前权限
+            let originalMode: number | undefined;
+            try {
+                const stats = await new Promise<Stats>((resolve, reject) => {
+                    state.sftp!.lstat(path, (err, stats) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(stats);
+                        }
+                    });
+                });
+                originalMode = stats.mode;
+                console.log(`[SFTP ${sessionId}] Retrieved original file mode for ${path}: ${originalMode.toString(8)} (ID: ${requestId})`);
+            } catch (statError: any) {
+                console.warn(`[SFTP ${sessionId}] Could not retrieve original file mode for ${path} (ID: ${requestId}):`, statError);
+                // 如果文件不存在或其他错误，继续写入操作，不设置权限
+            }
+
             console.debug(`[SFTP ${sessionId}] Creating write stream for ${path} (ID: ${requestId})`);
-            const writeStream = state.sftp.createWriteStream(path);
+            // 在创建写入流时设置文件权限
+            const writeStreamOptions = originalMode !== undefined ? { mode: originalMode } : {};
+            const writeStream = state.sftp.createWriteStream(path, writeStreamOptions);
             let errorOccurred = false;
 
             writeStream.on('error', (err: Error) => {
@@ -386,16 +407,18 @@ export class SftpService {
             writeStream.on('close', () => {
                 if (!errorOccurred) {
                     console.log(`[SFTP ${sessionId}] writefile ${path} stream closed successfully (ID: ${requestId}). Fetching updated stats...`);
+                    if (originalMode !== undefined) {
+                        console.log(`[SFTP ${sessionId}] Set file mode for ${path} during creation: ${originalMode.toString(8)} (ID: ${requestId})`);
+                    }
                     // Get updated stats after writing
                     state.sftp!.lstat(path, (statErr, stats) => {
                         if (statErr) {
                             console.error(`[SFTP ${sessionId}] lstat after writefile ${path} failed (ID: ${requestId}):`, statErr);
-                            // Send success anyway, but without updated item details
                             state.ws.send(JSON.stringify({ type: 'sftp:writefile:success', path: path, payload: null, requestId: requestId }));
                         } else {
                             const updatedItem = {
                                 filename: path.substring(path.lastIndexOf('/') + 1),
-                                longname: '', // lstat doesn't provide longname
+                                longname: '',
                                 attrs: {
                                     size: stats.size, uid: stats.uid, gid: stats.gid, mode: stats.mode,
                                     atime: stats.atime * 1000, mtime: stats.mtime * 1000,
