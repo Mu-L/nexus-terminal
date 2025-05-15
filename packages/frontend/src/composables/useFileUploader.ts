@@ -1,21 +1,19 @@
-import { ref, reactive, nextTick, onUnmounted, readonly, type Ref } from 'vue'; // 再次修正导入，移除大写 Readonly
-import { createWebSocketConnectionManager } from './useWebSocketConnection'; // 导入工厂函数
+import { ref, reactive, nextTick, onUnmounted, readonly, type Ref } from 'vue'; 
+import { createWebSocketConnectionManager } from './useWebSocketConnection'; 
 import { useI18n } from 'vue-i18n';
-import type { FileListItem } from '../types/sftp.types'; // 从 sftp 类型文件导入
-import type { UploadItem } from '../types/upload.types'; // 从 upload 类型文件导入
-import type { WebSocketMessage, MessagePayload } from '../types/websocket.types'; // 从类型文件导入
+import type { FileListItem } from '../types/sftp.types'; 
+import type { UploadItem } from '../types/upload.types'; 
+import type { WebSocketMessage, MessagePayload } from '../types/websocket.types'; 
 
-// --- 接口定义 (已移至 upload.types.ts) ---
 
-import type { WebSocketDependencies } from './useSftpActions'; // 导入 WebSocketDependencies 类型
+import type { WebSocketDependencies } from './useSftpActions'; 
 
-// 辅助函数 (从 FileManager.vue 复制)
+
 const generateUploadId = (): string => {
-    // 如果需要，可以使用稍微不同的格式作为上传 ID
     return `upload-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 };
 
-// 辅助函数 (从 FileManager.vue 复制)
+
 const joinPath = (base: string, name: string): string => {
     if (base === '/') return `/${name}`;
     if (base.endsWith('/')) return `${base}${name}`;
@@ -25,14 +23,9 @@ const joinPath = (base: string, name: string): string => {
 export function useFileUploader(
     currentPathRef: Ref<string>,
     fileListRef: Readonly<Ref<readonly FileListItem[]>>, // 使用 Readonly 类型
-    // refreshDirectory: () => void, // 不再需要此回调
-    // sessionId: string, // 不再需要，因为 wsDeps 包含了会话上下文
-    // dbConnectionId: string, // 不再需要
     wsDeps: WebSocketDependencies // 注入 WebSocket 依赖项
 ) {
     const { t } = useI18n();
-    // 不再创建独立的连接管理器，而是使用注入的依赖项
-    // const { sendMessage, onMessage, isConnected } = createWebSocketConnectionManager(sessionId, dbConnectionId, t);
     const { sendMessage, onMessage, isConnected } = wsDeps; // 使用注入的依赖项
 
     // 对 uploads 字典使用 reactive 以获得更好的深度响应性
@@ -70,24 +63,24 @@ export function useFileUploader(
 
                 sendMessage({
                     type: 'sftp:upload:chunk',
-                    payload: { uploadId, chunkIndex: chunkIndex++, data: chunkBase64, isLast } // Add and increment chunkIndex
+                    payload: { uploadId, chunkIndex: chunkIndex++, data: chunkBase64, isLast } 
                 });
 
-                // --- FIX: Update offset based on the actual chunk size that was read ---
-                offset += currentChunkSize; // Use the stored size of the slice
-                // currentUpload.progress = Math.min(100, Math.round((offset / file.size) * 100)); // --- REMOVED: Optimistic progress update
+                
+                offset += currentChunkSize; 
+                
 
                 if (!isLast) {
-                    // 使用 requestAnimationFrame 或 nextTick 在块之间添加轻微延迟
-                    // 以潜在地改善 UI 响应性并减少负载。
+                    
+                    
                     nextTick(readNextChunk);
                 } else {
                     console.log(`[文件上传模块] 已发送 ${uploadId} 的最后一个块`);
-                    // 后端将在收到最后一个块后发送 sftp:upload:success
+                    
                 }
             } else {
                  console.error(`[文件上传模块] FileReader 为 ${uploadId} 返回了意外结果:`, chunkResult);
-                 // 处理错误：更新上传状态，也许重试？
+                 
                  currentUpload.status = 'error';
                  currentUpload.error = t('fileManager.errors.readFileError');
             }
@@ -106,7 +99,7 @@ export function useFileUploader(
             // 读取下一个块之前再次检查状态
             if (offset < file.size && uploads[uploadId]?.status === 'uploading') {
                 const slice = file.slice(offset, offset + chunkSize);
-                currentChunkSize = slice.size; // Store the actual size of the slice being read
+                currentChunkSize = slice.size; 
                 reader.readAsDataURL(slice);
             }
         };
@@ -120,23 +113,23 @@ export function useFileUploader(
              // Send chunkIndex 0 for zero-byte file
              sendMessage({ type: 'sftp:upload:chunk', payload: { uploadId, chunkIndex: 0, data: '', isLast: true } });
              upload.progress = 100;
-             // Backend should send success message shortly after this
+             
         }
     };
 
 
-    const startFileUpload = (file: File, relativePath?: string) => { // 保持签名修改
+    const startFileUpload = (file: File, relativePath?: string) => { 
         if (!isConnected.value) {
             console.warn('[文件上传模块] 无法开始上传：WebSocket 未连接。');
-            // 可以选择向用户显示错误消息
+            
             return;
         }
 
         const uploadId = generateUploadId();
-        // --- 修正：直接构建最终远程路径 ---
+        
         let finalRemotePath: string;
         if (relativePath) {
-            // 确保 currentPathRef.value 结尾有斜杠
+            
             const basePath = currentPathRef.value.endsWith('/') ? currentPathRef.value : `${currentPathRef.value}/`;
             // 确保 relativePath 开头没有斜杠，末尾有斜杠 (如果非空)
             let cleanRelativePath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
@@ -215,20 +208,12 @@ export function useFileUploader(
             upload.status = 'success';
             upload.progress = 100;
 
-            // 不再调用 refreshDirectory()，由 useSftpActions 处理列表更新
-            // refreshDirectory();
 
             // 立即删除记录
             if (uploads[uploadId]) { // 确保记录仍然存在
                 delete uploads[uploadId];
             }
 
-            // 延迟后从列表中移除
-            // setTimeout(() => {
-            //      if (uploads[uploadId]?.status === 'success') {
-            //         delete uploads[uploadId];
-            //      }
-            // }, 2000); // 成功状态显示时间短一些
         } else {
             console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:success 消息: ${uploadId}`);
         }
@@ -277,10 +262,7 @@ export function useFileUploader(
         if (upload && upload.status === 'paused') {
             console.log(`[文件上传模块] 恢复上传 ${uploadId}`);
             upload.status = 'uploading';
-            // 恢复发送块（后端应该告知从哪里恢复，
-            // 但现在假设我们重新开始或后端处理了它）
-            // 更健壮的实现需要后端发送最后接收到的字节偏移量。
-            sendFileChunks(uploadId, upload.file); // 为简单起见，现在重新开始发送块
+            sendFileChunks(uploadId, upload.file);
         }
     };
 
@@ -303,7 +285,7 @@ export function useFileUploader(
         }
     };
 
-    // +++ 新增：处理上传进度更新 +++
+    // +++ 处理上传进度更新 +++
     const onUploadProgress = (payload: MessagePayload, message: WebSocketMessage) => {
         const uploadId = message.uploadId || payload?.uploadId; // 从顶层获取 uploadId
         if (!uploadId) {
@@ -316,17 +298,17 @@ export function useFileUploader(
             // payload 现在应该包含 bytesWritten 和 totalSize
             if (typeof payload?.bytesWritten === 'number' && typeof payload?.totalSize === 'number') {
                 upload.progress = Math.min(100, Math.round((payload.bytesWritten / payload.totalSize) * 100));
-                // console.debug(`[文件上传模块] 更新上传 ${uploadId} 进度: ${upload.progress}% (${payload.bytesWritten}/${payload.totalSize})`);
+                
             } else {
                 console.warn(`[文件上传模块] 收到 upload:progress 消息，但 payload 格式不正确:`, payload);
             }
         } else if (upload) {
-            // console.warn(`[文件上传模块] 收到 upload:progress 消息，但上传 ${uploadId} 状态为 ${upload.status}，不予更新。`);
+            
         } else {
             console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:progress 消息: ${uploadId}`);
         }
     };
-    // --- 结束新增 ---
+    
 
     // --- 注册处理器 ---
     const unregisterUploadReady = onMessage('sftp:upload:ready', onUploadReady);
@@ -346,7 +328,7 @@ export function useFileUploader(
         unregisterUploadPause?.();
         unregisterUploadResume?.();
         unregisterUploadCancelled?.();
-        unregisterUploadProgress?.(); // +++ 注销新处理器 +++
+        unregisterUploadProgress?.();
 
         // 当使用此 composable 的组件卸载时，取消任何正在进行的上传
         Object.keys(uploads).forEach(uploadId => {
@@ -355,12 +337,8 @@ export function useFileUploader(
     });
 
     return {
-        uploads, // 暴露响应式字典
+        uploads, 
         startFileUpload,
         cancelUpload,
-        // 如果拖放/选择处理程序要在这里管理，则暴露它们，
-        // 或者将它们保留在组件中并调用 startFileUpload。
-        // 为简单起见，假设组件处理 UI 事件
-        // 并为每个文件调用 startFileUpload(file)。
     };
 }
