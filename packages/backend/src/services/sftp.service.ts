@@ -1574,24 +1574,6 @@ export class SftpService {
                  }
             });
 
-            if (!writeSuccess) {
-                console.warn(`[SFTP Upload ${uploadId}] Write stream buffer full after chunk ${chunkIndex}. Waiting for drain is recommended for large files/slow connections.`);
-            }
-
-
-            if (!writeSuccess) {
-                // console.warn(`[SFTP Upload ${uploadId}] Write stream buffer full after chunk ${chunkIndex}. Pausing chunk processing until 'drain'.`);
-                try {
-                    await new Promise<void>(resolve => uploadState.stream.once('drain', resolve));
-                    // console.log(`[SFTP Upload ${uploadId}] Write stream drained after chunk ${chunkIndex}. Resuming chunk processing.`);
-                } catch (drainError) {
-                     // Should not happen with .once, but handle defensively
-                     console.error(`[SFTP Upload ${uploadId}] Error waiting for drain event:`, drainError);
-                     // Consider cancelling upload if waiting for drain fails critically
-                     this.cancelUploadInternal(uploadId, 'Error waiting for drain');
-                     throw drainError; // Re-throw to stop further processing in this chunk handler
-                }
-            }
 
 
             if (!writeSuccess) {
