@@ -75,7 +75,7 @@ export function useFileUploader(
 
                 // --- FIX: Update offset based on the actual chunk size that was read ---
                 offset += currentChunkSize; // Use the stored size of the slice
-                currentUpload.progress = Math.min(100, Math.round((offset / file.size) * 100));
+                // currentUpload.progress = Math.min(100, Math.round((offset / file.size) * 100)); // --- REMOVED: Optimistic progress update
 
                 if (!isLast) {
                     // 使用 requestAnimationFrame 或 nextTick 在块之间添加轻微延迟
@@ -303,6 +303,30 @@ export function useFileUploader(
         }
     };
 
+    // +++ 新增：处理上传进度更新 +++
+    const onUploadProgress = (payload: MessagePayload, message: WebSocketMessage) => {
+        const uploadId = message.uploadId || payload?.uploadId; // 从顶层获取 uploadId
+        if (!uploadId) {
+            console.warn(`[文件上传模块] 收到缺少 uploadId 的 upload:progress 消息:`, message);
+            return;
+        }
+
+        const upload = uploads[uploadId];
+        if (upload && upload.status === 'uploading') {
+            // payload 现在应该包含 bytesWritten 和 totalSize
+            if (typeof payload?.bytesWritten === 'number' && typeof payload?.totalSize === 'number') {
+                upload.progress = Math.min(100, Math.round((payload.bytesWritten / payload.totalSize) * 100));
+                // console.debug(`[文件上传模块] 更新上传 ${uploadId} 进度: ${upload.progress}% (${payload.bytesWritten}/${payload.totalSize})`);
+            } else {
+                console.warn(`[文件上传模块] 收到 upload:progress 消息，但 payload 格式不正确:`, payload);
+            }
+        } else if (upload) {
+            // console.warn(`[文件上传模块] 收到 upload:progress 消息，但上传 ${uploadId} 状态为 ${upload.status}，不予更新。`);
+        } else {
+            console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:progress 消息: ${uploadId}`);
+        }
+    };
+    // --- 结束新增 ---
 
     // --- 注册处理器 ---
     const unregisterUploadReady = onMessage('sftp:upload:ready', onUploadReady);
@@ -311,6 +335,7 @@ export function useFileUploader(
     const unregisterUploadPause = onMessage('sftp:upload:pause', onUploadPause);
     const unregisterUploadResume = onMessage('sftp:upload:resume', onUploadResume);
     const unregisterUploadCancelled = onMessage('sftp:upload:cancelled', onUploadCancelled);
+    const unregisterUploadProgress = onMessage('sftp:upload:progress', onUploadProgress); // +++ 注册新处理器 +++
 
     // --- 清理 ---
     onUnmounted(() => {
@@ -321,6 +346,7 @@ export function useFileUploader(
         unregisterUploadPause?.();
         unregisterUploadResume?.();
         unregisterUploadCancelled?.();
+        unregisterUploadProgress?.(); // +++ 注销新处理器 +++
 
         // 当使用此 composable 的组件卸载时，取消任何正在进行的上传
         Object.keys(uploads).forEach(uploadId => {

@@ -294,3 +294,10 @@ export interface SftpDecompressErrorPayload {
     details?: string; // Stderr output or specific error details
     requestId: string;
 }
+// S -> C: SFTP Upload Progress (New)
+export interface SftpUploadProgressPayload {
+    uploadId: string; // To correlate with the specific upload
+    bytesWritten: number;
+    totalSize: number;
+    progress: number; // Calculated percentage (0-100)
+}
