@@ -309,7 +309,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
             </select>
           </div>
           <span v-else-if="activeTab" class="encoding-select-placeholder">{{ t('fileManager.loadingEncoding', '加载中...') }}</span>
-          <!-- +++ 结束新增 +++ -->
+      
 
           <span v-if="currentTabSaveStatus === 'saving'" class="save-status saving">{{ t('fileManager.saving') }}...</span>
           <span v-if="currentTabSaveStatus === 'success'" class="save-status success">✅ {{ t('fileManager.saveSuccess') }}</span>
@@ -317,7 +317,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab || !currentTabIsModified" class="save-btn">
             {{ t('fileManager.actions.save') }}
           </button>
-          <!-- 关闭/最小化按钮已移除 -->
         </div>
       </div>
       <!-- 如果没有活动标签页，显示简化头部 -->
