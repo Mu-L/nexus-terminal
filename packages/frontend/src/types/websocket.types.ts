@@ -15,6 +15,17 @@ export interface WebSocketMessage {
 
 // 消息处理器函数类型
 export type MessageHandler = (payload: MessagePayload, message: WebSocketMessage) => void; // 恢复 message 参数为必需
+export interface SftpUploadProgressPayload {
+    uploadId: string; // 虽然 uploadId 在 WebSocketMessage 顶层，payload 里也包含以明确关联
+    bytesWritten: number;
+    totalSize: number;
+    progress: number; // 0-100
+}
+export interface SftpUploadProgressMessage extends WebSocketMessage {
+  type: 'sftp:upload:progress';
+  uploadId: string; // uploadId 也在顶层消息中，这里为了明确 payload 关联
+  payload: SftpUploadProgressPayload;
+}
 
 // --- SSH Suspend Mode WebSocket Message Types ---
 

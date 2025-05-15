@@ -245,7 +245,7 @@ export function initializeConnectionHandler(wss: WebSocketServer, sshSuspendServ
                                         }));
                                         console.log(`[WebSocket Handler][SSH_SUSPEND_RESUME_REQUEST] 已发送 ssh:connected 给 ${newFrontendSessionId}。`);
                                     }
-                                    // +++ 结束新增 +++
+                                
                                     
                                     const responseNotification: SshSuspendResumedNotification = { // 确保变量名不冲突且类型正确
                                         type: 'SSH_SUSPEND_RESUMED_NOTIF', // 改回与前端和新类型定义一致

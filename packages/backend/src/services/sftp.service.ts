@@ -64,6 +64,7 @@ interface ActiveUpload {
     stream: WriteStream;
     sessionId: string; // Link back to the session for cleanup
     relativePath?: string;
+    drainPromise?: Promise<void> | null; // +++ For managing drain event listeners +++
 }
 
 export class SftpService {
@@ -1489,6 +1490,7 @@ export class SftpService {
                 stream,
                 sessionId,
                 relativePath, // +++ 存储 relativePath +++
+                drainPromise: null // +++ Initialize drainPromise +++
             };
             this.activeUploads.set(uploadId, uploadState);
 
@@ -1566,61 +1568,77 @@ export class SftpService {
             const chunkBuffer = Buffer.from(dataBase64, 'base64');
             const writeSuccess = uploadState.stream.write(chunkBuffer, (err) => {
                  if (err) {
-                     // This callback handles errors specifically related to *this* write operation.
+                     
                      console.error(`[SFTP Upload ${uploadId}] Error writing chunk ${chunkIndex} to ${uploadState.remotePath}:`, err);
                      state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: `写入块 ${chunkIndex} 失败: ${err.message}` } }));
-                     // Consider cancelling the upload on write error
+                     
                      this.cancelUploadInternal(uploadId, `Write error on chunk ${chunkIndex}`);
+                 } else {
+                    
+                    uploadState.bytesWritten += chunkBuffer.length;
+
+                    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                        const progressPercent = Math.round((uploadState.bytesWritten / uploadState.totalSize) * 100);
+                        state.ws.send(JSON.stringify({
+                            type: 'sftp:upload:progress',
+                            uploadId: uploadId,
+                            payload: {
+                                bytesWritten: uploadState.bytesWritten,
+                                totalSize: uploadState.totalSize,
+                                progress: Math.min(100, progressPercent)
+                            }
+                        }));
+                    }
+                    
+
+                    
+                    if (uploadState.bytesWritten >= uploadState.totalSize) {
+                         if (!uploadState.stream.writableEnded) {
+                             uploadState.stream.end((endErr: Error & { code?: string } | undefined) => {
+                                 
+                                 const streamStateInEndCallback = uploadState?.stream;
+                                 if (endErr) {
+                                     if (endErr.code === 'ERR_STREAM_DESTROYED' && uploadState && uploadState.bytesWritten >= uploadState.totalSize) {
+                                         console.warn(`[SFTP Upload ${uploadId}] stream.end() CALLBACK reported ERR_STREAM_DESTROYED, but all bytes written. UploadId: ${uploadId}. Error:`, endErr);
+                                         console.log(`[SFTP Upload ${uploadId}] Treating ERR_STREAM_DESTROYED as non-fatal for this upload. Expecting 'close' event to finalize success for ${uploadState.remotePath}.`);
+                                     } else {
+                                         console.error(`[SFTP Upload ${uploadId}] Error from stream.end() CALLBACK for ${uploadState?.remotePath || 'unknown path'}:`, endErr);
+                                         if (state && state.ws) {
+                                             state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: `结束写入流时出错: ${endErr.message}` } }));
+                                         }
+                                         this.cancelUploadInternal(uploadId, `Stream end error: ${endErr.message}`, endErr);
+                                     }
+                                 }
+                             });
+                         }
+                    }
                  }
             });
 
-
-
             if (!writeSuccess) {
-                // console.warn(`[SFTP Upload ${uploadId}] Write stream buffer full after chunk ${chunkIndex}. Pausing chunk processing until 'drain'.`);
+                if (!uploadState.drainPromise) {
+                    uploadState.drainPromise = new Promise<void>(resolve => {
+                        uploadState.stream.once('drain', () => {
+                            
+                            uploadState.drainPromise = null; 
+                            resolve();
+                        });
+                    });
+                }
                 try {
-                    await new Promise<void>(resolve => uploadState.stream.once('drain', resolve));
-                    // console.log(`[SFTP Upload ${uploadId}] Write stream drained after chunk ${chunkIndex}. Resuming chunk processing.`);
+                    await uploadState.drainPromise;
+                    
                 } catch (drainError) {
-                     // Should not happen with .once, but handle defensively
-                     console.error(`[SFTP Upload ${uploadId}] Error waiting for drain event:`, drainError);
-                     // Consider cancelling upload if waiting for drain fails critically
-                     this.cancelUploadInternal(uploadId, 'Error waiting for drain');
-                     throw drainError; // Re-throw to stop further processing in this chunk handler
+                    console.error(`[SFTP Upload ${uploadId}] Error awaiting drain promise for chunk ${chunkIndex}:`, drainError);
+                    this.cancelUploadInternal(uploadId, 'Error waiting for drain promise');
+                    throw drainError;
                 }
             }
 
+            
+            
 
-            uploadState.bytesWritten += chunkBuffer.length;
-
-
-            // Check if upload is complete
-            if (uploadState.bytesWritten > uploadState.totalSize) {
-                 console.error(`[SFTP Upload ${uploadId}] Bytes written (${uploadState.bytesWritten}) exceeded total size (${uploadState.totalSize}) for ${uploadState.remotePath}.`);
-                 state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: '写入字节数超过文件总大小' } }));
-                 this.cancelUploadInternal(uploadId, 'Bytes written exceeded total size');
-
-            } else if (uploadState.bytesWritten >= uploadState.totalSize) {
-                 if (!uploadState.stream.writableEnded) {
-                 uploadState.stream.end((endErr: Error & { code?: string } | undefined) => { // Added code to Error type hint
-                     const streamStateInEndCallback = uploadState?.stream; // Re-fetch in case it changed
-                     if (endErr) {
-                         // Check if it's the specific ERR_STREAM_DESTROYED error and all bytes were written
-                         if (endErr.code === 'ERR_STREAM_DESTROYED' && uploadState && uploadState.bytesWritten >= uploadState.totalSize) {
-                             console.warn(`[SFTP Upload ${uploadId}] stream.end() CALLBACK reported ERR_STREAM_DESTROYED, but all bytes written. UploadId: ${uploadId}. Error:`, endErr);
-                             console.log(`[SFTP Upload ${uploadId}] Treating ERR_STREAM_DESTROYED as non-fatal for this upload. Expecting 'close' event to finalize success for ${uploadState.remotePath}.`);
-                         } else {
-                             console.error(`[SFTP Upload ${uploadId}] Error from stream.end() CALLBACK for ${uploadState?.remotePath || 'unknown path'}:`, endErr);
-                             if (state && state.ws) {
-                                 state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: `结束写入流时出错: ${endErr.message}` } }));
-                             }
-                             this.cancelUploadInternal(uploadId, `Stream end error: ${endErr.message}`, endErr);
-                         }
-                     }
-                 });
-              }
-         }
-
+            
      } catch (error: any) {
             console.error(`[SFTP Upload ${uploadId}] Error handling chunk ${chunkIndex} for ${uploadState?.remotePath}:`, error);
             state.ws.send(JSON.stringify({ type: 'sftp:upload:error', payload: { uploadId, message: `处理块 ${chunkIndex} 时出错: ${error.message}` } }));

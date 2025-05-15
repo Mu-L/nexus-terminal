@@ -520,7 +520,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
           <span v-else-if="activeTab" class="encoding-select-placeholder">{{ t('fileManager.loadingEncoding', '加载中...') }}</span>
-          <!-- +++ 结束新增 +++ -->
+    ++ -->
 
           <span v-if="currentTabSaveStatus === 'saving'" class="save-status saving">{{ t('fileManager.saving') }}...</span>
           <span v-if="currentTabSaveStatus === 'success'" class="save-status success">✅ {{ t('fileManager.saveSuccess') }}</span>
