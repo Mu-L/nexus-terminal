@@ -407,7 +407,24 @@ const handleKeyDown = (event: KeyboardEvent) => {
 .editor-actions {
     display: flex;
     align-items: center;
-    gap: 0.8rem; /* 稍微减小间距以容纳下拉菜单 */
+    gap: 0.8rem;
+}
+/* 移动端响应式调整 */
+@media (max-width: 768px) {
+  .editor-header {
+    flex-direction: column; 
+    align-items: flex-start;
+  }
+
+  .editor-header > span:first-of-type {
+    margin-bottom: 0.5rem; 
+  }
+
+  .editor-actions {
+    width: 100%; 
+    justify-content: flex-start; 
+  }
+
 }
 
 .save-btn {

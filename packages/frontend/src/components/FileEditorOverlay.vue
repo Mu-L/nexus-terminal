@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
       />
 
       <!-- 编辑器头部 (使用动态计算属性) -->
-      <div v-if="activeTab" class="editor-header">
+      <div v-if="activeTab" class="editor-header" :class="{ 'is-mobile': props.isMobile }">
         <span>
           {{ t('fileManager.editingFile') }}<template v-if="shareFileEditorTabsBoolean && currentTabSessionName">({{ currentTabSessionName }})</template>: {{ currentTabFilePath }}
           <span v-if="currentTabIsModified" class="modified-indicator">*</span>
@@ -528,11 +528,13 @@ onBeforeUnmount(() => {
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab" class="save-btn">
             {{ t('fileManager.actions.save') }}
           </button>
-          <button @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
+
+          <button v-if="!props.isMobile" @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
         </div>
+        <button v-if="props.isMobile" @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
       </div>
        <!-- 如果没有活动标签页 -->
-      <div v-else class="editor-header editor-header-placeholder">
+      <div v-else class="editor-header editor-header-placeholder" :class="{ 'is-mobile': props.isMobile }">
         <span>{{ t('fileManager.noOpenFile') }}</span>
          <button @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
       </div>
@@ -598,6 +600,7 @@ onBeforeUnmount(() => {
 }
 
 /* 移动设备上布满屏幕 */
+/* @media (max-width: 768px) 的部分样式会通过 .is-mobile 类处理 */
 @media (max-width: 768px) {
   .editor-popup {
     width: 100vw;
@@ -605,14 +608,6 @@ onBeforeUnmount(() => {
     max-width: 100%;
     max-height: 100%;
     border-radius: 0;
-  }
-  .editor-header {
-    padding: 1.5rem 2.5rem 0.5rem 1rem; /* 增加顶部内边距以确保关闭按钮可见 */
-  }
-  .editor-actions {
-    flex-wrap: wrap;
-    max-width: 100%;
-    margin-top: 1rem;
   }
 }
 
@@ -627,29 +622,48 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 标签栏区域 (FileEditorTabs 组件将放在这里) */
-/* .file-tabs-container { ... } */
 
 .editor-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   padding: 0.5rem 1rem;
   background-color: #333;
   border-bottom: 1px solid #555;
   font-size: 0.9em;
   flex-shrink: 0;
+}
+
+.editor-header.is-mobile {
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative; 
+  padding: 1.5rem 2.5rem 0.5rem 1rem;
+}
+
+.editor-header:not(.is-mobile) {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.editor-header-placeholder {
+    color: #888;
+}
+
+.editor-header-placeholder.is-mobile {
+  flex-direction: column;
+  align-items: flex-start;
   position: relative;
 }
-.editor-header-placeholder {
-    flex-direction: column;
-    align-items: flex-start;
-    color: #888;
-    position: relative;
+
+.editor-header-placeholder:not(.is-mobile) {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .modified-indicator {
-    color: #ffeb3b; /* 黄色星号表示修改 */
+    color: #ffeb3b;
     margin-left: 4px;
     font-weight: bold;
 }
@@ -661,13 +675,35 @@ onBeforeUnmount(() => {
   font-size: 1.2em;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
-  position: absolute;
-  right: 0.5rem;
-  top: 0.5rem;
-  z-index: 10;
 }
 .close-editor-btn:hover {
   color: white;
+}
+
+
+.editor-header:not(.is-mobile) .editor-actions .close-editor-btn {
+  position: static; 
+}
+
+
+.editor-header.is-mobile > .close-editor-btn {
+  position: absolute;
+  top: 1.5rem; 
+  right: 1rem; 
+  z-index: 10;
+}
+
+
+.editor-header-placeholder.is-mobile > .close-editor-btn {
+  position: absolute;
+  top: 1.5rem; 
+  right: 1rem;
+  z-index: 10;
+}
+
+
+.editor-header-placeholder:not(.is-mobile) > .close-editor-btn {
+  position: static;
 }
 
 /* 编辑器内容区域，包含加载、错误、编辑器实例 */
@@ -700,11 +736,18 @@ onBeforeUnmount(() => {
 .editor-actions {
     display: flex;
     align-items: center;
-    gap: 0.8rem; /* 稍微减小间距以容纳下拉菜单 */
+    gap: 0.8rem;
+}
+
+.editor-header.is-mobile .editor-actions {
     flex-wrap: wrap;
     max-width: 100%;
     justify-content: flex-start;
-    margin-top: 0.5rem;
+    margin-top: 1rem;
+}
+
+.editor-header:not(.is-mobile) .editor-actions {
+    margin-top: 0; 
 }
 
 .save-btn {
