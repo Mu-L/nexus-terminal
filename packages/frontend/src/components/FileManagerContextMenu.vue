@@ -24,6 +24,10 @@ const props = defineProps({
     type: Object as PropType<FileListItem | null>,
     default: null,
   },
+  selectedFileItems: { // Items currently selected in the file manager
+    type: Array as PropType<FileListItem[]>,
+    default: () => [],
+  },
   currentDirectoryPath: { // Current path of the file manager
     type: String,
     required: true,
@@ -118,33 +122,46 @@ const handleItemClick = (item: ContextMenuItem) => {
 };
 
 const handleSendToClick = () => {
-  if (props.activeContextItem) {
+  const itemsToSend: { name: string; path: string; type: 'file' | 'directory' }[] = [];
+
+  // 优先使用多选的项目
+  if (props.selectedFileItems && props.selectedFileItems.length > 0) {
+    props.selectedFileItems.forEach(item => {
+      const type = item.attrs.isDirectory ? 'directory' : 'file';
+      let fullPath = props.currentDirectoryPath;
+      if (!fullPath.endsWith('/')) {
+        fullPath += '/';
+      }
+      fullPath += item.filename;
+      fullPath = fullPath.replace(/(?<!:)\/\//g, '/'); // Normalize path
+
+      itemsToSend.push({
+        name: item.filename,
+        path: fullPath,
+        type: type,
+      });
+    });
+  } else if (props.activeContextItem) { // 如果没有多选项目，则使用右键点击的单个项目
     const item = props.activeContextItem;
     const type = item.attrs.isDirectory ? 'directory' : 'file';
-    // Ensure path is constructed correctly, assuming currentDirectoryPath ends with / or is root '/'
-    // And filename does not start with /
     let fullPath = props.currentDirectoryPath;
     if (!fullPath.endsWith('/')) {
       fullPath += '/';
     }
     fullPath += item.filename;
-    
-    // Normalize path to remove any double slashes, except for protocol like sftp://
-    fullPath = fullPath.replace(/(?<!:)\/\//g, '/');
+    fullPath = fullPath.replace(/(?<!:)\/\//g, '/'); // Normalize path
 
-
-    itemsToSendData.value = [{
+    itemsToSend.push({
       name: item.filename,
       path: fullPath,
       type: type,
-    }];
-  } else {
-    // No specific item clicked, perhaps send selected items? Or disable "Send To"?
-    // For now, sending an empty array if no activeContextItem.
-    // This scenario should ideally be handled by disabling the "Send to..." option
-    // if no item is targeted or no selection is made that can be sent.
-    itemsToSendData.value = [];
+    });
   }
+  // else {
+    // 如果两者都为空，itemsToSend 将保持为空数组
+  // }
+
+  itemsToSendData.value = itemsToSend;
   showSendFilesModal.value = true;
   emit('close-request');
 };
