@@ -679,7 +679,14 @@ export class TransfersService {
     const task = this.transferTasks.get(taskId);
     console.debug(`[TransfersService] Retrieving details for task: ${taskId} for user: ${userId}`);
     if (task && task.userId === userId) {
-      return { ...task, subTasks: task.subTasks.map(st => ({...st})) }; // Return copies
+      // Spread the task, then explicitly add top-level fields from payload
+      const taskToReturn = {
+        ...task,
+        subTasks: task.subTasks.map(st => ({ ...st })),
+        sourceConnectionId: task.payload.sourceConnectionId,
+        remoteTargetPath: task.payload.remoteTargetPath,
+      };
+      return taskToReturn;
     }
     if (task && task.userId !== userId) {
         console.warn(`[TransfersService] User ${userId} attempted to access task ${taskId} owned by ${task.userId}.`);
@@ -692,7 +699,15 @@ export class TransfersService {
     console.debug(`[TransfersService] Retrieving all transfer tasks for user: ${userId}.`);
     return Array.from(this.transferTasks.values())
       .filter(task => task.userId === userId)
-      .map(task => ({ ...task, subTasks: task.subTasks.map(st => ({...st})) })); // Return copies
+      .map(task => {
+        // Spread the task, then explicitly add top-level fields from payload
+        return {
+          ...task,
+          subTasks: task.subTasks.map(st => ({ ...st })),
+          sourceConnectionId: task.payload.sourceConnectionId,
+          remoteTargetPath: task.payload.remoteTargetPath,
+        };
+      });
   }
 
   public updateSubTaskStatus(

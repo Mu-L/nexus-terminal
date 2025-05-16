@@ -1,8 +1,9 @@
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'; // Added computed
 import { useI18n } from 'vue-i18n';
 import apiClient from '../utils/apiClient';
+import { useConnectionsStore } from '../stores/connections.store'; // 请确认此路径是否正确
 
 interface Props {
   visible: boolean;
@@ -11,6 +12,38 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['update:visible']);
 const { t } = useI18n();
+const connectionsStore = useConnectionsStore();
+
+// Helper function to get connection name by ID
+// 注意: 此函数假设 'connectionsStore.connections' 是一个包含连接对象的数组，
+// 每个对象至少有 'id' 和 'name' 属性。请根据实际 store 结构调整。
+const getConnectionName = (connectionId: number): string => {
+  const connection = connectionsStore.connections?.find((c: any) => c.id === connectionId);
+  if (connection && connection.name) {
+    return connection.name;
+  }
+  return `连接ID: ${connectionId}`; // 未找到连接或名称时的回退显示
+};
+
+// Helper function to format the task title
+const formatTaskTitle = (task: TransferTask): string => {
+  const fileName = (task.subTasks && task.subTasks.length > 0)
+    ? task.subTasks[0].sourceItemName
+    : "[文件名未知]";
+  
+  const sourceServerName = task.sourceConnectionId
+    ? getConnectionName(task.sourceConnectionId)
+    : "[源服务器名]"; // 占位符，如果 sourceConnectionId 未提供
+    
+  const targetPath = task.remoteTargetPath || "[目标路径]"; // 占位符，如果 remoteTargetPath 未提供
+
+  // 如果 sourceConnectionId, remoteTargetPath 都未提供，且没有子任务（无法获取文件名），则退回显示原始任务ID
+  if (!task.sourceConnectionId && !task.remoteTargetPath && (!task.subTasks || task.subTasks.length === 0)) {
+    return `任务ID: ${task.taskId}`;
+  }
+  
+  return `${sourceServerName} (${fileName} -> ${targetPath})`;
+};
 
 // --- 新增：文件传输相关 ---
 
@@ -32,12 +65,27 @@ interface TransferTask {
   updatedAt: string | Date;
   subTasks: TransferSubTask[];
   overallProgress?: number;
+  sourceConnectionId?: number; // 新增：源连接ID (可选)
+  remoteTargetPath?: string;   // 新增：目标路径 (可选)
 }
 
 const transferTasks = ref<TransferTask[]>([]);
 const isLoading = ref(false);
 const errorLoading = ref<string | null>(null);
 const pollingIntervalId = ref<number | null>(null);
+
+// Computed property for sorted and limited tasks
+const displayedTasks = computed(() => {
+  // Create a new array to avoid mutating the original transferTasks ref directly during sort
+  return [...transferTasks.value]
+    .sort((a, b) => {
+      // Ensure createdAt is treated as a Date object for comparison
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime(); // For descending order (newest first)
+    })
+    .slice(0, 5); // Limit to the 5 newest tasks
+});
 
 const fetchTransferTasks = async () => {
   isLoading.value = true;
@@ -166,10 +214,10 @@ const handleClose = () => {
           {{ t('transferProgressModal.noTasks', '当前没有活动的传输任务。') }}
         </div>
         <div v-else class="space-y-3">
-          <div v-for="task in transferTasks" :key="task.taskId" class="bg-background-alt p-3 rounded-lg border border-border-alt shadow-sm hover:shadow-md transition-shadow">
+          <div v-for="task in displayedTasks" :key="task.taskId" class="bg-background-alt p-3 rounded-lg border border-border-alt shadow-sm hover:shadow-md transition-shadow">
             <div class="flex justify-between items-start mb-2">
               <div>
-                <span class="font-semibold text-md block">{{ t('transferProgressModal.task.idLabel', '任务') }}: {{ task.taskId }}</span>
+                <span class="font-semibold text-md block">{{ t('transferProgressModal.task.idLabel', '任务') }}: {{ formatTaskTitle(task) }}</span>
                 <span class="text-xs text-text-muted">{{ t('transferProgressModal.task.createdAt', '创建于') }}: {{ formatDate(task.createdAt) }}</span>
               </div>
               <span :class="['px-2.5 py-1 text-xs font-semibold rounded-full',
@@ -200,7 +248,7 @@ const handleClose = () => {
               <ul class="mt-2 space-y-1.5 pl-3 border-l border-border-alt ml-1">
                 <li v-for="subTask in task.subTasks" :key="subTask.subTaskId" class="text-xs p-1.5 rounded bg-background border border-border-alt/50">
                   <p><strong>{{ t('transferProgressModal.subTask.source', '源文件') }}:</strong> {{ subTask.sourceItemName }}</p>
-                  <p><strong>{{ t('transferProgressModal.subTask.connectionId', '目标连接') }}:</strong> {{ subTask.connectionId }}</p>
+                  <p><strong>{{ t('transferProgressModal.subTask.connectionId', '目标连接') }}:</strong> {{ getConnectionName(subTask.connectionId) }}</p>
                   <p><strong>{{ t('transferProgressModal.subTask.status', '状态') }}:</strong> {{ getDisplayStatus(subTask.status) }}
                     <span v-if="subTask.progress !== undefined"> ({{ subTask.progress }}%)</span>
                   </p>
