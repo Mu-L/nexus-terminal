@@ -214,7 +214,7 @@ const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
 
  // --- 本地方法 (仅处理 UI 状态) ---
  const handleRequestAddConnection = () => {
-   console.log('[WorkspaceView] handleRequestAddConnection 被调用！'); // 添加日志确认事件到达
+   console.log('[WorkspaceView] handleRequestAddConnection 被调用！');
    connectionToEdit.value = null;
    showAddEditForm.value = true;
  };

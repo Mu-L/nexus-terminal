@@ -235,9 +235,9 @@ export const useAppearanceStore = defineStore('appearance', () => {
      * @param enabled 是否启用
      */
     async function setTerminalBackgroundEnabled(enabled: boolean) {
-        console.log(`[AppearanceStore LOG] setTerminalBackgroundEnabled 调用，准备发送给后端的值: ${enabled}`); // 添加日志
+        console.log(`[AppearanceStore LOG] setTerminalBackgroundEnabled 调用，准备发送给后端的值: ${enabled}`);
         await updateAppearanceSettings({ terminalBackgroundEnabled: enabled });
-        console.log(`[AppearanceStore LOG] setTerminalBackgroundEnabled 更新后端调用完成。`); // 添加日志
+        console.log(`[AppearanceStore LOG] setTerminalBackgroundEnabled 更新后端调用完成。`); 
     }
  
     /**

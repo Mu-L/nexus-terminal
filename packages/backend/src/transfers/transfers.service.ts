@@ -1,19 +1,17 @@
-import * as fs from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid'; // 用于生成唯一ID
+import { v4 as uuidv4 } from 'uuid'; 
 import { Client, ConnectConfig, SFTPWrapper } from 'ssh2';
 import { InitiateTransferPayload, TransferTask, TransferSubTask } from './transfers.types';
 import { getConnectionWithDecryptedCredentials } from '../services/connection.service';
 import type { ConnectionWithTags, DecryptedConnectionCredentials } from '../types/connection.types';
-// import { logger } from '../utils/logger'; // 假设的日志工具路径
+
 
 export class TransfersService {
   private transferTasks: Map<string, TransferTask> = new Map();
   private taskAbortControllers: Map<string, AbortController> = new Map(); // +++ 用于存储任务的 AbortController +++
   private readonly TEMP_KEY_PREFIX = 'nexus_target_key_';
-  private readonly MAX_CONCURRENT_SUB_TASKS = 5; // Maximum concurrent sub-tasks
+  private readonly MAX_CONCURRENT_SUB_TASKS = 5; 
 
   constructor() {
     console.info('[TransfersService] Initialized.');
@@ -23,8 +21,8 @@ export class TransfersService {
     const taskId = uuidv4();
     const now = new Date();
     const subTasks: TransferSubTask[] = [];
-    const abortController = new AbortController(); // +++ 创建 AbortController +++
-    this.taskAbortControllers.set(taskId, abortController); // +++ 存储 AbortController +++
+    const abortController = new AbortController(); 
+    this.taskAbortControllers.set(taskId, abortController); 
 
     // 每个 (目标服务器, 源文件) 组合都是一个子任务
     for (const connectionId of payload.connectionIds) { // 目标服务器ID列表
@@ -91,10 +89,6 @@ export class TransfersService {
         }
       });
       
-      // 确保在 AbortController Map 中移除，以防内存泄漏（如果任务不再处理）
-      // 也可以在任务彻底结束后移除
-      // this.taskAbortControllers.delete(taskId); // 暂时不在这里删除，可能在 processTransferTask 的 finally 中
-
       return true;
     }
     console.warn(`[TransfersService] No AbortController found for task ${taskId} to cancel.`);
@@ -299,7 +293,6 @@ export class TransfersService {
               });
             subTaskExecutionPromises.push(taskPromise);
           }
-          // If all tasks were launched and some are still active, or if all tasks were skipped due to early cancellation
           if (currentSubTaskIndex === totalSubTasks && currentlyActiveSubTasks === 0 && !signal.aborted) {
              console.info(`[TransfersService] Task ${taskId}: All sub-tasks processed (no active, no more to launch).`);
              signal.removeEventListener('abort', onAbortOverall);
@@ -343,7 +336,7 @@ export class TransfersService {
         }
       }
       this.finalizeOverallTaskStatus(taskId); // Ensure final status is set
-      this.taskAbortControllers.delete(taskId); // +++ Clean up AbortController +++
+      this.taskAbortControllers.delete(taskId); 
       if (task) { // task 可能未定义如果 taskId 错误
         console.info(`[TransfersService] Task ${taskId} processing finished. Final status: ${task.status}.`);
       } else {
@@ -355,10 +348,8 @@ export class TransfersService {
   private async checkCommandOnSource(client: Client, command: string): Promise<string | null> {
     return new Promise((resolve) => {
       const checkCmd = `command -v ${this.escapeShellArg(command)} 2>/dev/null`;
-      console.error(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Executing: ${checkCmd}`);
       client.exec(checkCmd, (err, stream) => {
         if (err) {
-          console.warn(`[Roo Debug][transfers.service.ts] Error checking for command '${command}' on source:`, err);
           return resolve(null);
         }
         let stdout = '';
@@ -367,15 +358,12 @@ export class TransfersService {
           .on('close', (code: number) => {
             const foundPath = stdout.trim();
             if (code === 0 && foundPath) {
-              console.error(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Command '${command}' found at '${foundPath}'.`);
               resolve(foundPath);
             } else {
-              console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Command '${command}' not found (exit code: ${code}).`);
               resolve(null);
             }
           })
-          .stderr.on('data', (data: Buffer) => { // Should be empty due to 2>/dev/null, but good to have
-            console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnSource: STDERR for '${command}': ${data.toString()}`);
+          .stderr.on('data', (data: Buffer) => { 
           });
       });
     });
@@ -386,7 +374,6 @@ export class TransfersService {
     const connectConfig = this.buildSshConnectConfig(targetConnection, targetCredentials);
     let foundCommandPath: string | null = null;
 
-    console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Attempting to connect to target ${targetConnection.host} to check for command '${command}'.`);
 
     try {
       await new Promise<void>((resolve, reject) => {
@@ -407,10 +394,8 @@ export class TransfersService {
 
       foundCommandPath = await new Promise((resolve) => {
         const checkCmd = `command -v ${this.escapeShellArg(command)} 2>/dev/null`;
-        console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Executing on target: ${checkCmd}`);
         targetClient.exec(checkCmd, (err, stream) => {
           if (err) {
-            console.warn(`[Roo Debug][transfers.service.ts] Error checking for command '${command}' on target ${targetConnection.host}:`, err);
             return resolve(null);
           }
           let stdout = '';
@@ -419,20 +404,16 @@ export class TransfersService {
             .on('close', (code: number) => {
               const pathOutput = stdout.trim();
               if (code === 0 && pathOutput) {
-                console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Command '${command}' found at '${pathOutput}' on target ${targetConnection.host}.`);
                 resolve(pathOutput);
               } else {
-                console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Command '${command}' not found on target ${targetConnection.host} (exit code: ${code}).`);
                 resolve(null);
               }
             })
             .stderr.on('data', (data: Buffer) => {
-              console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: STDERR for '${command}' on target ${targetConnection.host}: ${data.toString()}`);
             });
         });
       });
     } catch (error) {
-      console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Failed to check command '${command}' on target ${targetConnection.host}:`, error);
       foundCommandPath = null; // Ensure it's null on error
     } finally {
       targetClient.end();
@@ -441,7 +422,6 @@ export class TransfersService {
   }
  
   private async uploadKeyToSourceViaSftp(client: Client, privateKeyContent: string, remotePath: string): Promise<void> {
-    console.error(`[Roo Debug][transfers.service.ts] ENTERING uploadKeyToSourceViaSftp for remotePath: ${remotePath}`);
     const SFTP_UPLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for SFTP key upload
 
     return new Promise((resolve, reject) => {
@@ -450,8 +430,6 @@ export class TransfersService {
 
       const cleanupAndReject = (errMsg: string, errObj?: any) => {
         if (timeoutHandle) clearTimeout(timeoutHandle);
-        if (errObj) console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp error: ${errMsg}`, errObj);
-        else console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp error: ${errMsg}`);
         sftpSession?.end();
         reject(new Error(errMsg));
       };
@@ -460,7 +438,6 @@ export class TransfersService {
         cleanupAndReject(`SFTP upload to ${remotePath} timed out after ${SFTP_UPLOAD_TIMEOUT_MS / 1000}s.`);
       }, SFTP_UPLOAD_TIMEOUT_MS);
 
-      console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Calling client.sftp(). Timeout set for ${SFTP_UPLOAD_TIMEOUT_MS}ms.`);
       client.sftp((err, sftp) => {
         sftpSession = sftp; // Store session for potential cleanup
         if (err) {
@@ -469,7 +446,6 @@ export class TransfersService {
         if (!sftp) {
           return cleanupAndReject(`SFTP session error: SFTP object is null.`);
         }
-        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: client.sftp() CALLBACK success. SFTP session obtained. Creating write stream to ${remotePath}`);
         const stream = sftp.createWriteStream(remotePath, { mode: 0o600 });
         
         stream.on('error', (writeErr: Error) => {
@@ -479,19 +455,13 @@ export class TransfersService {
         // Listen to 'close' instead of 'finish' for more reliability
         stream.on('close', () => {
           if (timeoutHandle) clearTimeout(timeoutHandle);
-          console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: WriteStream ON CLOSE for ${remotePath}. Key upload likely successful.`);
           console.info(`[TransfersService] Private key for target successfully uploaded to source at ${remotePath}`);
           sftp.end();
           resolve();
         });
  
-        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Previewing privateKeyContent before stream.end(). Length: ${privateKeyContent.length}`);
-        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Key content START: <<<${privateKeyContent.substring(0, 70)}>>>`);
-        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Key content END: <<<${privateKeyContent.substring(Math.max(0, privateKeyContent.length - 70))}>>>`);
-        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Calling stream.end() to write key content.`);
         let keyContentToWrite = privateKeyContent;
         if (!keyContentToWrite.endsWith('\n')) {
-          console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: privateKeyContent does not end with a newline. Appending one.`);
           keyContentToWrite += '\n';
         }
         stream.end(keyContentToWrite);
@@ -544,8 +514,7 @@ export class TransfersService {
       commandParts.push(options.sshPassCommand);
     }
  
-    // Use the full path here (should be safe, no special chars from command -v)
-    // Arguments will still be quoted later.
+
     commandParts.push(executableCommand);
  
     if (commandType === 'rsync') {
@@ -568,12 +537,6 @@ export class TransfersService {
       commandParts.push(remoteFullDest);
  
     } else { // scp
-      // For scp, SSH options are typically passed directly if scp is a wrapper around ssh, or via scp's own options that map to ssh options.
-      // Common scp implementations accept -P for port and -i for identity file directly.
-      // StrictHostKeyChecking and UserKnownHostsFile are ssh options.
-      // We build the ssh part for scp separately if needed, or rely on scp passing -o options.
-      // Let's assume scp will pass these -o options to its underlying ssh call.
-      // If not, a more complex construction of scp's ssh command via -S might be needed.
       commandParts.push('-o StrictHostKeyChecking=no'); // For scp, pass as direct option
       commandParts.push('-o UserKnownHostsFile=/dev/null'); // For scp, pass as direct option
       if (isDir) commandParts.push('-r');
@@ -601,14 +564,12 @@ private async executeRemoteTransferOnSource(
   transferMethodPreference: 'auto' | 'rsync' | 'scp',
   signal: AbortSignal // +++ Add AbortSignal parameter +++
 ): Promise<void> {
-  console.error(`[Roo Debug][transfers.service.ts] ENTERING executeRemoteTransferOnSource for sub-task ${subTaskId}, item: ${sourceItem.name}`);
   if (signal.aborted) throw new DOMException('Transfer cancelled by user.', 'AbortError');
   this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 0, `Initializing remote transfer for ${sourceItem.name}`);
   let tempTargetKeyPathOnSource: string | undefined;
 
     try {
       if (signal.aborted) throw new DOMException('Transfer cancelled by user.', 'AbortError');
-      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Starting try block in executeRemoteTransferOnSource.`);
       // Pass signal to these check commands if they are made to support it. For now, they are quick.
       const sshpassPath = await this.checkCommandOnSource(sourceSshClient, 'sshpass' /*, signal */);
       if (signal.aborted) throw new DOMException('Transfer cancelled by user.', 'AbortError');
@@ -617,7 +578,6 @@ private async executeRemoteTransferOnSource(
       const scpPathOnSource = await this.checkCommandOnSource(sourceSshClient, 'scp' /*, signal */);
       if (signal.aborted) throw new DOMException('Transfer cancelled by user.', 'AbortError');
 
-      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Source checks -> sshpass: ${sshpassPath}, rsync: ${rsyncPathOnSource}, scp: ${scpPathOnSource}`);
 
       let executableCommandPath: string | null = null;
       let commandTypeForLogic: 'rsync' | 'scp' | undefined = undefined; // Initialize as undefined
@@ -626,7 +586,6 @@ private async executeRemoteTransferOnSource(
       if (transferMethodPreference === 'auto') {
         if (rsyncPathOnSource) {
           // Source has rsync, check target
-          console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: 'auto' mode, rsync found on source. Checking target...`);
           rsyncPathOnTarget = await this.checkCommandOnTargetServer(targetConnection, targetCredentials, 'rsync' /*, signal */);
           if (signal.aborted) throw new DOMException('Transfer cancelled by user.', 'AbortError');
           if (rsyncPathOnTarget) {
@@ -677,7 +636,6 @@ private async executeRemoteTransferOnSource(
 
       // +++ 自动创建目标目录 +++
       this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 6, `Ensuring target directory ${this.escapeShellArg(remoteTargetPathOnTarget)} exists on ${targetConnection.host}.`);
-      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Ensuring target directory exists: ${remoteTargetPathOnTarget} on ${targetConnection.host}`);
       const targetClientForMkdir = new Client();
       const targetConnectConfigForMkdir = this.buildSshConnectConfig(targetConnection, targetCredentials);
       try {
@@ -685,8 +643,8 @@ private async executeRemoteTransferOnSource(
         await new Promise<void>((resolveMkdir, rejectMkdir) => {
           let mkdirStreamClosed = false;
           const onAbortMkdir = () => {
-            if (!mkdirStreamClosed) { // Only if stream/connection is still active
-                targetClientForMkdir.end(); // Attempt to close the connection
+            if (!mkdirStreamClosed) { 
+                targetClientForMkdir.end();
             }
             rejectMkdir(new DOMException('Mkdir operation cancelled by user.', 'AbortError'));
           };
@@ -699,7 +657,6 @@ private async executeRemoteTransferOnSource(
               return rejectMkdir(new DOMException('Mkdir operation cancelled by user (on ready).', 'AbortError'));
             }
             const mkdirCommand = `mkdir -p ${this.escapeShellArg(remoteTargetPathOnTarget)}`;
-            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Executing on target for mkdir: ${mkdirCommand}`);
             targetClientForMkdir.exec(mkdirCommand, (err, stream) => {
               if (err) {
                 signal.removeEventListener('abort', onAbortMkdir);
@@ -718,11 +675,9 @@ private async executeRemoteTransferOnSource(
                   rejectMkdir(new Error(`Failed to create directory ${remoteTargetPathOnTarget} on ${targetConnection.host}. Exit code: ${code}. Stderr: ${mkdirStderr.trim()}`));
                 }
               }).on('data', (data: Buffer) => {
-                // stdout from mkdir -p is usually empty
               }).stderr.on('data', (data: Buffer) => {
                 mkdirStderr += data.toString();
-                console.warn(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: STDERR (mkdir on target): ${data.toString()}`);
-              }).on('error', (streamErr: Error) => { // Handle stream errors specifically
+              }).on('error', (streamErr: Error) => { 
                 mkdirStreamClosed = true;
                 signal.removeEventListener('abort', onAbortMkdir);
                 targetClientForMkdir.end();
@@ -731,11 +686,9 @@ private async executeRemoteTransferOnSource(
             });
           }).on('error', (connErr: Error) => {
             signal.removeEventListener('abort', onAbortMkdir);
-            // targetClientForMkdir.end(); // .end() might not be needed if 'close' always follows 'error'
             rejectMkdir(connErr);
-          }).on('close', () => { // This 'close' is for the client connection itself
-            signal.removeEventListener('abort', onAbortMkdir); // Ensure cleanup if closed for other reasons
-            // console.info(`[TransfersService] SSH connection for mkdir to target ${targetConnection.host} closed.`);
+          }).on('close', () => { 
+            signal.removeEventListener('abort', onAbortMkdir); 
           }).connect(targetConnectConfigForMkdir);
         });
 
@@ -743,17 +696,14 @@ private async executeRemoteTransferOnSource(
         this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 8, `Target directory ensured. Preparing transfer command.`);
 
       } catch (mkdirError: any) {
-        // Ensure client is closed on error if it's still somehow connected
-        // (though on 'error' or exec stream 'close'/'error', it should be handled)
         if (targetClientForMkdir && (targetClientForMkdir as any)._sock && !(targetClientForMkdir as any)._sock.destroyed) {
              try { targetClientForMkdir.end(); } catch (e) { /* ignore */ }
         }
         console.error(`[TransfersService] Sub-task ${subTaskId}: Failed to ensure target directory ${remoteTargetPathOnTarget} on ${targetConnection.host}:`, mkdirError.message);
         if (mkdirError.name === 'AbortError') {
              this.updateSubTaskStatus(taskId, subTaskId, 'cancelled', undefined, `Directory creation cancelled: ${mkdirError.message}`);
-             throw mkdirError; // Re-throw AbortError to be handled by the main try-catch
+             throw mkdirError; 
         }
-        // For other errors, update status to failed and throw a new error to be caught by main try-catch
         this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, `Failed to create target directory: ${mkdirError.message}`);
         throw new Error(`Failed to create target directory ${remoteTargetPathOnTarget}: ${mkdirError.message}`); // This will be caught by the outer try-catch
       }
@@ -792,10 +742,6 @@ private async executeRemoteTransferOnSource(
         const onAbortCmd = () => {
           if (!streamClosed) {
             console.warn(`[TransfersService] Abort signal received for command stream of sub-task ${subTaskId}. Attempting to close stream.`);
-            // execStream?.close(); // 'execStream' is not defined here, should be 'stream' from exec callback
-            // It's tricky to access the stream here to close it directly.
-            // The main mechanism will be the timeout and the client connection eventually closing if task is aborted.
-            // Or, if ssh2's stream object can be made available to this scope, call .close() or .destroy().
           }
           rejectCmd(new DOMException('Command cancelled by user.', 'AbortError'));
         };
@@ -840,7 +786,6 @@ private async executeRemoteTransferOnSource(
           stream.stderr.on('data', (data: Buffer) => {
             if (signal.aborted) return;
             stderrCombined += data.toString();
-            console.warn(`[Roo Debug][transfers.service.ts] STDERR Sub-task ${subTaskId}: ${data.toString()}`);
           });
           stream.on('close', (code: number | null) => {
             streamClosed = true;
@@ -882,7 +827,6 @@ private async executeRemoteTransferOnSource(
       }
       throw error; // Re-throw to be caught by processSingleSubTaskWrapper
     } finally {
-      console.info(`[Roo Debug][transfers.service.ts] executeRemoteTransferOnSource FINALLY for sub-task ${subTaskId}`);
       if (tempTargetKeyPathOnSource) {
         try {
           // TODO: Make deleteFileOnSourceViaSftp accept signal
@@ -1001,7 +945,6 @@ private async executeRemoteTransferOnSource(
 
     if (numSubTasks === 0) {
       task.overallProgress = 0;
-      // task.status remains as set by initiate or direct updateOverallTaskStatus if no subtasks.
       return;
     }
 
@@ -1013,12 +956,9 @@ private async executeRemoteTransferOnSource(
           break;
         case 'failed':
           failedCount++;
-          // Failed tasks are "done" but contribute 0 to success progress.
-          // Depending on definition, they could count as 100 for task "completion" progress.
-          // Here, only successful completion adds to progress towards 100%.
           break;
         case 'transferring':
-        case 'connecting': // consider connecting as in-progress for overall status
+        case 'connecting': 
           inProgressCount++;
           totalProgress += (st.progress !== undefined ? st.progress : (st.status === 'connecting' ? 5 : 0)); // Small progress for connecting
           break;
@@ -1043,8 +983,6 @@ private async executeRemoteTransferOnSource(
     } else if (queuedCount === numSubTasks) {
       newOverallStatus = 'queued'; // All subtasks are still queued
     } else {
-      // Fallback or unexpected mixed state, treat as in-progress generally
-      // This case implies some completed, some queued, no failed, no in-progress items.
       newOverallStatus = 'in-progress'; // Or 'partially-completed' if completedCount > 0
       if (completedCount > 0 && queuedCount > 0 && failedCount === 0 && inProgressCount === 0) {
         newOverallStatus = 'partially-completed'; // More accurate for this specific mix
@@ -1056,7 +994,6 @@ private async executeRemoteTransferOnSource(
         task.status = newOverallStatus;
     }
     task.updatedAt = new Date();
-    // console.debug(`[TransfersService] Task ${taskId} overall progress: ${task.overallProgress}%, status: ${task.status}`);
   }
 
   private finalizeOverallTaskStatus(taskId: string): void {

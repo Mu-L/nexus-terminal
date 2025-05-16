@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import WorkspaceConnectionListComponent from './WorkspaceConnectionList.vue';
 import TabBarContextMenu from './TabBarContextMenu.vue';
-import TransferProgressModal from './TransferProgressModal.vue'; // 导入传输进度模态框
+import TransferProgressModal from './TransferProgressModal.vue';
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
@@ -15,7 +15,7 @@ import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber, useWorkspaceEven
 import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
 
-const { t } = useI18n(); // 初始化 i18n
+const { t } = useI18n();
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const onWorkspaceEvent = useWorkspaceEventSubscriber(); // +++ 获取事件订阅器 +++
 const offWorkspaceEvent = useWorkspaceEventOff(); // +++ 获取事件取消订阅器 +++

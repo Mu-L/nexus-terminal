@@ -65,8 +65,8 @@ interface TransferTask {
   updatedAt: string | Date;
   subTasks: TransferSubTask[];
   overallProgress?: number;
-  sourceConnectionId?: number; // 新增：源连接ID (可选)
-  remoteTargetPath?: string;   // 新增：目标路径 (可选)
+  sourceConnectionId?: number; 
+  remoteTargetPath?: string; 
 }
 
 const transferTasks = ref<TransferTask[]>([]);
@@ -133,8 +133,8 @@ const getDisplayStatus = (status: string): string => {
     'partially-completed': 'transferProgressModal.status.partiallyCompleted',
     'connecting': 'transferProgressModal.status.connecting',
     'transferring': 'transferProgressModal.status.transferring',
-    'cancelling': 'transferProgressModal.status.cancelling', // +++ 新增状态翻译键 +++
-    'cancelled': 'transferProgressModal.status.cancelled',   // +++ 新增状态翻译键 +++
+    'cancelling': 'transferProgressModal.status.cancelling',
+    'cancelled': 'transferProgressModal.status.cancelled', 
   };
   // 提供一个默认的回退文本，以防i18n key缺失
   const defaultText = status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ');
@@ -150,7 +150,7 @@ const formatDate = (dateInput: string | Date): string => {
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
   } catch (e) {
-    return String(dateInput); // Fallback if date is invalid
+    return String(dateInput); 
   }
 };
 
@@ -185,7 +185,7 @@ watch(() => props.visible, (newVisible) => {
   }
 }, { immediate: false }); // immediate: false 避免在组件初始化时立即执行，onMounted已处理首次加载
 
-// --- 原有：模态框可见性控制 ---
+// --- 模态框可见性控制 ---
 const internalVisible = ref(props.visible);
 
 // 监听 props.visible 的变化来更新 internalVisible
@@ -221,17 +221,10 @@ const handleCancelTask = async (taskId: string) => {
     // 更新UI，将任务状态临时设置为 'cancelling' 或禁用按钮
     const task = transferTasks.value.find(t => t.taskId === taskId);
     if (task) {
-      // 优选: 如果后端会快速更新状态并通过轮询反映, 前端可能不需要立即改变状态。
-      // 否则, 可以临时改变: task.status = 'cancelling';
-      // 另一种方法是添加一个 loading 状态到按钮上
+
     }
 
     await apiClient.post(`/transfers/cancel/${taskId}`);
-    // 可以添加成功提示
-    // uiNotificationsStore.showSuccess(t('transferProgressModal.cancelRequested', '已发送终止请求。'));
-
-    // 前端优化：立即将任务状态设置为 'cancelling' 以提供即时反馈
-    // 这样用户点击后能马上看到状态变为“终止中”，后续轮询会从后端获取权威状态。
     const taskBeingCancelled = transferTasks.value.find(t => t.taskId === taskId);
     if (taskBeingCancelled && ['queued', 'in-progress', 'connecting', 'transferring'].includes(taskBeingCancelled.status)) {
       taskBeingCancelled.status = 'cancelling';
@@ -241,8 +234,6 @@ const handleCancelTask = async (taskId: string) => {
     fetchTransferTasks();
   } catch (error: any) {
     console.error(`Failed to cancel task ${taskId}:`, error);
-    // uiNotificationsStore.showError(error.response?.data?.message || error.message || t('transferProgressModal.error.cancelFailed', '终止任务失败。'));
-    // 如果任务状态之前被临时修改，可能需要回滚
   }
 };
 

@@ -28,7 +28,7 @@ const initialFormData = {
   port: 1080, // 默认 SOCKS5 端口
   username: '',
   password: '',
-  tag_ids: [] as number[], // 新增 tag_ids 字段
+  tag_ids: [] as number[], 
 };
 const formData = reactive({ ...initialFormData });
 

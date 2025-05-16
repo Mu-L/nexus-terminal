@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, type PropType, onUnmounted, computed } from 'vue'; // Added watch, nextTick, computed
+import { ref, watch, nextTick, type PropType, onUnmounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import SendFilesModal from './SendFilesModal.vue';
 import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu';
-import type { FileListItem } from '../types/sftp.types'; // Import FileListItem
+import type { FileListItem } from '../types/sftp.types';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
-import { useSessionStore } from '../stores/session.store'; // +++ 导入 session store +++
+import { useSessionStore } from '../stores/session.store';
 
 const props = defineProps({
   isVisible: {

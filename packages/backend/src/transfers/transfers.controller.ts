@@ -44,7 +44,6 @@ export class TransfersController {
       res.status(202).json(task); // 202 Accepted 表示请求已接受处理，但尚未完成
     } catch (error) {
       console.error('[TransfersController] Error initiating transfer:', error);
-      // next(error) 可以将错误传递给全局错误处理中间件
       res.status(500).json({ message: 'Failed to initiate transfer.', error: error instanceof Error ? error.message : String(error) });
     }
   }

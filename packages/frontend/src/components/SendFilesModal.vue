@@ -210,11 +210,6 @@ const getGroupId = (group: GroupedConnection): string => {
 
 const toggleTagGroupExpansion = (group: GroupedConnection) => {
   const groupId = getGroupId(group);
-  // If state is undefined, default to true (expanded), then toggle it.
-  // So, if undefined, it becomes !(true) = false. If defined, it's just toggled.
-  // To make it default to expanded and then collapse on first click:
-  // expandedTagGroups.value[groupId] = !(expandedTagGroups.value[groupId] ?? true);
-  // To make it default to collapsed and then expand on first click (if true means expanded):
     expandedTagGroups.value[groupId] = !(expandedTagGroups.value[groupId] ?? true);
   };
   
@@ -276,8 +271,6 @@ const groupedConnections = computed<GroupedConnection[]>(() => {
             groups[tag.id].connections.push(conn);
           }
         } else {
-          // Connection has a tag ID that doesn't exist in tagsStore, treat as untagged for this modal
-           // Or handle as an error, or create a "missing tag" group
           if (!untaggedConnections.some(c => c.id === conn.id)) {
             untaggedConnections.push(conn);
           }
@@ -359,11 +352,6 @@ const toggleTagGroupSelection = (group: GroupedConnection) => {
 
 watch(() => props.visible, (newValue) => {
   if (newValue) {
-    // Reset state when modal becomes visible, except perhaps targetPath if desired
-    // searchTerm.value = '';
-    // selectedConnectionIds.value = [];
-    // transferMethod.value = 'auto';
-    // If stores might be empty, fetch again or ensure they are fresh
     if (connectionsStore.connections.length === 0) {
       connectionsStore.fetchConnections().catch(error => console.error(t('sendFilesModal.errorFetchingConnections'), error));
     }
@@ -428,7 +416,6 @@ const toggleIndividualConnectionSelection = (connectionId: number) => {
 };
 
 const getConnectionIconClass = (connectionType?: string): string => {
-  // Ensure connectionType is treated as optional and provide a default if undefined
   const type = connectionType?.toLowerCase();
   switch (type) {
     case 'rdp': return 'fas fa-desktop';
@@ -438,9 +425,8 @@ const getConnectionIconClass = (connectionType?: string): string => {
     case 'local': return 'fas fa-laptop';
     case 'serial': return 'fas fa-microchip';
     case 'docker': return 'fab fa-docker';
-    default: return 'fas fa-server'; // Default icon for unknown or undefined types
+    default: return 'fas fa-server';
   }
 };
 
-// Fallback i18n messages are now removed as they are expected to be in the locale JSON files.
 </script>
