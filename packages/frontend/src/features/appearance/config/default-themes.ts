@@ -42,7 +42,6 @@ export const defaultUiTheme: Record<string, string> = {
   '--button-bg-color': '#A06CD5', // 现代紫色 - 激活 (基础)
   '--button-text-color': '#ffffff',
   '--button-hover-bg-color': '#8E44AD', // 现代紫色 - 悬停 (稍暗)
-  // Added new variables
   '--icon-color': 'var(--text-color-secondary)', // 图标颜色
   '--icon-hover-color': 'var(--link-hover-color)', // 图标悬停颜色 (自动更新)
   '--split-line-color': 'var(--border-color)', /* 分割线颜色 */
@@ -50,7 +49,6 @@ export const defaultUiTheme: Record<string, string> = {
   '--input-focus-border-color': 'var(--link-active-color)', /* 输入框聚焦边框颜色 (自动更新) */
   '--input-focus-glow': 'var(--link-active-color)', /* 输入框聚焦光晕值 (自动更新) */
   '--overlay-bg-color': 'rgba(0, 0, 0, 0.6)', /* Added Overlay Background - 恢复 rgba 以支持透明度 */
-  // End added variables
   '--font-family-sans-serif': 'sans-serif',
   '--base-padding': '1rem',
   '--base-margin': '0.5rem',

@@ -190,7 +190,6 @@ CREATE TABLE IF NOT EXISTS quick_command_tag_associations (
 );
 `;
 
-// --- End Quick Command Tags ---
 
 
 // 从 database.ts 移动过来的，保持一致性

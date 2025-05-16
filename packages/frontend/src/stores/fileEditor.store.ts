@@ -96,7 +96,7 @@ const decodeRawContent = (rawContentBase64: string, encoding: string): string =>
         return `// Error decoding content: ${error.message}`; // 返回错误信息
     }
 };
-// --- End Helper Functions ---
+
 
 export const useFileEditorStore = defineStore('fileEditor', () => {
     const { t } = useI18n();

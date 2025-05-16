@@ -72,7 +72,8 @@ const filteredAndSortedConnections = computed(() => {
       const usernameMatch = conn.username?.toLowerCase().includes(query);
       const hostMatch = conn.host?.toLowerCase().includes(query);
       const portMatch = conn.port?.toString().includes(query);
-      return nameMatch || usernameMatch || hostMatch || portMatch;
+      const notesMatch = conn.notes?.toLowerCase().includes(query); // 添加对备注的搜索
+      return nameMatch || usernameMatch || hostMatch || portMatch || notesMatch;
     });
   }
 
@@ -267,7 +268,6 @@ const handleBatchEditSaved = async () => {
 const handleBatchEditFormClose = () => {
   showBatchEditForm.value = false;
 };
-// --- End Batch Edit Functions ---
 
 // --- Test Connection Logic ---
 interface ConnectionTestState {
@@ -408,7 +408,37 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
   return notes.substring(0, maxLength) + '...';
 };
 
-// --- End Test Connection Logic ---
+
+
+// --- Connect All Filtered Connections ---
+const isConnectingAll = ref(false);
+
+const handleConnectAllFilteredConnections = async () => {
+  if (isConnectingAll.value || isLoadingConnections.value) return;
+
+  const sshConnectionsToConnect = filteredAndSortedConnections.value.filter(conn => conn.type === 'SSH');
+  if (sshConnectionsToConnect.length === 0) {
+    console.warn(t('connections.messages.noSshConnectionsToConnectAll', '没有可连接的 SSH 筛选结果。'));
+    // Optionally, use a UI notification if available in your project
+    // e.g., uiNotificationsStore.addNotification({ message: t('connections.messages.noSshConnectionsToConnectAll'), type: 'info' });
+    return;
+  }
+
+  isConnectingAll.value = true;
+  try {
+    for (const conn of sshConnectionsToConnect) {
+      connectTo(conn);
+      // Consider a small delay if you want to visually see connections initiating one by one,
+      // or if connectTo triggers operations that might benefit from not being fired too rapidly.
+      // await new Promise(resolve => setTimeout(resolve, 200)); // Example delay
+    }
+  } catch (error) {
+    console.error("Error connecting to all filtered SSH connections:", error);
+    // uiNotificationsStore.addNotification({ message: t('connections.errors.connectAllSshFailed', '连接全部 SSH 操作失败。'), type: 'error' });
+  } finally {
+    isConnectingAll.value = false;
+  }
+};
 
 </script>
 
@@ -498,6 +528,16 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
             <i v-if="isTestingAll" class="fas fa-spinner fa-spin mr-1 sm:mr-2"></i>
             <i v-else class="fas fa-check-double mr-1 sm:mr-2"></i>
             <span class="hidden sm:inline">{{ t('connections.actions.testAllFiltered') }}</span>
+          </button>
+          <!-- Connect All Filtered Connections Button -->
+          <button
+            @click="handleConnectAllFilteredConnections"
+            :disabled="isConnectingAll || isLoadingConnections || !filteredAndSortedConnections.some(c => c.type === 'SSH')"
+            class="h-8 px-3 py-1.5 text-sm bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 ml-2 sm:ml-0"
+          >
+            <i v-if="isConnectingAll" class="fas fa-spinner fa-spin mr-1 sm:mr-2"></i>
+            <i v-else class="fas fa-network-wired mr-1 sm:mr-2"></i>
+            <span class="hidden sm:inline">{{ t('workspaceConnectionList.connectAllSshInGroupMenu', '连接全部') }}</span>
           </button>
         </div>
       </div>
