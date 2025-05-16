@@ -22,6 +22,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Proxies',
      component: () => import('../views/ProxiesView.vue')
    },
+   // 连接管理页面
+   {
+     path: '/connections',
+     name: 'Connections',
+     component: () => import('../views/ConnectionsView.vue')
+   },
    // 移除：标签管理页面路由
    // {
    //   path: '/tags',

@@ -972,18 +972,11 @@ const cancelEditingTag = () => {
           @click="handleTagMenuAction('deleteAllConnections')"
         >
           <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
-          <span>{{ t('workspaceConnectionList.deleteAllConnectionsInGroupMenu') }}</span> <!-- 新增i18n -->
+          <span>{{ t('workspaceConnectionList.deleteAllConnectionsInGroupMenu') }}</span>
         </li>
-        <!-- Future: Add "Rename Tag" or "Delete Tag (if empty)" options here -->
       </ul>
     </div>
 
-    <!-- --- 移除 RDP Modal 渲染 --- -->
-    <!-- <RemoteDesktopModal
-      v-if="showRdpModal"
-      :connection="selectedRdpConnection"
-      @close="closeRdpModal"
-    /> -->
    <teleport to="body">
      <ManageTagConnectionsModal
        :tag-info="tagToManage"
@@ -994,4 +987,3 @@ const cancelEditingTag = () => {
  </div>
 </template>
 
-<!-- Scoped styles removed, now using Tailwind utility classes -->

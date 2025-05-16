@@ -39,7 +39,7 @@ export function createWebSocketConnectionManager(
     let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null; // 重连定时器 ID
     let lastUrl = ''; // 保存上次连接的 URL
     let intentionalDisconnect = false; // 标记是否为用户主动断开
-    // --- End Instance State ---
+
 
     /**
      * 安全地获取状态文本的辅助函数

@@ -462,7 +462,6 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
                         }
                     });
                     console.log(`[Store] Manually updated tagIds for ${updatedCount} commands in local state.`);
-                    // --- End manual state update ---
 
                     // Optionally, still fetch for full consistency, but UI should update based on manual change first.
                     // clearQuickCommandsCache();

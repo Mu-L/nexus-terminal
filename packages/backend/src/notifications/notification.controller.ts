@@ -216,4 +216,4 @@ export class NotificationController {
          res.status(500).json({ message: i18next.t('notificationController.errorTriggerTest'), error: error.message });
      }
  };
-} // End of class NotificationController
+}

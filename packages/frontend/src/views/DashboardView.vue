@@ -355,7 +355,7 @@ const handleConnectionModified = async () => {
               <div class="flex-grow mr-4 overflow-hidden">
                 <span class="font-medium block truncate flex items-center" :title="conn.name || ''">
                   <i :class="['fas', conn.type === 'VNC' ? 'fa-plug' : (conn.type === 'RDP' ? 'fa-desktop' : 'fa-server'), 'mr-2 w-4 text-center text-text-secondary']"></i>
-                  <span>{{ conn.name || t('connections.unnamed') }}</span>
+                  <span>{{ conn.name || conn.host || t('connections.unnamedFallback', '未命名连接') }}</span>
                 </span>
                 <span class="text-sm text-text-secondary block truncate" :title="`${conn.username}@${conn.host}:${conn.port}`">
                   {{ conn.username }}@{{ conn.host }}:{{ conn.port }}

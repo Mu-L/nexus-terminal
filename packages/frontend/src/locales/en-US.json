@@ -6,6 +6,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "terminal": "Terminal",
+    "connections": "Connections",
     "proxies": "Proxies",
     "login": "Login",
     "logout": "Logout",
@@ -126,7 +127,18 @@
       "lastConnected": "Last Connected",
       "actions": "Actions"
     },
+    "batchEdit":{
+      "toggleLabel":"Batch Edit",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "invertSelection": "Invert Selection",
+      "title": "Batch Edit Connections",
+      "editSelected": "Edit Selected",
+      "noChange":"No change",
+      "selectedItems":"{count} items selected"
+    },
     "actions": {
+      "testAllFiltered":"Test All",
       "connect": "Connect",
       "edit": "Edit",
       "delete": "Delete",
@@ -151,6 +163,7 @@
       "confirm": "Confirm Add",
       "adding": "Adding...",
       "cancel": "Cancel",
+      "noSshKey":"No SSH Key",
       "errorRequiredFields": "Please fill in all required fields.",
       "errorPasswordRequired": "Password is required for password authentication.",
       "errorPrivateKeyRequired": "Private key is required for key authentication.",
@@ -968,6 +981,7 @@
     "restore": "Restore",
     "minimize": "Minimize",
     "send":"Send",
+    "updateSuccess":"Update successful",
     "copied": "Copied to clipboard"
   },
   "layoutConfigurator": {

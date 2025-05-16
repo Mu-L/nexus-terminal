@@ -51,7 +51,6 @@ const resetCaptchaWidget = () => {
   // Reset reCAPTCHA v2 if it exists
   recaptchaWidget.value?.reset();
 };
-// --- End CAPTCHA Event Handlers ---
 
 
 // 处理登录或 2FA 验证提交
@@ -67,8 +66,6 @@ const handleSubmit = async () => {
       return; // Stop submission if CAPTCHA is required but not completed
     }
   }
-  // --- End CAPTCHA Check ---
-  // --- End CAPTCHA Check ---
 
   try {
     if (loginRequires2FA.value) {
