@@ -362,9 +362,10 @@
       "compressZip": "zip に圧縮",
       "compressTarGz": "tar.gz に圧縮",
       "compressTarBz2": "tar.bz2 に圧縮",
-      "decompress": "解凍"
+      "decompress": "解凍",
+      "sendTo": "送信..."
     },
-        "currentPath": "現在のパス",
+    "currentPath": "現在のパス",
         "dropFilesHere": "ファイルをここにドラッグ＆ドロップしてアップロード",
         "editPathTooltip": "パスをクリックして編集",
         "editingFile": "編集中",
@@ -1285,9 +1286,10 @@
         "deleteFailed": "タグ「{name}」の削除に失敗しました: {error}"
       },
       "terminalTabBar": {
-        "selectServerTitle": "接続するサーバーを選択"
-    },
-    "workspace": {
+          "selectServerTitle": "接続するサーバーを選択",
+          "showTransferProgressTooltip": "転送進捗の表示/非表示"
+      },
+      "workspace": {
         "terminal": {
             "reconnectingMsg": "再接続を試行中..."
         }

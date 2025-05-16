@@ -358,7 +358,8 @@
       "compressZip": "压缩为 zip",
       "compressTarGz": "压缩为 tar.gz",
       "compressTarBz2": "压缩为 tar.bz2",
-      "decompress": "解压"
+      "decompress": "解压",
+      "sendTo": "发送到..."
     },
     "headers": {
       "type": "类型",
@@ -1330,7 +1331,8 @@
     "searchConnectionsPlaceholder": "搜索连接..."
   },
   "terminalTabBar": {
-    "selectServerTitle": "选择要连接的服务器"
+    "selectServerTitle": "选择要连接的服务器",
+    "showTransferProgressTooltip": "显示/隐藏传输进度"
   },
   "tabs": {
     "contextMenu": {

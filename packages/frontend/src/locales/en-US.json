@@ -358,7 +358,8 @@
       "compressZip": "Compress to zip",
       "compressTarGz": "Compress to tar.gz",
       "compressTarBz2": "Compress to tar.bz2",
-      "decompress": "Decompress"
+      "decompress": "Decompress",
+      "sendTo": "Send to..."
     },
     "headers": {
       "type": "Type",
@@ -1326,7 +1327,8 @@
     "searchConnectionsPlaceholder": "Search connections..."
   },
   "terminalTabBar": {
-    "selectServerTitle": "Select server to connect"
+    "selectServerTitle": "Select server to connect",
+    "showTransferProgressTooltip": "Show/Hide Transfer Progress"
   },
   "tabs": {
     "contextMenu": {
