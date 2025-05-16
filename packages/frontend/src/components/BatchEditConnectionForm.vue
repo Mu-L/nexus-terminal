@@ -226,17 +226,15 @@ onMounted(() => {
           <!-- Port Section -->
           <div class="p-4 border border-border rounded-md bg-card">
             <div class="flex justify-between items-center mb-2">
-              <h4 class="text-base font-semibold">{{ t('connections.form.sectionBasic.port', '端口') }}</h4>
+              <h4 class="text-base font-semibold">{{ t('connections.table.port', '端口') }}</h4>
               <input type="checkbox" v-model="enablePortEdit" class="form-checkbox h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary" />
             </div>
             <div v-if="enablePortEdit">
-              <label for="batch-port" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionBasic.portPlaceholder', '例如: 22') }}</label>
               <input
                 type="text"
                 id="batch-port"
                 v-model="formData.port"
                 class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
-                :placeholder="t('connections.batchEdit.portPlaceholder', '输入新端口号')"
               />
             </div>
           </div>
@@ -244,21 +242,20 @@ onMounted(() => {
           <!-- Auth Section -->
           <div class="p-4 border border-border rounded-md bg-card">
             <div class="flex justify-between items-center mb-2">
-              <h4 class="text-base font-semibold">{{ t('connections.form.sectionAuth.title', '认证信息') }}</h4>
+              <h4 class="text-base font-semibold">{{ t('connections.form.sectionAuth', '认证信息') }}</h4>
               <input type="checkbox" v-model="enableAuthEdit" class="form-checkbox h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary" />
             </div>
             <div v-if="enableAuthEdit" class="space-y-3">
               <div>
-                <label for="batch-username" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionAuth.username', '用户名') }}</label>
-                <input type="text" id="batch-username" v-model="formData.username" class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" :placeholder="t('connections.batchEdit.authPlaceholder', '留空表示不更改此字段')" />
+                <label for="batch-username" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.username', '用户名') }}</label>
+                <input type="text" id="batch-username" v-model="formData.username" class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" />
               </div>
               <div>
-                <label for="batch-password" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionAuth.password', '密码') }}</label>
-                <input type="password" id="batch-password" v-model="formData.password" class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" :placeholder="t('connections.batchEdit.passwordInfoBatch', '输入新密码，或留空不更改')" />
-                <p class="mt-1 text-xs text-text-alt">{{ t('connections.batchEdit.passwordWarning', '注意：某些连接类型可能不支持空密码或有特定密码策略。') }}</p>
+                <label for="batch-password" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.authMethodPassword', '密码') }}</label>
+                <input type="password" id="batch-password" v-model="formData.password" class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" />
               </div>
               <div>
-                <label for="batch-ssh-key" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionAuth.sshKey', 'SSH 密钥') }}</label>
+                <label for="batch-ssh-key" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.authMethodKey', 'SSH 密钥') }}</label>
                 <select
                   id="batch-ssh-key"
                   v-model="formData.ssh_key_id"
@@ -266,13 +263,12 @@ onMounted(() => {
                   :disabled="sshKeysStore.isLoading"
                 >
                   <option :value="undefined">{{ t('connections.batchEdit.noChange', '-- 不更改 --') }}</option>
-                  <option :value="null">{{ t('connections.form.sectionAuth.noSshKey', '无密钥') }}</option>
+                  <option :value="null">{{ t('connections.form.noSshKey', '无密钥') }}</option>
                   <option v-if="sshKeysStore.isLoading" disabled>{{ t('common.loading', '加载中...') }}</option>
                   <option v-for="key in availableSshKeys" :key="key.id" :value="key.id">
                     {{ key.name }}
                   </option>
                 </select>
-                <p class="mt-1 text-xs text-text-alt">{{ t('connections.batchEdit.sshKeyInfo', '选择密钥将覆盖密码认证（如果连接类型支持）。') }}</p>
               </div>
             </div>
           </div>
@@ -280,34 +276,32 @@ onMounted(() => {
           <!-- Advanced Section (Now includes Notes) -->
           <div class="p-4 border border-border rounded-md bg-card">
             <div class="flex justify-between items-center mb-2">
-              <h4 class="text-base font-semibold">{{ t('connections.form.sectionAdvanced.title', '高级选项') }}</h4>
+              <h4 class="text-base font-semibold">{{ t('connections.form.sectionAdvanced', '高级选项') }}</h4>
               <input type="checkbox" v-model="enableAdvancedEdit" class="form-checkbox h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary" />
             </div>
             <div v-if="enableAdvancedEdit" class="space-y-3">
               <div>
-                <label for="batch-proxy" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionAdvanced.proxy.label', '代理') }}</label>
+                <label for="batch-proxy" class="block text-sm font-medium text-text-secondary">{{ t('connections.form.proxy', '代理') }}</label>
                 <select id="batch-proxy" v-model="formData.proxy_id" class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm">
                   <option :value="undefined">{{ t('connections.batchEdit.noChange', '-- 不更改 --') }}</option>
-                  <option :value="null">{{ t('connections.form.sectionAdvanced.proxy.none', '无代理') }}</option>
+                  <option :value="null">{{ t('connections.form.noProxy', '无代理') }}</option>
                   <option v-for="proxy in availableProxies" :key="proxy.id" :value="proxy.id">
                     {{ proxy.name }} ({{ proxy.type }})
                   </option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-text-secondary">{{ t('connections.form.sectionAdvanced.tags.label', '标签') }}</label>
+                <label class="block text-sm font-medium text-text-secondary">{{ t('connections.table.tags', '标签') }}</label>
                 <TagInput
                   :modelValue="formData.tag_ids || []"
                   @update:modelValue="val => formData.tag_ids = val"
                   :availableTags="availableTags"
                   @create-tag="handleCreateTag"
                   @delete-tag="handleDeleteTag"
-                  :placeholder="t('connections.batchEdit.tagsPlaceholder', '选择或创建标签 (将替换现有标签)')"
                   :allow-create="true"
                   :allow-delete="true"
                   class="mt-1"
                 />
-                 <p class="mt-1 text-xs text-text-alt">{{ t('connections.batchEdit.tagsInfoReplace', '选择的标签将替换所有选中连接的现有标签。') }}</p>
               </div>
               <!-- Notes section moved here, no separate enable checkbox for notes itself -->
               <div class="pt-2">
@@ -317,7 +311,6 @@ onMounted(() => {
                   v-model="formData.notes"
                   rows="3"
                   class="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
-                  :placeholder="t('connections.batchEdit.notesPlaceholder', '输入新备注，或留空不更改')"
                 ></textarea>
               </div>
             </div>
@@ -340,7 +333,7 @@ onMounted(() => {
             :disabled="isLoading || (!enablePortEdit && !enableAuthEdit && !enableAdvancedEdit)"
           > <!-- Removed enableNotesEdit from disabled condition -->
             <i v-if="isLoading" class="fas fa-spinner fa-spin mr-2"></i>
-            {{ t('common.saveChanges', '保存更改') }}
+            {{ t('common.save', '保存') }}
           </button>
         </div>
       </div>

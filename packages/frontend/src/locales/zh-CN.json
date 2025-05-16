@@ -126,7 +126,19 @@
       "lastConnected": "上次连接",
       "actions": "操作"
     },
+    "batchEdit":{
+      "toggleLabel":"批量修改",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "invertSelection": "反向选择",
+      "editSelected": "编辑所选",
+      "title": "批量编辑连接",
+      "selectedItems": "已选项目",
+      "noChange": "保持不变",
+      "tagsPlaceholder": "输入标签 (替换现有)"
+    },
     "actions": {
+      "testAllFiltered":"测试全部",
       "connect": "连接",
       "edit": "编辑",
       "delete": "删除",
@@ -181,6 +193,7 @@
       "testConnection": "测试连接",
       "testing": "测试中...",
       "sshKey": "SSH 密钥",
+      "noSshKey":"无 SSH 密钥",
       "privateKeyDirect": "私钥内容",
       "keyUpdateNoteDirect": "编辑时将私钥和密码短语留空以保留现有密钥。",
       "keyUpdateNoteSelected": "编辑时选择其他密钥或使用直接输入来更改密钥。",

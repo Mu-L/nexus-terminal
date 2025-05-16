@@ -485,7 +485,7 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
               <i :class="['fas', isAscending ? 'fa-arrow-up-a-z' : 'fa-arrow-down-z-a', 'w-4 h-4']"></i>
             </button>
           </div>
-          <button @click="openAddConnectionForm" title="Add Connection" class="h-8 w-8 bg-button rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 ml-2 sm:ml-0">
+          <button @click="openAddConnectionForm" :title="t('connections.addConnection', 'Add Connection')" class="h-8 w-8 bg-button rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 ml-2 sm:ml-0">
             <i class="fas fa-plus" style="color: white;"></i>
           </button>
           <!-- Test All Filtered Connections Button -->
@@ -498,7 +498,6 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
             <i v-if="isTestingAll" class="fas fa-spinner fa-spin mr-1 sm:mr-2"></i>
             <i v-else class="fas fa-check-double mr-1 sm:mr-2"></i>
             <span class="hidden sm:inline">{{ t('connections.actions.testAllFiltered') }}</span>
-            <span class="sm:hidden">{{ t('connections.actions.testAllShort', '测试全部') }}</span>
           </button>
         </div>
       </div>
@@ -560,7 +559,7 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
               </span>
               <!-- 备注信息移到这里 -->
               <div v-if="conn.notes && conn.notes.trim() !== ''" class="text-xs text-text-secondary mt-1">
-                <span class="font-medium text-text-alt">{{ t('connections.notes.label', '备注:') }}</span>
+                <span class="font-medium text-text-alt">{{ t('connections.form.notes', '备注:') }}</span>
                 <span class="break-words leading-snug ml-1" :title="conn.notes">
                   {{ getTruncatedNotes(conn.notes) }}
                 </span>
@@ -619,7 +618,6 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
                 class="px-3 py-1.5 bg-transparent text-foreground border border-border rounded-md shadow-sm hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium h-9 flex items-center justify-center"
                 :disabled="isBatchEditMode"
                 :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode }"
-                :title="isBatchEditMode ? t('connections.batchEdit.disabledInBatchMode', '批量模式下禁用') : t('connections.actions.edit', '编辑')"
               >
                 <i class="fas fa-pencil-alt mr-1"></i>{{ t('connections.actions.edit') }}
               </button>
@@ -628,7 +626,6 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
                 class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium h-9 flex items-center justify-center"
                 :disabled="isBatchEditMode"
                 :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode }"
-                :title="isBatchEditMode ? t('connections.batchEdit.disabledInBatchMode', '批量模式下禁用') : t('connections.actions.connect', '连接')"
               >
                 {{ t('connections.actions.connect') }}
               </button>

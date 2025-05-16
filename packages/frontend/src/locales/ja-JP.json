@@ -109,7 +109,18 @@
         "copied": "クリップボードにコピーしました"
     },
     "connections": {
+        "batchEdit": {
+            "toggleLabel": "一括編集",
+            "selectAll": "すべて選択",
+            "deselectAll": "すべて選択解除",
+            "invertSelection": "選択を反転",
+            "title": "接続の一括編集",
+            "editSelected": "選択した項目を編集",
+            "noChange": "変更なし",
+            "selectedItems": "{count} 件選択済み"
+        },
         "actions": {
+            "testAllFiltered":"すべてテスト",
             "connect": "接続",
             "delete": "削除",
             "edit": "編集",
@@ -150,6 +161,7 @@
             "password": "パスワード:",
             "port": "ポート:",
             "privateKey": "秘密鍵:",
+            "noSshKey":"SSHキーなし",
             "proxy": "プロキシ:",
             "saving": "保存中...",
             "sectionAdvanced": "詳細設定",
