@@ -298,7 +298,7 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
     <main>
       <!-- 使用 KeepAlive 包裹 RouterView，并指定缓存 WorkspaceView -->
       <RouterView v-slot="{ Component }">
-        <KeepAlive include="WorkspaceView">
+        <KeepAlive :include="['WorkspaceView', 'ConnectionsView']">
           <component :is="Component" />
         </KeepAlive>
       </RouterView>
