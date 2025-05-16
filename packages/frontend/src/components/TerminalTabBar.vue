@@ -10,7 +10,7 @@ import TransferProgressModal from './TransferProgressModal.vue'; // 导入传输
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
-import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber } from '../composables/workspaceEvents';
+import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber, useWorkspaceEventOff } from '../composables/workspaceEvents'; // +++ 导入 useWorkspaceEventOff +++
 
 import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
@@ -18,6 +18,7 @@ import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路�
 const { t } = useI18n(); // 初始化 i18n
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const onWorkspaceEvent = useWorkspaceEventSubscriber(); // +++ 获取事件订阅器 +++
+const offWorkspaceEvent = useWorkspaceEventOff(); // +++ 获取事件取消订阅器 +++
 const layoutStore = useLayoutStore(); // 初始化布局 store
 const connectionsStore = useConnectionsStore();
 const { isHeaderVisible } = storeToRefs(layoutStore); // 从 layout store 获取主导航栏可见状态
@@ -280,6 +281,18 @@ onMounted(() => {
   onWorkspaceEvent('connection:connect', (payload) => {
     console.log('[TabBar] Received connection:connect event:', payload);
     handlePopupConnect(payload.connectionId);
+  });
+
+  // +++ 监听打开传输进度模态框事件 +++
+  const handleOpenTransferProgressModal = () => {
+    console.log('[TabBar] Received ui:openTransferProgressModal event, opening modal.');
+    showTransferProgressModal.value = true;
+  };
+  onWorkspaceEvent('ui:openTransferProgressModal', handleOpenTransferProgressModal);
+
+  // 在组件卸载前取消订阅
+  onBeforeUnmount(() => {
+    offWorkspaceEvent('ui:openTransferProgressModal', handleOpenTransferProgressModal); // +++ 正确取消订阅 +++
   });
 });
 

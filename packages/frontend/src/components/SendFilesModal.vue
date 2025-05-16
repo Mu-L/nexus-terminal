@@ -138,6 +138,7 @@ import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.
 import { useTagsStore, type TagInfo } from '../stores/tags.store';
 import apiClient from '../utils/apiClient';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ 导入事件发射器 +++
 
 interface ItemToSend {
   name: string;
@@ -171,6 +172,7 @@ const { t } = useI18n();
 const connectionsStore = useConnectionsStore();
 const tagsStore = useTagsStore();
 const uiNotificationsStore = useUiNotificationsStore();
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器实例 +++
 
 const searchTerm = ref('');
 const targetPath = ref('');
@@ -343,6 +345,7 @@ const handleSend = async () => {
     } else {
       uiNotificationsStore.showSuccess(t('sendFilesModal.transferInitiatedGeneric'));
     }
+    emitWorkspaceEvent('ui:openTransferProgressModal'); // +++ 触发打开传输进度模态框的事件 +++
     emit('update:visible', false);
   } catch (error: any) {
     console.error('Failed to initiate transfer:', error);
