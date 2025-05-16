@@ -164,26 +164,94 @@ export class TransfersService {
     }
   }
 
-  private async checkCommandOnSource(client: Client, command: string): Promise<boolean> {
+  private async checkCommandOnSource(client: Client, command: string): Promise<string | null> {
     return new Promise((resolve) => {
-      client.exec(`command -v ${command}`, (err, stream) => {
+      const checkCmd = `command -v ${this.escapeShellArg(command)} 2>/dev/null`;
+      console.error(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Executing: ${checkCmd}`);
+      client.exec(checkCmd, (err, stream) => {
         if (err) {
-          console.warn(`[TransfersService] Error checking for command '${command}' on source:`, err);
-          return resolve(false);
+          console.warn(`[Roo Debug][transfers.service.ts] Error checking for command '${command}' on source:`, err);
+          return resolve(null);
         }
         let stdout = '';
         stream
           .on('data', (data: Buffer) => stdout += data.toString())
           .on('close', (code: number) => {
-            resolve(code === 0 && stdout.trim() !== '');
+            const foundPath = stdout.trim();
+            if (code === 0 && foundPath) {
+              console.error(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Command '${command}' found at '${foundPath}'.`);
+              resolve(foundPath);
+            } else {
+              console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnSource: Command '${command}' not found (exit code: ${code}).`);
+              resolve(null);
+            }
           })
-          .stderr.on('data', (data: Buffer) => {
-            console.warn(`[TransfersService] STDERR checking for command '${command}' on source: ${data.toString()}`);
+          .stderr.on('data', (data: Buffer) => { // Should be empty due to 2>/dev/null, but good to have
+            console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnSource: STDERR for '${command}': ${data.toString()}`);
           });
       });
     });
   }
 
+  private async checkCommandOnTargetServer(targetConnection: ConnectionWithTags, targetCredentials: DecryptedConnectionCredentials, command: string): Promise<string | null> {
+    const targetClient = new Client();
+    const connectConfig = this.buildSshConnectConfig(targetConnection, targetCredentials);
+    let foundCommandPath: string | null = null;
+
+    console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Attempting to connect to target ${targetConnection.host} to check for command '${command}'.`);
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        targetClient
+          .on('ready', () => {
+            console.info(`[TransfersService] SSH connection established to target server ${targetConnection.host} for command check.`);
+            resolve();
+          })
+          .on('error', (err) => {
+            console.error(`[TransfersService] SSH connection error to target server ${targetConnection.host} for command check:`, err);
+            reject(err);
+          })
+          .on('close', () => {
+             console.info(`[TransfersService] SSH connection closed to target server ${targetConnection.host} after command check.`);
+          })
+          .connect(connectConfig);
+      });
+
+      foundCommandPath = await new Promise((resolve) => {
+        const checkCmd = `command -v ${this.escapeShellArg(command)} 2>/dev/null`;
+        console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Executing on target: ${checkCmd}`);
+        targetClient.exec(checkCmd, (err, stream) => {
+          if (err) {
+            console.warn(`[Roo Debug][transfers.service.ts] Error checking for command '${command}' on target ${targetConnection.host}:`, err);
+            return resolve(null);
+          }
+          let stdout = '';
+          stream
+            .on('data', (data: Buffer) => stdout += data.toString())
+            .on('close', (code: number) => {
+              const pathOutput = stdout.trim();
+              if (code === 0 && pathOutput) {
+                console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Command '${command}' found at '${pathOutput}' on target ${targetConnection.host}.`);
+                resolve(pathOutput);
+              } else {
+                console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Command '${command}' not found on target ${targetConnection.host} (exit code: ${code}).`);
+                resolve(null);
+              }
+            })
+            .stderr.on('data', (data: Buffer) => {
+              console.warn(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: STDERR for '${command}' on target ${targetConnection.host}: ${data.toString()}`);
+            });
+        });
+      });
+    } catch (error) {
+      console.error(`[Roo Debug][transfers.service.ts] checkCommandOnTargetServer: Failed to check command '${command}' on target ${targetConnection.host}:`, error);
+      foundCommandPath = null; // Ensure it's null on error
+    } finally {
+      targetClient.end();
+    }
+    return foundCommandPath;
+  }
+ 
   private async uploadKeyToSourceViaSftp(client: Client, privateKeyContent: string, remotePath: string): Promise<void> {
     console.error(`[Roo Debug][transfers.service.ts] ENTERING uploadKeyToSourceViaSftp for remotePath: ${remotePath}`);
     const SFTP_UPLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for SFTP key upload
@@ -271,7 +339,8 @@ export class TransfersService {
     isDir: boolean,
     targetConnection: ConnectionWithTags, // Target B connection details
     targetPathOnB: string, // Base remote target path on B
-    transferCmd: 'scp' | 'rsync',
+    executableCommand: string, // Full path to rsync or scp
+    commandType: 'rsync' | 'scp', // To distinguish logic
     options: { // Options derived from checking source A and target B auth
       sshPassCommand?: string; // e.g., "sshpass -p 'password'"
       sshIdentityFileOption?: string; // e.g., "-i /tmp/key_B_XYZ"
@@ -280,38 +349,50 @@ export class TransfersService {
     }
   ): string {
     const remoteBase = targetPathOnB.endsWith('/') ? targetPathOnB : `${targetPathOnB}/`;
-    const remoteFullDest = `${options.targetUserAndHost}:${this.escapeShellArg(remoteBase)}`; // SCP/Rsync will append filename if source is file
-
+    const remoteFullDest = `${options.targetUserAndHost}:${this.escapeShellArg(remoteBase)}`;
+ 
     let commandParts: string[] = [];
     if (options.sshPassCommand) {
       commandParts.push(options.sshPassCommand);
     }
-
-    if (transferCmd === 'rsync') {
-      commandParts.push('rsync -avz --progress');
+ 
+    // Use the full path here (should be safe, no special chars from command -v)
+    // Arguments will still be quoted later.
+    commandParts.push(executableCommand);
+ 
+    if (commandType === 'rsync') {
+      commandParts.push('-avz --progress'); // rsync specific options
+      // For rsync, SSH options go into the -e argument
       let sshArgsForRsync = `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
-      if (options.sshPortOption && options.sshPortOption.startsWith('-p')) { // for rsync -e "ssh -p XXX"
+      if (options.sshPortOption && options.sshPortOption.startsWith('-p')) { // rsync uses -p for port in its -e "ssh -p XXX"
          sshArgsForRsync += ` ${options.sshPortOption}`;
       }
-      if (options.sshIdentityFileOption) {
+      if (options.sshIdentityFileOption) { // -i for identity file is an ssh option
         sshArgsForRsync += ` ${options.sshIdentityFileOption}`;
       }
       commandParts.push(`-e "${sshArgsForRsync.trim()}"`);
       
       let rsyncSourcePath = this.escapeShellArg(sourceItemPathOnA);
-      if (isDir && !rsyncSourcePath.endsWith('/\'')) { // if escaped and ends with /'
-        rsyncSourcePath = rsyncSourcePath.slice(0, -1) + '/\''; // Add trailing slash for rsync dir content copy
+      if (isDir && !rsyncSourcePath.endsWith('/\'')) {
+        rsyncSourcePath = rsyncSourcePath.slice(0, -1) + '/\'';
       }
       commandParts.push(rsyncSourcePath);
       commandParts.push(remoteFullDest);
-
+ 
     } else { // scp
-      commandParts.push('scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null');
+      // For scp, SSH options are typically passed directly if scp is a wrapper around ssh, or via scp's own options that map to ssh options.
+      // Common scp implementations accept -P for port and -i for identity file directly.
+      // StrictHostKeyChecking and UserKnownHostsFile are ssh options.
+      // We build the ssh part for scp separately if needed, or rely on scp passing -o options.
+      // Let's assume scp will pass these -o options to its underlying ssh call.
+      // If not, a more complex construction of scp's ssh command via -S might be needed.
+      commandParts.push('-o StrictHostKeyChecking=no'); // For scp, pass as direct option
+      commandParts.push('-o UserKnownHostsFile=/dev/null'); // For scp, pass as direct option
       if (isDir) commandParts.push('-r');
-      if (options.sshPortOption && options.sshPortOption.startsWith('-P')) { // for scp -P XXX
+      if (options.sshPortOption && options.sshPortOption.startsWith('-P')) { // scp uses -P for port
          commandParts.push(options.sshPortOption);
       }
-      if (options.sshIdentityFileOption) {
+      if (options.sshIdentityFileOption) { // scp uses -i for identity file
         commandParts.push(options.sshIdentityFileOption);
       }
       commandParts.push(this.escapeShellArg(sourceItemPathOnA));
@@ -319,7 +400,7 @@ export class TransfersService {
     }
     return commandParts.join(' ');
   }
-
+ 
   private async executeRemoteTransferOnSource(
     taskId: string,
     subTaskId: string,
@@ -333,30 +414,97 @@ export class TransfersService {
   ): Promise<void> {
     console.error(`[Roo Debug][transfers.service.ts] ENTERING executeRemoteTransferOnSource for sub-task ${subTaskId}, item: ${sourceItem.name}`);
     this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 0, `Initializing remote transfer for ${sourceItem.name}`);
-    let tempTargetKeyPathOnSource: string | undefined; // Path of target's private key if temporarily on source A
- 
+    let tempTargetKeyPathOnSource: string | undefined;
+
     try {
       console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Starting try block in executeRemoteTransferOnSource.`);
-      const sshpassAvailableOnSource = await this.checkCommandOnSource(sourceSshClient, 'sshpass');
-      const rsyncAvailableOnSource = await this.checkCommandOnSource(sourceSshClient, 'rsync');
+      const sshpassPath = await this.checkCommandOnSource(sourceSshClient, 'sshpass');
+      const rsyncPathOnSource = await this.checkCommandOnSource(sourceSshClient, 'rsync'); // Renamed for clarity
+      const scpPathOnSource = await this.checkCommandOnSource(sourceSshClient, 'scp'); // Renamed for clarity
 
-      let determinedTransferCmd: 'scp' | 'rsync' = 'scp'; // Default to scp
-      if (transferMethodPreference === 'rsync' && rsyncAvailableOnSource) {
-        determinedTransferCmd = 'rsync';
-      } else if (transferMethodPreference === 'rsync' && !rsyncAvailableOnSource) {
-         this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, `Rsync preferred but not available on source server. Sub-task for ${sourceItem.name} failed.`);
-         throw new Error('Rsync preferred but not available on source server.');
-      } else if (transferMethodPreference === 'auto') {
-        determinedTransferCmd = rsyncAvailableOnSource ? 'rsync' : 'scp';
+      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Source checks -> sshpass: ${sshpassPath}, rsync: ${rsyncPathOnSource}, scp: ${scpPathOnSource}`);
+
+      let executableCommandPath: string | null = null;
+      let commandTypeForLogic: 'rsync' | 'scp' | undefined = undefined; // Initialize as undefined
+      let rsyncPathOnTarget: string | null = null;
+
+      if (transferMethodPreference === 'auto') {
+        if (rsyncPathOnSource) {
+          // Source has rsync, check target
+          console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: 'auto' mode, rsync found on source. Checking target...`);
+          rsyncPathOnTarget = await this.checkCommandOnTargetServer(targetConnection, targetCredentials, 'rsync');
+          if (rsyncPathOnTarget) {
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Target check (for auto rsync) -> rsync found at '${rsyncPathOnTarget}'. Selecting rsync.`);
+            executableCommandPath = rsyncPathOnSource; // Use source path for exec
+            commandTypeForLogic = 'rsync';
+          } else {
+            console.warn(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Rsync found on source, but NOT on target. Rsync cannot be used for 'auto' mode.`);
+          }
+        }
+        // If rsync not chosen (either source or target missing), try SCP for 'auto'
+        if (!commandTypeForLogic) {
+          if (scpPathOnSource) {
+            executableCommandPath = scpPathOnSource;
+            commandTypeForLogic = 'scp';
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: 'auto' mode falling back to SCP (Source SCP path: ${scpPathOnSource}).`);
+          } else {
+            const msg = `Neither Rsync (source/target) nor SCP (source) are available for ${sourceItem.name} (auto mode).`;
+            this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+            throw new Error(msg);
+          }
+        }
+      } else if (transferMethodPreference === 'rsync') {
+        if (rsyncPathOnSource) {
+          console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: 'rsync' preference, rsync found on source. Checking target...`);
+          rsyncPathOnTarget = await this.checkCommandOnTargetServer(targetConnection, targetCredentials, 'rsync');
+          if (rsyncPathOnTarget) {
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Target check (for preferred rsync) -> rsync found at '${rsyncPathOnTarget}'. Selecting rsync.`);
+            executableCommandPath = rsyncPathOnSource;
+            commandTypeForLogic = 'rsync';
+          } else {
+            const msg = `Rsync preferred, found on source, but rsync is NOT available on target server for ${sourceItem.name}.`;
+            this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+            throw new Error(msg);
+          }
+        } else {
+          const msg = `Rsync preferred but not available on source server for ${sourceItem.name}.`;
+          this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+          throw new Error(msg);
+        }
+      } else if (transferMethodPreference === 'scp') {
+        if (scpPathOnSource) {
+          executableCommandPath = scpPathOnSource;
+          commandTypeForLogic = 'scp';
+          console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: 'scp' preference. Selecting SCP (Source SCP path: ${scpPathOnSource}).`);
+        } else {
+          const msg = `SCP preferred but not available on source server for ${sourceItem.name}.`;
+          this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+          throw new Error(msg);
+        }
+      } else {
+        // This case should ideally not be reached if transferMethodPreference is correctly typed
+        const msg = `Invalid transfer method preference: ${transferMethodPreference}`;
+        this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+        throw new Error(msg);
       }
-      this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 5, `Using ${determinedTransferCmd}. Source SSHPass: ${sshpassAvailableOnSource}, Rsync: ${rsyncAvailableOnSource}`);
-      const subTaskToUpdate = this.transferTasks.get(taskId)?.subTasks.find(st => st.subTaskId === subTaskId);
-      if (subTaskToUpdate) subTaskToUpdate.transferMethodUsed = determinedTransferCmd;
+      
+      // Safeguard: ensure a command was actually selected
+      if (!executableCommandPath || !commandTypeForLogic) {
+          const msg = `Internal error: Could not determine a valid transfer command for ${sourceItem.name}. This should not happen.`;
+          console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: ${msg} rsyncSrc=${rsyncPathOnSource}, scpSrc=${scpPathOnSource}, rsyncTgt=${rsyncPathOnTarget}, pref=${transferMethodPreference}`);
+          this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
+          throw new Error(msg);
+      }
 
+      this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 5, `Using ${commandTypeForLogic} (Path: ${executableCommandPath}). Source SSHPass: ${!!sshpassPath}, Rsync Src: ${!!rsyncPathOnSource}, Rsync Tgt: ${!!rsyncPathOnTarget}, SCP Src: ${!!scpPathOnSource}`);
+      const subTaskToUpdate = this.transferTasks.get(taskId)?.subTasks.find(st => st.subTaskId === subTaskId);
+      if (subTaskToUpdate) subTaskToUpdate.transferMethodUsed = commandTypeForLogic;
 
       const cmdOptions: any = {
         targetUserAndHost: `${targetConnection.username}@${targetConnection.host}`,
-        sshPortOption: targetConnection.port ? (determinedTransferCmd === 'scp' ? `-P ${targetConnection.port}`: `-p ${targetConnection.port}`) : undefined,
+        // Port for rsync is handled in buildTransferCommandString via -e "ssh -p <port>"
+        // Port for scp is -P <port>
+        sshPortOption: targetConnection.port ? (commandTypeForLogic === 'scp' ? `-P ${targetConnection.port}` : (commandTypeForLogic === 'rsync' ? `-p ${targetConnection.port}` : undefined)) : undefined,
       };
 
       if (targetConnection.auth_method === 'key' && targetCredentials.decryptedPrivateKey) {
@@ -369,8 +517,8 @@ export class TransfersService {
         cmdOptions.sshIdentityFileOption = `-i ${this.escapeShellArg(tempTargetKeyPathOnSource)}`;
  
         if (targetCredentials.decryptedPassphrase) {
-          if (sshpassAvailableOnSource) {
-            cmdOptions.sshPassCommand = `sshpass -p ${this.escapeShellArg(targetCredentials.decryptedPassphrase)}`;
+          if (sshpassPath) { // Check if sshpassPath is not null
+            cmdOptions.sshPassCommand = `${this.escapeShellArg(sshpassPath)} -p ${this.escapeShellArg(targetCredentials.decryptedPassphrase)}`;
           } else {
             const msg = `Target key has passphrase, but sshpass is not available on source server for ${sourceItem.name}.`;
             this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
@@ -378,8 +526,8 @@ export class TransfersService {
           }
         }
       } else if (targetConnection.auth_method === 'password' && targetCredentials.decryptedPassword) {
-        if (sshpassAvailableOnSource) {
-          cmdOptions.sshPassCommand = `sshpass -p ${this.escapeShellArg(targetCredentials.decryptedPassword)}`;
+        if (sshpassPath) { // Check if sshpassPath is not null
+          cmdOptions.sshPassCommand = `${this.escapeShellArg(sshpassPath)} -p ${this.escapeShellArg(targetCredentials.decryptedPassword)}`;
         } else {
           const msg = `Target uses password auth, but sshpass is not available on source server for ${sourceItem.name}.`;
           this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, msg);
@@ -397,24 +545,25 @@ export class TransfersService {
         sourceItem.type === 'directory',
         targetConnection,
         remoteTargetPathOnTarget,
-        determinedTransferCmd,
+        executableCommandPath!, // Assert not null as we'd have thrown earlier
+        commandTypeForLogic,
         cmdOptions
       );
  
       console.info(`[TransfersService] Executing on source for sub-task ${subTaskId} (item: ${sourceItem.name}): ${commandToExecute}`);
       console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Prepared command: ${commandToExecute}`);
       console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Command options: ${JSON.stringify(cmdOptions)}`);
-      this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 10, `Executing: ${determinedTransferCmd} from source to ${targetConnection.name}`);
+      this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 10, `Executing: ${commandTypeForLogic} from source to ${targetConnection.name}`);
       
       const COMMAND_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout for command execution
  
       await new Promise<void>((resolveCmd, rejectCmd) => {
         let commandTimedOut = false;
-        let stdoutCombined = ''; // Moved here to be accessible by timeout
-        let stderrCombined = ''; // Moved here to be accessible by timeout
+        let stdoutCombined = '';
+        let stderrCombined = '';
         const timeoutHandle = setTimeout(() => {
           commandTimedOut = true;
-          const timeoutMsg = `${determinedTransferCmd} command for ${sourceItem.name} timed out after ${COMMAND_TIMEOUT_MS / 1000}s.`;
+          const timeoutMsg = `${commandTypeForLogic} command for ${sourceItem.name} timed out after ${COMMAND_TIMEOUT_MS / 1000}s.`;
           console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT ${timeoutMsg} (Sub-task: ${subTaskId})`);
           console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT Sub-task ${subTaskId}: STDOUT at timeout: ${stdoutCombined}`);
           console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT Sub-task ${subTaskId}: STDERR at timeout: ${stderrCombined}`);
@@ -449,12 +598,12 @@ export class TransfersService {
             stdoutCombined += output;
             // More verbose logging for stdout
             console.debug(`[Roo Debug][transfers.service.ts] RAW STDOUT Sub-task ${subTaskId} (item ${sourceItem.name}): <<<${output}>>>`);
-            if (determinedTransferCmd === 'rsync') {
+            if (commandTypeForLogic === 'rsync') {
               const progressMatch = output.match(/(\d+)%/);
               if (progressMatch && progressMatch[1]) {
                 this.updateSubTaskStatus(taskId, subTaskId, 'transferring', parseInt(progressMatch[1], 10));
               }
-            } else {
+            } else { // scp
                 this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 50, 'SCP in progress...');
             }
           });
@@ -478,23 +627,23 @@ export class TransfersService {
             console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Final STDERR: ${stderrCombined}`);
  
             if (code === 0) {
-              this.updateSubTaskStatus(taskId, subTaskId, 'completed', 100, `${determinedTransferCmd} successful for ${sourceItem.name} to ${targetConnection.name}.`);
+              this.updateSubTaskStatus(taskId, subTaskId, 'completed', 100, `${commandTypeForLogic} successful for ${sourceItem.name} to ${targetConnection.name}.`);
               resolveCmd();
             } else {
-              const errorMsg = `${determinedTransferCmd} failed for ${sourceItem.name} to ${targetConnection.name}. Exit code: ${code}, signal: ${signal}. Stderr: ${stderrCombined.trim()}`;
+              const errorMsg = `${commandTypeForLogic} failed for ${sourceItem.name} to ${targetConnection.name}. Exit code: ${code}, signal: ${signal}. Stderr: ${stderrCombined.trim()}`;
               this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, errorMsg);
               rejectCmd(new Error(errorMsg));
             }
           });
  
-          stream.on('error', (streamErr: Error) => { // Should not happen if exec cb err is null
+          stream.on('error', (streamErr: Error) => {
             clearTimeout(timeoutHandle);
             if (commandTimedOut) {
                 console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream error AFTER timeout.`);
                 return;
             }
             console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream error event:`, streamErr);
-            const errorMsg = `Stream error during ${determinedTransferCmd} for ${sourceItem.name}: ${streamErr.message}`;
+            const errorMsg = `Stream error during ${commandTypeForLogic} for ${sourceItem.name}: ${streamErr.message}`;
             this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, errorMsg);
             rejectCmd(streamErr);
           });
