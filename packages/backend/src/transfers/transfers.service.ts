@@ -185,24 +185,64 @@ export class TransfersService {
   }
 
   private async uploadKeyToSourceViaSftp(client: Client, privateKeyContent: string, remotePath: string): Promise<void> {
+    console.error(`[Roo Debug][transfers.service.ts] ENTERING uploadKeyToSourceViaSftp for remotePath: ${remotePath}`);
+    const SFTP_UPLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for SFTP key upload
+
     return new Promise((resolve, reject) => {
+      let timeoutHandle: NodeJS.Timeout | null = null;
+      let sftpSession: SFTPWrapper | null = null; // To ensure sftp.end() can be called in timeout
+
+      const cleanupAndReject = (errMsg: string, errObj?: any) => {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+        if (errObj) console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp error: ${errMsg}`, errObj);
+        else console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp error: ${errMsg}`);
+        sftpSession?.end();
+        reject(new Error(errMsg));
+      };
+
+      timeoutHandle = setTimeout(() => {
+        cleanupAndReject(`SFTP upload to ${remotePath} timed out after ${SFTP_UPLOAD_TIMEOUT_MS / 1000}s.`);
+      }, SFTP_UPLOAD_TIMEOUT_MS);
+
+      console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Calling client.sftp(). Timeout set for ${SFTP_UPLOAD_TIMEOUT_MS}ms.`);
       client.sftp((err, sftp) => {
-        if (err) return reject(new Error(`SFTP session error for key upload: ${err.message}`));
+        sftpSession = sftp; // Store session for potential cleanup
+        if (err) {
+          return cleanupAndReject(`SFTP session error for key upload: ${err.message}`, err);
+        }
+        if (!sftp) {
+          return cleanupAndReject(`SFTP session error: SFTP object is null.`);
+        }
+        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: client.sftp() CALLBACK success. SFTP session obtained. Creating write stream to ${remotePath}`);
         const stream = sftp.createWriteStream(remotePath, { mode: 0o600 });
-        stream.on('error', (writeErr: Error) => { // Added Error type for writeErr
-            sftp.end();
-            reject(new Error(`Failed to write key to ${remotePath} on source: ${writeErr.message}`))
+        
+        stream.on('error', (writeErr: Error) => {
+          cleanupAndReject(`Failed to write key to ${remotePath} on source: ${writeErr.message}`, writeErr);
         });
-        stream.on('finish', () => { // 'close' might be more reliable with sftp streams
+
+        // Listen to 'close' instead of 'finish' for more reliability
+        stream.on('close', () => {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: WriteStream ON CLOSE for ${remotePath}. Key upload likely successful.`);
           console.info(`[TransfersService] Private key for target successfully uploaded to source at ${remotePath}`);
-          sftp.end(); // Ensure sftp session is closed after operation
+          sftp.end();
           resolve();
         });
-        stream.end(privateKeyContent);
+ 
+        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Previewing privateKeyContent before stream.end(). Length: ${privateKeyContent.length}`);
+        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Key content START: <<<${privateKeyContent.substring(0, 70)}>>>`);
+        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Key content END: <<<${privateKeyContent.substring(Math.max(0, privateKeyContent.length - 70))}>>>`);
+        console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: Calling stream.end() to write key content.`);
+        let keyContentToWrite = privateKeyContent;
+        if (!keyContentToWrite.endsWith('\n')) {
+          console.error(`[Roo Debug][transfers.service.ts] uploadKeyToSourceViaSftp: privateKeyContent does not end with a newline. Appending one.`);
+          keyContentToWrite += '\n';
+        }
+        stream.end(keyContentToWrite);
       });
     });
   }
-
+ 
   private async deleteFileOnSourceViaSftp(client: Client, remotePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       client.sftp((err, sftp) => {
@@ -249,7 +289,7 @@ export class TransfersService {
 
     if (transferCmd === 'rsync') {
       commandParts.push('rsync -avz --progress');
-      let sshArgsForRsync = `ssh`;
+      let sshArgsForRsync = `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
       if (options.sshPortOption && options.sshPortOption.startsWith('-p')) { // for rsync -e "ssh -p XXX"
          sshArgsForRsync += ` ${options.sshPortOption}`;
       }
@@ -266,7 +306,7 @@ export class TransfersService {
       commandParts.push(remoteFullDest);
 
     } else { // scp
-      commandParts.push('scp');
+      commandParts.push('scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null');
       if (isDir) commandParts.push('-r');
       if (options.sshPortOption && options.sshPortOption.startsWith('-P')) { // for scp -P XXX
          commandParts.push(options.sshPortOption);
@@ -291,10 +331,12 @@ export class TransfersService {
     remoteTargetPathOnTarget: string, // This is the base directory on target
     transferMethodPreference: 'auto' | 'rsync' | 'scp'
   ): Promise<void> {
+    console.error(`[Roo Debug][transfers.service.ts] ENTERING executeRemoteTransferOnSource for sub-task ${subTaskId}, item: ${sourceItem.name}`);
     this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 0, `Initializing remote transfer for ${sourceItem.name}`);
     let tempTargetKeyPathOnSource: string | undefined; // Path of target's private key if temporarily on source A
-
+ 
     try {
+      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Starting try block in executeRemoteTransferOnSource.`);
       const sshpassAvailableOnSource = await this.checkCommandOnSource(sourceSshClient, 'sshpass');
       const rsyncAvailableOnSource = await this.checkCommandOnSource(sourceSshClient, 'rsync');
 
@@ -321,9 +363,11 @@ export class TransfersService {
         const randomSuffix = crypto.randomBytes(6).toString('hex');
         tempTargetKeyPathOnSource = path.posix.join('/tmp', `${this.TEMP_KEY_PREFIX}${randomSuffix}`); // Use posix path for remote systems
 
+        console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: BEFORE calling uploadKeyToSourceViaSftp for target key path: ${tempTargetKeyPathOnSource}`);
         await this.uploadKeyToSourceViaSftp(sourceSshClient, targetCredentials.decryptedPrivateKey, tempTargetKeyPathOnSource);
+        console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: AFTER calling uploadKeyToSourceViaSftp.`);
         cmdOptions.sshIdentityFileOption = `-i ${this.escapeShellArg(tempTargetKeyPathOnSource)}`;
-
+ 
         if (targetCredentials.decryptedPassphrase) {
           if (sshpassAvailableOnSource) {
             cmdOptions.sshPassCommand = `sshpass -p ${this.escapeShellArg(targetCredentials.decryptedPassphrase)}`;
@@ -356,46 +400,55 @@ export class TransfersService {
         determinedTransferCmd,
         cmdOptions
       );
-
+ 
       console.info(`[TransfersService] Executing on source for sub-task ${subTaskId} (item: ${sourceItem.name}): ${commandToExecute}`);
+      console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Prepared command: ${commandToExecute}`);
+      console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Command options: ${JSON.stringify(cmdOptions)}`);
       this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 10, `Executing: ${determinedTransferCmd} from source to ${targetConnection.name}`);
       
       const COMMAND_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout for command execution
-
+ 
       await new Promise<void>((resolveCmd, rejectCmd) => {
         let commandTimedOut = false;
+        let stdoutCombined = ''; // Moved here to be accessible by timeout
+        let stderrCombined = ''; // Moved here to be accessible by timeout
         const timeoutHandle = setTimeout(() => {
           commandTimedOut = true;
           const timeoutMsg = `${determinedTransferCmd} command for ${sourceItem.name} timed out after ${COMMAND_TIMEOUT_MS / 1000}s.`;
-          console.warn(`[TransfersService] ${timeoutMsg} (Sub-task: ${subTaskId})`);
+          console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT ${timeoutMsg} (Sub-task: ${subTaskId})`);
+          console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT Sub-task ${subTaskId}: STDOUT at timeout: ${stdoutCombined}`);
+          console.warn(`[Roo Debug][transfers.service.ts] TIMEOUT Sub-task ${subTaskId}: STDERR at timeout: ${stderrCombined}`);
           // Attempt to close the stream, though it might not always work if process is stuck hard
-          // stream?.close(); // stream is not in this scope yet.
+          // stream?.close(); // stream is not in this scope yet, and might not exist
           rejectCmd(new Error(timeoutMsg));
         }, COMMAND_TIMEOUT_MS);
-
+ 
         const execOptions: { pty?: boolean } = {};
         if (cmdOptions.sshPassCommand) { // Only use PTY if sshpass is involved
           execOptions.pty = true;
         }
 
+        console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Exec options for ssh2: ${JSON.stringify(execOptions)}`);
         sourceSshClient.exec(commandToExecute, execOptions, (err, stream) => {
           if (commandTimedOut) { // If timeout already fired, don't process stream events
+            console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: exec callback fired AFTER timeout. Closing stream.`);
             stream?.close(); // Try to close the stream if exec cb somehow still runs
             return;
           }
           if (err) {
             clearTimeout(timeoutHandle);
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Failed to initiate command execution:`, err);
             return rejectCmd(new Error(`Failed to execute command on source: ${err.message}`));
           }
-
-          let stdoutCombined = '';
-          let stderrCombined = '';
-
+ 
+          console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream obtained for command execution.`);
+ 
           stream.on('data', (data: Buffer) => {
             if (commandTimedOut) return;
             const output = data.toString();
             stdoutCombined += output;
-            console.debug(`[TransfersService] CMD STDOUT (sub-task ${subTaskId}, item ${sourceItem.name}): ${output.trim()}`);
+            // More verbose logging for stdout
+            console.debug(`[Roo Debug][transfers.service.ts] RAW STDOUT Sub-task ${subTaskId} (item ${sourceItem.name}): <<<${output}>>>`);
             if (determinedTransferCmd === 'rsync') {
               const progressMatch = output.match(/(\d+)%/);
               if (progressMatch && progressMatch[1]) {
@@ -405,18 +458,25 @@ export class TransfersService {
                 this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 50, 'SCP in progress...');
             }
           });
-
+ 
           stream.stderr.on('data', (data: Buffer) => {
             if (commandTimedOut) return;
             const errorOutput = data.toString();
             stderrCombined += errorOutput;
-            console.warn(`[TransfersService] CMD STDERR (sub-task ${subTaskId}, item ${sourceItem.name}): ${errorOutput.trim()}`);
+            // More verbose logging for stderr
+            console.warn(`[Roo Debug][transfers.service.ts] RAW STDERR Sub-task ${subTaskId} (item ${sourceItem.name}): <<<${errorOutput}>>>`);
           });
-
+ 
           stream.on('close', (code: number | null, signal?: string) => {
             clearTimeout(timeoutHandle);
-            if (commandTimedOut) return; // Already handled by timeout
-
+            if (commandTimedOut) {
+              console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream closed AFTER timeout.`);
+              return; // Already handled by timeout
+            }
+            console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream closed. Code: ${code}, Signal: ${signal}.`);
+            console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Final STDOUT: ${stdoutCombined}`);
+            console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Final STDERR: ${stderrCombined}`);
+ 
             if (code === 0) {
               this.updateSubTaskStatus(taskId, subTaskId, 'completed', 100, `${determinedTransferCmd} successful for ${sourceItem.name} to ${targetConnection.name}.`);
               resolveCmd();
@@ -426,21 +486,25 @@ export class TransfersService {
               rejectCmd(new Error(errorMsg));
             }
           });
-
+ 
           stream.on('error', (streamErr: Error) => { // Should not happen if exec cb err is null
             clearTimeout(timeoutHandle);
-            if (commandTimedOut) return;
-
+            if (commandTimedOut) {
+                console.info(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream error AFTER timeout.`);
+                return;
+            }
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Stream error event:`, streamErr);
             const errorMsg = `Stream error during ${determinedTransferCmd} for ${sourceItem.name}: ${streamErr.message}`;
             this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, errorMsg);
             rejectCmd(streamErr);
           });
         });
       });
-
+ 
     } catch (error: any) {
       // This will catch errors from checks, key upload, or the command execution promise
-      console.error(`[TransfersService] executeRemoteTransferOnSource error for sub-task ${subTaskId} (item: ${sourceItem.name}):`, error);
+      console.error(`[Roo Debug][transfers.service.ts] executeRemoteTransferOnSource CATCH block for sub-task ${subTaskId} (item: ${sourceItem.name}). Error type: ${error?.constructor?.name}`, error);
+      console.error(`[TransfersService] executeRemoteTransferOnSource error for sub-task ${subTaskId} (item: ${sourceItem.name}):`, error); // Keep original error log
       // Status should have been updated by the specific failure point, or update here if not already failed
       const taskFromMap = this.transferTasks.get(taskId);
       const currentSubTask = taskFromMap?.subTasks.find((st: TransferSubTask) => st.subTaskId === subTaskId);
@@ -449,6 +513,7 @@ export class TransfersService {
       }
       throw error; // Re-throw to be caught by processTransferTask's loop for this sub-task
     } finally {
+      console.info(`[Roo Debug][transfers.service.ts] executeRemoteTransferOnSource FINALLY block for sub-task ${subTaskId} (item: ${sourceItem.name}). Temp key path: ${tempTargetKeyPathOnSource}`);
       if (tempTargetKeyPathOnSource) {
         try {
           await this.deleteFileOnSourceViaSftp(sourceSshClient, tempTargetKeyPathOnSource);
