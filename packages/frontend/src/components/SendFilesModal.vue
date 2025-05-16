@@ -159,6 +159,7 @@ interface GroupedConnection {
 const props = defineProps<{
   visible: boolean;
   itemsToSend: ItemToSend[];
+  sourceConnectionId: number | null; // +++ 新增 sourceConnectionId prop +++
 }>();
 
 const emit = defineEmits<{
@@ -320,11 +321,19 @@ const handleSend = async () => {
   const sourceItems: SourceItem[] = itemsToSendInternal.value;
 
   const payload = {
+    sourceConnectionId: props.sourceConnectionId, // +++ 添加 sourceConnectionId 到 payload +++
+    connectionIds: [...selectedConnectionIds.value], // 这些是目标服务器IDs
     sourceItems,
-    connectionIds: [...selectedConnectionIds.value],
     remoteTargetPath: targetPath.value.trim(),
     transferMethod: transferMethod.value,
   };
+
+  // 验证 sourceConnectionId 是否存在
+  if (payload.sourceConnectionId === null || payload.sourceConnectionId === undefined) {
+    console.error('Source Connection ID is missing in SendFilesModal payload:', payload);
+    uiNotificationsStore.showError(t('sendFilesModal.errorSourceConnectionMissing', 'Source server information is missing. Cannot initiate transfer.'));
+    return;
+  }
 
   try {
     const response = await apiClient.post('/transfers/send', payload);

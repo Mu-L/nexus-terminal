@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, type PropType, onUnmounted } from 'vue'; // Added watch, nextTick
+import { ref, watch, nextTick, type PropType, onUnmounted, computed } from 'vue'; // Added watch, nextTick, computed
 import { useI18n } from 'vue-i18n';
 import SendFilesModal from './SendFilesModal.vue';
 import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu';
 import type { FileListItem } from '../types/sftp.types'; // Import FileListItem
 import { useDeviceDetection } from '../composables/useDeviceDetection';
+import { useSessionStore } from '../stores/session.store'; // +++ 导入 session store +++
 
 const props = defineProps({
   isVisible: {
@@ -31,9 +32,18 @@ const props = defineProps({
 
 const { isMobile } = useDeviceDetection();
 const { t } = useI18n();
+const sessionStore = useSessionStore(); // +++ 使用 session store +++
 const showSendFilesModal = ref(false);
 // Update the type for itemsToSendData
 const itemsToSendData = ref<{ name: string; path: string; type: 'file' | 'directory' }[]>([]);
+const sourceConnectionId = computed(() => { // +++ 获取并转换源服务器 ID +++
+  const activeConnId = sessionStore.activeSession?.connectionId;
+  if (activeConnId) {
+    const parsedId = parseInt(activeConnId, 10);
+    return isNaN(parsedId) ? null : parsedId;
+  }
+  return null;
+});
 
 // +++ 新增：用于菜单位置调整的 ref +++
 const contextMenuRef = ref<HTMLDivElement | null>(null);
@@ -250,6 +260,7 @@ onUnmounted(() => {
   <SendFilesModal
     v-model:visible="showSendFilesModal"
     :items-to-send="itemsToSendData"
+    :source-connection-id="sourceConnectionId"
     @send="handleFilesSent"
   />
 </template>

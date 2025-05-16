@@ -1,5 +1,3 @@
-
-
 export interface ConnectionBase {
     id: number;
     name: string | null;
@@ -71,4 +69,10 @@ export interface FullConnectionData {
 notes: string | null; // 新增备注字段 (数据库原始字段)
     updated_at: number;
     last_connected_at: number | null;
+}
+
+export interface DecryptedConnectionCredentials {
+    decryptedPassword?: string;
+    decryptedPrivateKey?: string;
+    decryptedPassphrase?: string;
 }

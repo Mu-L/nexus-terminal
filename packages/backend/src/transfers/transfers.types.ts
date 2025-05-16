@@ -1,6 +1,7 @@
 export interface InitiateTransferPayload {
-  connectionIds: number[];
-  sourceItems: Array<{ name: string; path: string; type: 'file' | 'directory' }>;
+  sourceConnectionId: number; // ID of the source server (Server A)
+  connectionIds: number[];    // IDs of the target servers (Server B, C, etc.)
+  sourceItems: { name: string; path: string; type: 'file' | 'directory' }[];
   remoteTargetPath: string;
   transferMethod: 'auto' | 'rsync' | 'scp';
 }
