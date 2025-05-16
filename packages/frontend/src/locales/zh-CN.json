@@ -6,6 +6,7 @@
   "nav": {
     "dashboard": "仪表盘",
     "terminal": "终端",
+    "connections": "连接管理",
     "proxies": "代理管理",
     "login": "登录",
     "logout": "登出",
