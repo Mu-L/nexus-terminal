@@ -1480,7 +1480,7 @@
     "title": "Send Files",
     "searchConnectionsPlaceholder": "Search connections...",
     "targetPathLabel": "Target Path",
-    "targetPathPlaceholder": "/remote/path/to/destination",
+    "targetPathPlaceholder": "targetPath",
     "transferMethodLabel": "Transfer Method",
     "transferMethodAuto": "Auto",
     "loadingConnections": "Loading connections...",

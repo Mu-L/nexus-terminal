@@ -1453,7 +1453,7 @@
     "title": "发送文件",
     "searchConnectionsPlaceholder": "搜索连接...",
     "targetPathLabel": "目标路径",
-    "targetPathPlaceholder": "/远程/路径/到/目的地",
+    "targetPathPlaceholder": "目标路径",
     "transferMethodLabel": "传输方式",
     "transferMethodAuto": "自动",
     "loadingConnections": "正在加载连接...",
