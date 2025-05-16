@@ -391,7 +391,7 @@ const getSingleTestButtonInfo = (connId: number | undefined, connType: string | 
   }
 
   if (state?.status === 'testing') {
-    return { textKey: 'connections.test.testingShort', iconClass: 'fas fa-spinner fa-spin', disabled: true, loading: true, title: t('connections.test.testingShort', '测试中') };
+    return { textKey: 'connections.actions.testing', iconClass: 'fas fa-spinner fa-spin', disabled: true, loading: true, title: t('connections.actions.testing', '测试中') };
   }
   if (state?.status === 'success' || state?.status === 'error') {
     // 测试完成后，按钮恢复为初始“测试”状态
@@ -540,7 +540,7 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
             :key="conn.id"
             @click="handleConnectionClick(conn.id)"
             :class="[
-              'flex items-start p-3 bg-header/50 border border-border/50 rounded transition duration-150 ease-in-out', // Changed: items-start, removed justify-between
+              'flex items-center p-3 bg-header/50 border border-border/50 rounded transition duration-150 ease-in-out', // Changed: items-center, removed justify-between
               { 'ring-2 ring-primary ring-offset-1 ring-offset-background': isBatchEditMode && isConnectionSelectedForBatch(conn.id) },
               { 'cursor-pointer hover:bg-border/70': isBatchEditMode },
               { 'hover:bg-border/30': !isBatchEditMode }
@@ -610,8 +610,8 @@ const getTruncatedNotes = (notes: string | null | undefined): string => {
                 :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode || getSingleTestButtonInfo(conn.id, conn.type).disabled }"
                 :title="getSingleTestButtonInfo(conn.id, conn.type).title"
               >
-                <i :class="[getSingleTestButtonInfo(conn.id, conn.type).iconClass, 'w-4 text-center', getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.test.testingShort' ? 'mr-1' : '']"></i>
-                <span v-if="getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.test.testingShort'">{{ t(getSingleTestButtonInfo(conn.id, conn.type).textKey) }}</span>
+                <i :class="[getSingleTestButtonInfo(conn.id, conn.type).iconClass, 'w-4 text-center', getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.actions.testing' ? 'mr-1' : '']"></i>
+                <span v-if="getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.actions.testing'">{{ t(getSingleTestButtonInfo(conn.id, conn.type).textKey) }}</span>
               </button>
               <button
                 @click.stop="openEditConnectionForm(conn)"
