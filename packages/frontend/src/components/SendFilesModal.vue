@@ -85,7 +85,7 @@
                   class="mr-1.5 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
                 />
                 <i
-                  :class="['fas', expandedTagGroups[getGroupId(group)] ? 'fa-chevron-down' : 'fa-chevron-right', 'mr-2 w-3 text-center text-text-secondary/80 group-hover:text-text-secondary transition-transform duration-150 ease-in-out']"
+                  :class="['fas', expandedTagGroups[getGroupId(group)] ?? true ? 'fa-chevron-down' : 'fa-chevron-right', 'mr-2 w-3 text-center text-text-secondary/80 group-hover:text-text-secondary transition-transform duration-150 ease-in-out']"
                   style="font-size: 0.75rem;"
                 ></i>
                 <label
