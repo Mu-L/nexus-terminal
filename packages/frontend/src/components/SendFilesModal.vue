@@ -56,7 +56,7 @@
         </div>
 
         <!-- Connections Section -->
-        <div class="border border-border rounded-md p-4 space-y-3 max-h-72 overflow-y-auto bg-muted/30">
+        <div class="border border-border rounded-md p-4 space-y-4 max-h-72 overflow-y-auto bg-header/30">
           <div v-if="isLoadingConnections || isLoadingTags" class="flex items-center justify-center h-24 text-text-secondary">
             <i class="fas fa-spinner fa-spin mr-2"></i> {{ t('sendFilesModal.loadingConnections') }}
           </div>
@@ -84,15 +84,23 @@
                 </label>
               </div>
               <ul class="pl-7 space-y-0.5">
-                <li v-for="connection in group.connections" :key="connection.id" class="flex items-center py-0.5">
+                <li
+                  v-for="connection in group.connections"
+                  :key="connection.id"
+                  class="flex items-center p-2.5 rounded-md hover:bg-primary/10 cursor-pointer transition-colors duration-150"
+                  :class="{'bg-primary/20': selectedConnectionIds.includes(connection.id)}"
+                  @click="toggleIndividualConnectionSelection(connection.id)"
+                >
                   <input
                     type="checkbox"
                     :id="'conn-' + connection.id"
                     :value="connection.id"
                     v-model="selectedConnectionIds"
-                    class="mr-2 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                    class="mr-3 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
+                    @click.stop
                   />
-                  <label :for="'conn-' + connection.id" class="text-sm text-foreground select-none cursor-pointer truncate" :title="connection.name">{{ connection.name }}</label>
+                  <i :class="getConnectionIconClass(connection.type) + ' mr-2.5 w-4 text-center text-text-secondary'"></i>
+                  <span class="text-sm truncate flex-grow" :title="connection.name">{{ connection.name }}</span>
                 </li>
               </ul>
             </div>
@@ -222,6 +230,9 @@ const groupedConnections = computed<GroupedConnection[]>(() => {
   const untaggedConnections: ConnectionInfo[] = [];
 
   allConnections.value.forEach(conn => {
+    if (conn.type?.toLowerCase() !== 'ssh') { // 首先过滤掉非 SSH 连接
+      return;
+    }
     const connTagIds = conn.tag_ids || [];
     if (connTagIds.length === 0) {
       untaggedConnections.push(conn);
@@ -265,11 +276,12 @@ const filteredGroupedConnections = computed<GroupedConnection[]>(() => {
   return groupedConnections.value
     .map(group => {
       const filteredConns = group.connections.filter(conn =>
+        conn.type?.toLowerCase() === 'ssh' && // 只包括 SSH 连接
         conn.name.toLowerCase().includes(lowerSearchTerm)
       );
       return { ...group, connections: filteredConns };
     })
-    .filter(group => group.connections.length > 0);
+    .filter(group => group.connections.length > 0); // 只包括仍有连接的分组
 });
 
 const isTagGroupSelected = (group: GroupedConnection): boolean => {
@@ -357,6 +369,30 @@ const handleSend = async () => {
 
 const handleCancel = () => {
   emit('update:visible', false);
+};
+
+const toggleIndividualConnectionSelection = (connectionId: number) => {
+  const index = selectedConnectionIds.value.indexOf(connectionId);
+  if (index > -1) {
+    selectedConnectionIds.value.splice(index, 1);
+  } else {
+    selectedConnectionIds.value.push(connectionId);
+  }
+};
+
+const getConnectionIconClass = (connectionType?: string): string => {
+  // Ensure connectionType is treated as optional and provide a default if undefined
+  const type = connectionType?.toLowerCase();
+  switch (type) {
+    case 'rdp': return 'fas fa-desktop';
+    case 'vnc': return 'fas fa-plug';
+    case 'ssh': return 'fas fa-server';
+    case 'telnet': return 'fas fa-keyboard';
+    case 'local': return 'fas fa-laptop';
+    case 'serial': return 'fas fa-microchip';
+    case 'docker': return 'fab fa-docker';
+    default: return 'fas fa-server'; // Default icon for unknown or undefined types
+  }
 };
 
 // Fallback i18n messages are now removed as they are expected to be in the locale JSON files.
