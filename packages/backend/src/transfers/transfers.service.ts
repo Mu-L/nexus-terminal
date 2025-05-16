@@ -675,6 +675,89 @@ private async executeRemoteTransferOnSource(
       const subTaskToUpdate = this.transferTasks.get(taskId)?.subTasks.find(st => st.subTaskId === subTaskId);
       if (subTaskToUpdate) subTaskToUpdate.transferMethodUsed = commandTypeForLogic;
 
+      // +++ 自动创建目标目录 +++
+      this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 6, `Ensuring target directory ${this.escapeShellArg(remoteTargetPathOnTarget)} exists on ${targetConnection.host}.`);
+      console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Ensuring target directory exists: ${remoteTargetPathOnTarget} on ${targetConnection.host}`);
+      const targetClientForMkdir = new Client();
+      const targetConnectConfigForMkdir = this.buildSshConnectConfig(targetConnection, targetCredentials);
+      try {
+        if (signal.aborted) throw new DOMException('Transfer cancelled by user (before mkdir).', 'AbortError');
+        await new Promise<void>((resolveMkdir, rejectMkdir) => {
+          let mkdirStreamClosed = false;
+          const onAbortMkdir = () => {
+            if (!mkdirStreamClosed) { // Only if stream/connection is still active
+                targetClientForMkdir.end(); // Attempt to close the connection
+            }
+            rejectMkdir(new DOMException('Mkdir operation cancelled by user.', 'AbortError'));
+          };
+          signal.addEventListener('abort', onAbortMkdir, { once: true });
+
+          targetClientForMkdir.on('ready', () => {
+            if (signal.aborted) { // Check signal again after ready, before exec
+              signal.removeEventListener('abort', onAbortMkdir);
+              targetClientForMkdir.end();
+              return rejectMkdir(new DOMException('Mkdir operation cancelled by user (on ready).', 'AbortError'));
+            }
+            const mkdirCommand = `mkdir -p ${this.escapeShellArg(remoteTargetPathOnTarget)}`;
+            console.error(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: Executing on target for mkdir: ${mkdirCommand}`);
+            targetClientForMkdir.exec(mkdirCommand, (err, stream) => {
+              if (err) {
+                signal.removeEventListener('abort', onAbortMkdir);
+                targetClientForMkdir.end();
+                return rejectMkdir(err);
+              }
+              let mkdirStderr = '';
+              stream.on('close', (code: number) => {
+                mkdirStreamClosed = true;
+                signal.removeEventListener('abort', onAbortMkdir);
+                targetClientForMkdir.end();
+                if (code === 0) {
+                  console.info(`[TransfersService] Sub-task ${subTaskId}: Target directory ${remoteTargetPathOnTarget} ensured on ${targetConnection.host}.`);
+                  resolveMkdir();
+                } else {
+                  rejectMkdir(new Error(`Failed to create directory ${remoteTargetPathOnTarget} on ${targetConnection.host}. Exit code: ${code}. Stderr: ${mkdirStderr.trim()}`));
+                }
+              }).on('data', (data: Buffer) => {
+                // stdout from mkdir -p is usually empty
+              }).stderr.on('data', (data: Buffer) => {
+                mkdirStderr += data.toString();
+                console.warn(`[Roo Debug][transfers.service.ts] Sub-task ${subTaskId}: STDERR (mkdir on target): ${data.toString()}`);
+              }).on('error', (streamErr: Error) => { // Handle stream errors specifically
+                mkdirStreamClosed = true;
+                signal.removeEventListener('abort', onAbortMkdir);
+                targetClientForMkdir.end();
+                rejectMkdir(streamErr);
+              });
+            });
+          }).on('error', (connErr: Error) => {
+            signal.removeEventListener('abort', onAbortMkdir);
+            // targetClientForMkdir.end(); // .end() might not be needed if 'close' always follows 'error'
+            rejectMkdir(connErr);
+          }).on('close', () => { // This 'close' is for the client connection itself
+            signal.removeEventListener('abort', onAbortMkdir); // Ensure cleanup if closed for other reasons
+            // console.info(`[TransfersService] SSH connection for mkdir to target ${targetConnection.host} closed.`);
+          }).connect(targetConnectConfigForMkdir);
+        });
+
+        if (signal.aborted) throw new DOMException('Transfer cancelled by user (after mkdir attempt).', 'AbortError');
+        this.updateSubTaskStatus(taskId, subTaskId, 'transferring', 8, `Target directory ensured. Preparing transfer command.`);
+
+      } catch (mkdirError: any) {
+        // Ensure client is closed on error if it's still somehow connected
+        // (though on 'error' or exec stream 'close'/'error', it should be handled)
+        if (targetClientForMkdir && (targetClientForMkdir as any)._sock && !(targetClientForMkdir as any)._sock.destroyed) {
+             try { targetClientForMkdir.end(); } catch (e) { /* ignore */ }
+        }
+        console.error(`[TransfersService] Sub-task ${subTaskId}: Failed to ensure target directory ${remoteTargetPathOnTarget} on ${targetConnection.host}:`, mkdirError.message);
+        if (mkdirError.name === 'AbortError') {
+             this.updateSubTaskStatus(taskId, subTaskId, 'cancelled', undefined, `Directory creation cancelled: ${mkdirError.message}`);
+             throw mkdirError; // Re-throw AbortError to be handled by the main try-catch
+        }
+        // For other errors, update status to failed and throw a new error to be caught by main try-catch
+        this.updateSubTaskStatus(taskId, subTaskId, 'failed', undefined, `Failed to create target directory: ${mkdirError.message}`);
+        throw new Error(`Failed to create target directory ${remoteTargetPathOnTarget}: ${mkdirError.message}`); // This will be caught by the outer try-catch
+      }
+      // +++ 结束自动创建目标目录 +++
 
       if (targetConnection.auth_method === 'key' && targetCredentials.decryptedPrivateKey) {
         const randomSuffix = crypto.randomBytes(6).toString('hex');
