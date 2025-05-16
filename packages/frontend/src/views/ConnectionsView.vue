@@ -269,14 +269,156 @@ const handleBatchEditFormClose = () => {
 };
 // --- End Batch Edit Functions ---
 
+// --- Test Connection Logic ---
+interface ConnectionTestState {
+  status: 'idle' | 'testing' | 'success' | 'error';
+  resultText: string;
+  latency?: number;
+  latencyColor?: string;
+}
+const connectionTestStates = ref<Map<number, ConnectionTestState>>(new Map());
+const isTestingAll = ref(false);
+
+const getLatencyColorString = (latencyMs?: number): string => {
+  if (latencyMs === undefined) return 'inherit'; // Default or inherit
+  // These colors should ideally come from theme variables if available
+  if (latencyMs < 100) return 'var(--color-success, #4CAF50)';
+  if (latencyMs < 300) return 'var(--color-warning, #ff9800)';
+  return 'var(--color-error, #F44336)';
+};
+
+const handleTestSingleConnection = async (conn: ConnectionInfo) => {
+  if (!conn.id || conn.type !== 'SSH') return;
+
+  connectionTestStates.value.set(conn.id, {
+    status: 'testing',
+    resultText: t('connections.test.testingInProgress', '测试中...'),
+  });
+
+  try {
+    // Pass only the ID to testConnection, as per store definition
+    const result = await connectionsStore.testConnection(conn.id);
+
+    if (result.success) {
+      const latencyMs = result.latency;
+      let displayText = ''; // 初始化为空字符串，符合只显示延迟的要求
+      let determinedColor;
+
+      if (latencyMs !== undefined) {
+        displayText = `${latencyMs}ms`;
+        determinedColor = getLatencyColorString(latencyMs);
+      } else {
+        // 测试成功，但没有延迟信息。不显示文本。
+        // 颜色应为明确的成功颜色。
+        // getLatencyColorString(0) 会返回绿色，代表非常好的情况。
+        determinedColor = getLatencyColorString(0); // 或者直接使用 'var(--color-success, #4CAF50)'
+      }
+
+      connectionTestStates.value.set(conn.id, {
+        status: 'success',
+        resultText: displayText, // 将显示 "XXms" 或者为空
+        latency: latencyMs,
+        latencyColor: determinedColor,
+      });
+    } else {
+      connectionTestStates.value.set(conn.id, {
+        status: 'error',
+        resultText: result.message || t('connections.test.unknownError', '未知错误'),
+      });
+    }
+  } catch (error: any) {
+    connectionTestStates.value.set(conn.id, {
+      status: 'error',
+      resultText: error.message || t('connections.test.unknownError', '未知错误'),
+    });
+  }
+};
+
+const handleTestAllFilteredConnections = async () => {
+  if (isTestingAll.value || isLoadingConnections.value) return;
+  // Ensure conn.id exists for map function and error handling
+  const sshConnectionsToTest = filteredAndSortedConnections.value.filter(c => c.type === 'SSH' && c.id != null);
+  if (sshConnectionsToTest.length === 0) {
+    // Optionally notify user that there are no SSH connections to test
+    // Consider using uiNotificationsStore from your project for a user-friendly message
+    return;
+  }
+
+  isTestingAll.value = true;
+  const testPromises = sshConnectionsToTest.map(conn => {
+    // conn.id is guaranteed to exist here due to the filter above.
+    // We're calling handleTestSingleConnection for each.
+    // Individual errors within handleTestSingleConnection will update that specific connection's state.
+    // We also add a .catch here to handle any unexpected errors from handleTestSingleConnection itself
+    // or if conn.id was somehow null/undefined (though filtered out).
+    return handleTestSingleConnection(conn).catch(error => {
+      console.error(`Error testing connection ${conn.id}:`, error);
+      // Ensure state is updated for this specific connection to show an error
+      // The 'id' here is from the 'conn' object in the map function's scope.
+      connectionTestStates.value.set(conn.id!, { // Using non-null assertion as id is checked
+        status: 'error',
+        resultText: t('connections.test.unknownErrorDuringBatch', '批量测试中发生错误'), // New i18n key
+      });
+    });
+  });
+
+  try {
+    await Promise.all(testPromises);
+  } catch (error) {
+    // This catch block handles errors if Promise.all itself fails,
+    // though individual promise rejections are handled above.
+    console.error("Error during batch testing of connections (Promise.all):", error);
+    // Optionally, set a general error state or notification for the entire batch operation if needed.
+  } finally {
+    isTestingAll.value = false;
+  }
+};
+
+const getSingleTestButtonInfo = (connId: number | undefined, connType: string | undefined) => {
+  const state = connId ? connectionTestStates.value.get(connId) : undefined;
+
+  if (connType !== 'SSH') {
+    return {
+      textKey: 'connections.actions.test',
+      iconClass: 'fas fa-plug',
+      disabled: true,
+      loading: false,
+      title: t('connections.test.onlySshSupportedTest', '仅SSH连接支持测试。')
+    };
+  }
+  if (!connId) { // Should not happen if connType is SSH and we are in the list
+     return { textKey: 'connections.actions.test', iconClass: 'fas fa-plug', disabled: true, loading: false, title: '' };
+  }
+
+  if (state?.status === 'testing') {
+    return { textKey: 'connections.test.testingShort', iconClass: 'fas fa-spinner fa-spin', disabled: true, loading: true, title: t('connections.test.testingShort', '测试中') };
+  }
+  if (state?.status === 'success' || state?.status === 'error') {
+    // 测试完成后，按钮恢复为初始“测试”状态
+    return { textKey: 'connections.actions.test', iconClass: 'fas fa-plug', disabled: false, loading: false, title: t('connections.actions.test', '测试') };
+  }
+  // 默认状态也是“测试”
+  return { textKey: 'connections.actions.test', iconClass: 'fas fa-plug', disabled: false, loading: false, title: t('connections.actions.test', '测试') };
+};
+
+const getTruncatedNotes = (notes: string | null | undefined): string => {
+  if (!notes || notes.trim() === '') return ''; // 返回空字符串，如果没有备注
+  const maxLength = 100;
+  if (notes.length <= maxLength) return notes;
+  return notes.substring(0, maxLength) + '...';
+};
+
+// --- End Test Connection Logic ---
+
 </script>
 
 <template>
-  <div class="p-4 md:p-6 lg:p-8 bg-background text-foreground">
-    <h1 class="text-2xl font-semibold mb-6">{{ t('nav.connections', '连接管理') }}</h1>
+  <div class="p-4 md:p-6 lg:p-8 bg-background text-foreground"> <!-- 最外层，负责背景和整体内边距 -->
+    <div class="max-w-screen-lg mx-auto"> <!-- 将 xl 修改为 lg -->
+      <h1 class="text-2xl font-semibold mb-6">{{ t('nav.connections', '连接管理') }}</h1>
 
-    <div class="bg-card text-card-foreground shadow rounded-lg overflow-hidden border border-border min-h-[400px]">
-      <div class="px-4 py-3 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div class="bg-card text-card-foreground shadow rounded-lg overflow-hidden border border-border min-h-[400px]"> <!-- 移除了 max-w-screen-2xl mx-auto -->
+        <div class="px-4 py-3 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <h2 class="text-lg font-medium flex-shrink-0">{{ t('dashboard.connectionList', '连接列表') }} ({{ filteredAndSortedConnections.length }})</h2>
         <div class="w-full sm:w-auto flex flex-wrap sm:flex-nowrap items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
           <!-- Batch Edit Toggle -->
@@ -346,6 +488,18 @@ const handleBatchEditFormClose = () => {
           <button @click="openAddConnectionForm" title="Add Connection" class="h-8 w-8 bg-button rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 ml-2 sm:ml-0">
             <i class="fas fa-plus" style="color: white;"></i>
           </button>
+          <!-- Test All Filtered Connections Button -->
+          <button
+            @click="handleTestAllFilteredConnections"
+            :disabled="isTestingAll || isLoadingConnections || !filteredAndSortedConnections.some(c => c.type === 'SSH')"
+            class="h-8 px-3 py-1.5 text-sm bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out flex items-center justify-center flex-shrink-0 ml-2 sm:ml-0"
+            :title="t('connections.actions.testAllFiltered', '测试全部筛选的SSH连接')"
+          >
+            <i v-if="isTestingAll" class="fas fa-spinner fa-spin mr-1 sm:mr-2"></i>
+            <i v-else class="fas fa-check-double mr-1 sm:mr-2"></i>
+            <span class="hidden sm:inline">{{ t('connections.actions.testAllFiltered') }}</span>
+            <span class="sm:hidden">{{ t('connections.actions.testAllShort', '测试全部') }}</span>
+          </button>
         </div>
       </div>
 
@@ -387,24 +541,31 @@ const handleBatchEditFormClose = () => {
             :key="conn.id"
             @click="handleConnectionClick(conn.id)"
             :class="[
-              'flex items-center justify-between p-3 bg-header/50 border border-border/50 rounded transition duration-150 ease-in-out',
+              'flex items-start p-3 bg-header/50 border border-border/50 rounded transition duration-150 ease-in-out', // Changed: items-start, removed justify-between
               { 'ring-2 ring-primary ring-offset-1 ring-offset-background': isBatchEditMode && isConnectionSelectedForBatch(conn.id) },
               { 'cursor-pointer hover:bg-border/70': isBatchEditMode },
               { 'hover:bg-border/30': !isBatchEditMode }
             ]"
           >
-            <div class="flex-grow mr-4 overflow-hidden">
+            <div class="flex-1 min-w-0 mr-3"> <!-- Changed: flex-1 min-w-0 mr-3 -->
               <span class="font-medium block truncate flex items-center" :title="conn.name || ''">
                 <i :class="['fas', conn.type === 'VNC' ? 'fa-plug' : (conn.type === 'RDP' ? 'fa-desktop' : 'fa-server'), 'mr-2 w-4 text-center text-text-secondary']"></i>
-                <span>{{ conn.name || t('connections.unnamed') }}</span>
+                <span>{{ conn.name || conn.host || t('connections.unnamedFallback', '未命名连接') }}</span>
               </span>
               <span class="text-sm text-text-secondary block truncate" :title="`${conn.username}@${conn.host}:${conn.port}`">
                 {{ conn.username }}@{{ conn.host }}:{{ conn.port }}
               </span>
-              <span class="text-xs text-text-alt block mb-1">
+              <span class="text-xs text-text-alt block">
                 {{ t('dashboard.lastConnected', '上次连接:') }} {{ formatRelativeTime(conn.last_connected_at) }}
               </span>
-              <div v-if="getTagNames(conn.tag_ids).length > 0" class="flex flex-wrap gap-1 mt-1">
+              <!-- 备注信息移到这里 -->
+              <div v-if="conn.notes && conn.notes.trim() !== ''" class="text-xs text-text-secondary mt-1">
+                <span class="font-medium text-text-alt">{{ t('connections.notes.label', '备注:') }}</span>
+                <span class="break-words leading-snug ml-1" :title="conn.notes">
+                  {{ getTruncatedNotes(conn.notes) }}
+                </span>
+              </div>
+              <div v-if="getTagNames(conn.tag_ids).length > 0" class="flex flex-wrap gap-1 mt-1.5">
                 <span
                   v-for="tagName in getTagNames(conn.tag_ids)"
                   :key="tagName"
@@ -413,20 +574,58 @@ const handleBatchEditFormClose = () => {
                   {{ tagName }}
                 </span>
               </div>
+              <!-- Test Result Display -->
+              <div
+                v-if="conn.type === 'SSH' && connectionTestStates.get(conn.id) && connectionTestStates.get(conn.id)?.status !== 'idle'"
+                class="text-xs mt-1.5 pt-1 border-t border-border/30"
+              >
+                <div v-if="connectionTestStates.get(conn.id)?.status === 'testing'" class="text-text-secondary animate-pulse flex items-center">
+                  <i class="fas fa-spinner fa-spin mr-1.5 text-xs"></i>
+                  {{ t('connections.test.testingInProgress', '测试中...') }}
+                </div>
+                <div
+                  v-else-if="connectionTestStates.get(conn.id)?.status === 'success'"
+                  class="font-medium flex items-center"
+                  :style="{ color: connectionTestStates.get(conn.id)?.latencyColor || 'inherit' }"
+                >
+                  <i class="fas fa-check-circle mr-1.5 text-xs"></i>
+                  {{ connectionTestStates.get(conn.id)?.resultText }}
+                </div>
+                <div
+                  v-else-if="connectionTestStates.get(conn.id)?.status === 'error'"
+                  class="text-error font-medium flex items-center"
+                >
+                  <i class="fas fa-times-circle mr-1.5 text-xs"></i>
+                  {{ t('connections.test.errorPrefix', '错误:') }} {{ connectionTestStates.get(conn.id)?.resultText }}
+                </div>
+              </div>
             </div>
-            <div class="flex space-x-2 flex-shrink-0">
+            <!-- 中间备注区域已被移除 -->
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <!-- Test Single Connection Button -->
+              <button
+                v-if="conn.type === 'SSH'"
+                @click.stop="handleTestSingleConnection(conn)"
+                :disabled="isBatchEditMode || getSingleTestButtonInfo(conn.id, conn.type).disabled"
+                class="px-3 py-1.5 bg-transparent text-foreground border border-border rounded-md shadow-sm hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium h-9 flex items-center justify-center"
+                :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode || getSingleTestButtonInfo(conn.id, conn.type).disabled }"
+                :title="getSingleTestButtonInfo(conn.id, conn.type).title"
+              >
+                <i :class="[getSingleTestButtonInfo(conn.id, conn.type).iconClass, 'w-4 text-center', getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.test.testingShort' ? 'mr-1' : '']"></i>
+                <span v-if="getSingleTestButtonInfo(conn.id, conn.type).textKey !== 'connections.test.testingShort'">{{ t(getSingleTestButtonInfo(conn.id, conn.type).textKey) }}</span>
+              </button>
               <button
                 @click.stop="openEditConnectionForm(conn)"
-                class="px-3 py-1.5 bg-transparent text-foreground border border-border rounded-md shadow-sm hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium"
+                class="px-3 py-1.5 bg-transparent text-foreground border border-border rounded-md shadow-sm hover:bg-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium h-9 flex items-center justify-center"
                 :disabled="isBatchEditMode"
                 :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode }"
                 :title="isBatchEditMode ? t('connections.batchEdit.disabledInBatchMode', '批量模式下禁用') : t('connections.actions.edit', '编辑')"
               >
-                <i class="fas fa-pencil-alt"></i>
+                <i class="fas fa-pencil-alt mr-1"></i>{{ t('connections.actions.edit') }}
               </button>
               <button
                 @click.stop="connectTo(conn)"
-                class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium"
+                class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out text-sm font-medium h-9 flex items-center justify-center"
                 :disabled="isBatchEditMode"
                 :class="{ 'opacity-50 cursor-not-allowed': isBatchEditMode }"
                 :title="isBatchEditMode ? t('connections.batchEdit.disabledInBatchMode', '批量模式下禁用') : t('connections.actions.connect', '连接')"
@@ -439,8 +638,9 @@ const handleBatchEditFormClose = () => {
         <div v-else-if="!isLoadingConnections && searchQuery && filteredAndSortedConnections.length === 0" class="text-center text-text-secondary">{{ t('dashboard.noConnectionsMatchSearch', '没有连接匹配搜索条件') }}</div>
         <div v-else-if="!isLoadingConnections && selectedTagId !== null && filteredAndSortedConnections.length === 0" class="text-center text-text-secondary">{{ t('dashboard.noConnectionsWithTag', '该标签下没有连接记录') }}</div>
         <div v-else class="text-center text-text-secondary">{{ t('dashboard.noConnections', '没有连接记录') }}</div>
+        </div>
       </div>
-    </div>
+    </div> <!-- 结束新增的包裹层 -->
 
     <AddConnectionForm
       v-if="showAddEditConnectionForm"

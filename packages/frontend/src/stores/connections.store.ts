@@ -191,13 +191,14 @@ export const useConnectionsStore = defineStore('connections', {
         },
 
         // 测试连接 Action
-        async testConnection(connectionId: number): Promise<{ success: boolean; message?: string }> {
+        async testConnection(connectionId: number): Promise<{ success: boolean; message?: string; latency?: number }> {
             // 注意：这里不改变 isLoading 状态，或者可以引入单独的 testing 状态
             // this.isLoading = true;
             // this.error = null;
             try {
-                const response = await apiClient.post<{ success: boolean; message: string }>(`/connections/${connectionId}/test`); // 使用 apiClient
-                return { success: response.data.success, message: response.data.message };
+                // 假设后端返回 { success: boolean; message: string; latency?: number }
+                const response = await apiClient.post<{ success: boolean; message: string; latency?: number }>(`/connections/${connectionId}/test`); // 使用 apiClient
+                return { success: response.data.success, message: response.data.message, latency: response.data.latency };
             } catch (err: any) {
                 console.error(`测试连接 ${connectionId} 失败:`, err);
                 const errorMessage = err.response?.data?.message || err.message || '测试连接时发生未知错误。';
