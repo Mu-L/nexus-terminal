@@ -1405,7 +1405,7 @@
     "errorLoading": "加载传输任务失败：{error}",
     "error": {
       "unknown": "未知错误",
-      "cancelFailed": "中止任务失败。"
+      "cancelFailed": "终止任务失败。"
     },
     "noTasks": "当前没有活动的传输任务。",
     "task": {
@@ -1421,15 +1421,15 @@
       "partiallyCompleted": "部分完成",
       "connecting": "连接中",
       "transferring": "传输中",
-      "cancelling": "中止中",
-      "cancelled": "已中止"
+      "cancelling": "正在终止...",
+      "cancelled": "已终止"
     },
-    "confirmCancel": "您确定要中止此传输任务吗？",
-    "cancelRequested": "已发送中止请求。",
-    "cancelTaskTooltip": "中止任务",
-    "cancellingTooltip": "中止中...",
-    "cancelButton": "中止",
-    "cancellingButton": "中止中",
+    "confirmCancel": "您确定要终止此传输任务吗？",
+    "cancelRequested": "已发送终止请求。",
+    "cancelTaskTooltip": "终止任务",
+    "cancellingTooltip": "正在终止......",
+    "cancelButton": "终止",
+    "cancellingButton": "正在终止...",
     "subTasks": {
       "titleToggle": "查看 {count} 个子任务",
       "noSubTasks": "没有子任务。"

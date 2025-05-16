@@ -94,7 +94,28 @@ const fetchTransferTasks = async () => {
     // 假设后端API路径为 /api/v1/transfers/status，且返回数据结构为 { data: TransferTask[] }
     // 请根据实际API调整这里的类型和数据访问
     const response = await apiClient.get<{ data: TransferTask[] }>('/transfers/status');
-    transferTasks.value = Array.isArray(response.data.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
+    const rawTasks = Array.isArray(response.data.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
+    transferTasks.value = rawTasks.map(task => {
+      // 优先信任后端已经是 'cancelled' 或其他最终状态
+      if (['completed', 'failed', 'cancelled', 'partially-completed'].includes(task.status)) {
+        return task;
+      }
+      // 对于仍在进行中或正在取消中的任务
+      if (['in-progress', 'cancelling', 'queued', 'connecting', 'transferring'].includes(task.status)) {
+        // 如果它有子任务，并且所有子任务都已是 'cancelled'
+        if (task.subTasks && task.subTasks.length > 0 && task.subTasks.every((st: TransferSubTask) => st.status === 'cancelled')) {
+          // 则认为主任务也应该被标记为 'cancelled'
+          // 这有助于处理后端主任务状态更新延迟或遗漏的情况
+          return { ...task, status: 'cancelled' as TransferTask['status'] };
+        }
+        // 如果任务状态是 'cancelling' 但它没有子任务 (或子任务列表为空)
+        // 这种情况也应视为已取消
+        else if (task.status === 'cancelling' && (!task.subTasks || task.subTasks.length === 0)) {
+            return { ...task, status: 'cancelled' as TransferTask['status'] };
+        }
+      }
+      return task;
+    });
   } catch (error: any) {
     console.error("Failed to fetch transfer tasks:", error);
     errorLoading.value = error.response?.data?.message || error.message || t('transferProgressModal.error.unknown', '未知错误');
@@ -193,7 +214,7 @@ const isTaskCancelling = (taskStatus: TransferTask['status']): boolean => {
 
 const handleCancelTask = async (taskId: string) => {
   // 可以在这里添加一个确认对话框
-  // const confirmed = window.confirm(t('transferProgressModal.confirmCancel', '您确定要中止此传输任务吗？'));
+  // const confirmed = window.confirm(t('transferProgressModal.confirmCancel', '您确定要终止此传输任务吗？'));
   // if (!confirmed) return;
 
   try {
@@ -207,13 +228,20 @@ const handleCancelTask = async (taskId: string) => {
 
     await apiClient.post(`/transfers/cancel/${taskId}`);
     // 可以添加成功提示
-    // uiNotificationsStore.showSuccess(t('transferProgressModal.cancelRequested', '已发送中止请求。'));
+    // uiNotificationsStore.showSuccess(t('transferProgressModal.cancelRequested', '已发送终止请求。'));
+
+    // 前端优化：立即将任务状态设置为 'cancelling' 以提供即时反馈
+    // 这样用户点击后能马上看到状态变为“终止中”，后续轮询会从后端获取权威状态。
+    const taskBeingCancelled = transferTasks.value.find(t => t.taskId === taskId);
+    if (taskBeingCancelled && ['queued', 'in-progress', 'connecting', 'transferring'].includes(taskBeingCancelled.status)) {
+      taskBeingCancelled.status = 'cancelling';
+    }
     
     // 立即刷新一次列表，或者等待下一次轮询
     fetchTransferTasks();
   } catch (error: any) {
     console.error(`Failed to cancel task ${taskId}:`, error);
-    // uiNotificationsStore.showError(error.response?.data?.message || error.message || t('transferProgressModal.error.cancelFailed', '中止任务失败。'));
+    // uiNotificationsStore.showError(error.response?.data?.message || error.message || t('transferProgressModal.error.cancelFailed', '终止任务失败。'));
     // 如果任务状态之前被临时修改，可能需要回滚
   }
 };
@@ -273,10 +301,10 @@ const handleCancelTask = async (taskId: string) => {
                   @click="handleCancelTask(task.taskId)"
                   :disabled="isTaskCancelling(task.status)"
                   class="px-2 py-0.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  :title="isTaskCancelling(task.status) ? t('transferProgressModal.cancellingTooltip', '中止中...') : t('transferProgressModal.cancelTaskTooltip', '中止任务')"
+                  :title="isTaskCancelling(task.status) ? t('transferProgressModal.cancellingTooltip', '终止中...') : t('transferProgressModal.cancelTaskTooltip', '终止任务')"
                 >
                   <i v-if="isTaskCancelling(task.status)" class="fas fa-spinner fa-spin mr-1"></i>
-                  {{ isTaskCancelling(task.status) ? t('transferProgressModal.cancellingButton', '中止中') : t('transferProgressModal.cancelButton', '中止') }}
+                  {{ isTaskCancelling(task.status) ? t('transferProgressModal.cancellingButton', '终止中') : t('transferProgressModal.cancelButton', '终止') }}
                 </button>
               </div>
             </div>

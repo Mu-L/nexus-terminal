@@ -1393,7 +1393,7 @@
     "errorLoading": "転送タスクの読み込みに失敗しました：{error}",
     "error": {
       "unknown": "不明なエラー",
-      "cancelFailed": "タスクの中止に失敗しました。"
+      "cancelFailed": "タスクの终止に失敗しました。"
     },
     "noTasks": "現在アクティブな転送タスクはありません。",
     "task": {
@@ -1409,15 +1409,15 @@
       "partiallyCompleted": "一部完了",
       "connecting": "接続中",
       "transferring": "転送中",
-      "cancelling": "中止中",
-      "cancelled": "中止済み"
+      "cancelling": "终止中",
+      "cancelled": "终止済み"
     },
-    "confirmCancel": "この転送タスクを中止してもよろしいですか？",
-    "cancelRequested": "中止リクエストを送信しました。",
-    "cancelTaskTooltip": "タスクを中止",
-    "cancellingTooltip": "中止中...",
-    "cancelButton": "中止",
-    "cancellingButton": "中止中",
+    "confirmCancel": "この転送タスクを终止してもよろしいですか？",
+    "cancelRequested": "终止リクエストを送信しました。",
+    "cancelTaskTooltip": "タスクを终止",
+    "cancellingTooltip": "终止中...",
+    "cancelButton": "终止",
+    "cancellingButton": "终止中",
     "subTasks": {
       "titleToggle": "{count} 個のサブタスクを表示",
       "noSubTasks": "サブタスクはありません。"

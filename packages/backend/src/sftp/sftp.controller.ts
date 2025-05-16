@@ -242,7 +242,7 @@ export const downloadDirectory = async (req: Request, res: Response): Promise<vo
                          console.error(`Error reading file stream ${currentRemotePath}:`, streamErr);
                          // 如何通知 Archiver 或中断？ Archiver 的 error 事件应该会捕获？
                          if (!archive.destroyed) { // 检查 archive 是否已被销毁
-                            archive.abort(); // 尝试中止 archive
+                            archive.abort(); // 尝试终止 archive
                          }
                      });
                 }

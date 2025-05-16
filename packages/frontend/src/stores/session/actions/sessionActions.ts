@@ -130,7 +130,7 @@ export const openNewSession = (
 
     if (sessionToUpdate) {
       if (sessionToUpdate.connectionId !== backendCID) {
-        console.warn(`[SessionActions/ssh:connected] 后端CID ${backendCID} 与会话 ${originalFrontendSessionIdForHandler} 的期望CID ${sessionToUpdate.connectionId} 不匹配。中止SID更新。`);
+        console.warn(`[SessionActions/ssh:connected] 后端CID ${backendCID} 与会话 ${originalFrontendSessionIdForHandler} 的期望CID ${sessionToUpdate.connectionId} 不匹配。终止SID更新。`);
         return;
       }
 

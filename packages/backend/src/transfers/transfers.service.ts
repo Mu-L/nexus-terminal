@@ -56,7 +56,7 @@ export class TransfersService {
     // 异步启动传输，不阻塞当前请求
     this.processTransferTask(taskId, abortController.signal).catch(error => { // +++ 传递 signal +++
         console.error(`[TransfersService] Error processing task ${taskId} in background:`, error);
-        // 如果不是因为中止操作导致的错误，则更新状态
+        // 如果不是因为终止操作导致的错误，则更新状态
         if (error.name !== 'AbortError') {
           this.updateOverallTaskStatus(taskId, 'failed', `Background processing error: ${error.message}`);
         }
@@ -75,7 +75,7 @@ export class TransfersService {
     const abortController = this.taskAbortControllers.get(taskId);
     if (abortController) {
       console.info(`[TransfersService] Cancelling task ${taskId}.`);
-      abortController.abort(); // 触发中止信号
+      abortController.abort(); // 触发终止信号
 
       // 更新主任务状态
       // 假设 'cancelling' 和 'cancelled' 是有效的状态
