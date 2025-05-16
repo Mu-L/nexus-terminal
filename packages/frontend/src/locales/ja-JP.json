@@ -118,7 +118,12 @@
             "title": "接続の一括編集",
             "editSelected": "選択した項目を編集",
             "noChange": "変更なし",
-            "selectedItems": "{count} 件選択済み"
+            "selectedItems": "{count} 件選択済み",
+            "deleteSelectedButton": "選択した項目を削除",
+            "deleteSelectedTooltip": "選択した接続を削除します",
+            "confirmMessage": "選択した {count} 件の接続を本当に削除しますか？この操作は元に戻せません。",
+            "successMessage": "選択した接続は正常に削除されました。",
+            "errorMessage": "接続の一括削除に失敗しました: {error}"
         },
         "actions": {
             "testAllFiltered":"すべてテスト",

@@ -140,7 +140,11 @@
       "title": "批量编辑连接",
       "selectedItems": "已选项目",
       "noChange": "保持不变",
-      "tagsPlaceholder": "输入标签 (替换现有)"
+      "deleteSelectedButton": "删除选中",
+      "deleteSelectedTooltip": "删除选中的连接",
+      "confirmMessage": "您确定要删除选中的 {count} 个连接吗？此操作无法撤销。",
+      "successMessage": "选中的连接已成功删除。",
+      "errorMessage": "批量删除连接失败: {error}"
     },
     "actions": {
       "testAllFiltered":"测试全部",

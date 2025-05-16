@@ -45,6 +45,7 @@ const connectionToEdit = ref<ConnectionInfo | null>(null);
 const isBatchEditMode = ref(false);
 const selectedConnectionIdsForBatch = ref<Set<number>>(new Set());
 const showBatchEditForm = ref(false);
+const isDeletingSelectedConnections = ref(false);
 
 const sortOptions: { value: SortField; labelKey: string }[] = [
   { value: 'last_connected_at', labelKey: 'dashboard.sortOptions.lastConnected' },
@@ -267,6 +268,39 @@ const handleBatchEditSaved = async () => {
 
 const handleBatchEditFormClose = () => {
   showBatchEditForm.value = false;
+};
+
+// --- 批量删除 ---
+const handleBatchDeleteConnections = async () => {
+  if (selectedConnectionIdsForBatch.value.size === 0 || isDeletingSelectedConnections.value) {
+    return;
+  }
+
+  const confirmMessage = t(
+    'connections.batchEdit.confirmMessage',
+    { count: selectedConnectionIdsForBatch.value.size },
+    `您确定要删除选中的 ${selectedConnectionIdsForBatch.value.size} 个连接吗？此操作无法撤销。`
+  );
+
+  if (window.confirm(confirmMessage)) {
+    isDeletingSelectedConnections.value = true;
+    try {
+      const idsToDelete = Array.from(selectedConnectionIdsForBatch.value);
+      await connectionsStore.deleteBatchConnections(idsToDelete);
+
+
+      alert(t('connections.batchEdit.successMessage', '选中的连接已成功删除。'));
+
+      selectedConnectionIdsForBatch.value.clear();
+
+      await connectionsStore.fetchConnections(); 
+    } catch (error: any) {
+      console.error("Batch delete connections error:", error);
+      alert(t('connections.batchEdit.errorMessage', `批量删除连接失败: ${error.message || '未知错误'}`));
+    } finally {
+      isDeletingSelectedConnections.value = false;
+    }
+  }
 };
 
 // --- Test Connection Logic ---
@@ -569,6 +603,16 @@ const handleConnectAllFilteredConnections = async () => {
         >
           <i class="fas fa-edit mr-1"></i>
           {{ t('connections.batchEdit.editSelected', '编辑选中') }}
+        </button>
+        <button
+          @click="handleBatchDeleteConnections"
+          :disabled="selectedConnectionIdsForBatch.size === 0 || isDeletingSelectedConnections"
+          class="px-4 py-1.5 text-sm bg-red-600 text-white rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          :title="t('connections.batchEdit.deleteSelectedTooltip', '删除选中的连接')"
+        >
+          <i v-if="isDeletingSelectedConnections" class="fas fa-spinner fa-spin mr-1.5"></i>
+          <i v-else class="fas fa-trash-alt mr-1.5"></i>
+          <span>{{ t('connections.batchEdit.deleteSelectedButton', '删除选中') }}</span>
         </button>
       </div>
 

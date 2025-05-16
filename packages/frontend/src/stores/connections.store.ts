@@ -190,6 +190,51 @@ export const useConnectionsStore = defineStore('connections', {
             }
         },
 
+        // 批量删除连接 
+        async deleteBatchConnections(connectionIds: number[]): Promise<boolean> {
+            if (!connectionIds || connectionIds.length === 0) {
+                console.warn('[ConnectionsStore] deleteBatchConnections called with no IDs.');
+                return true; // 没有要删除的，视为成功
+            }
+            this.isLoading = true; // 标记整个批量删除操作正在进行
+            this.error = null;
+            let allSucceeded = true;
+            const individualErrors: string[] = [];
+
+            for (const id of connectionIds) {
+                try {
+                    // 调用现有的 deleteConnection 方法
+                    const success = await this.deleteConnection(id);
+                    if (!success) {
+                        allSucceeded = false;
+                        if (this.error) {
+                            individualErrors.push(`删除连接 ID ${id} 失败: ${this.error}`);
+                        } else {
+                            individualErrors.push(`删除连接 ID ${id} 失败 (未知原因)`);
+                        }
+                        this.error = null;
+                    }
+                } catch (e: any) {
+                    // 捕获 deleteConnection 调用本身可能抛出的意外错误
+                    allSucceeded = false;
+                    const errorMessage = e.message || '未知错误';
+                    individualErrors.push(`调用删除连接 ID ${id} 时发生意外错误: ${errorMessage}`);
+                    console.error(`[ConnectionsStore] Unexpected error calling deleteConnection for ID ${id}`, e);
+                }
+            }
+
+            if (!allSucceeded) {
+                this.error = `批量删除操作中部分连接未能成功删除。详情: ${individualErrors.join('; ')}`;
+                console.error('[ConnectionsStore] Batch delete operation completed with one or more failures.');
+            } else {
+                // 如果所有操作都成功，确保 this.error 为 null
+                this.error = null;
+            }
+
+            this.isLoading = false;
+            return allSucceeded;
+        },
+
         // 测试连接 Action
         async testConnection(connectionId: number): Promise<{ success: boolean; message?: string; latency?: number }> {
             // 注意：这里不改变 isLoading 状态，或者可以引入单独的 testing 状态

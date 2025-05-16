@@ -140,7 +140,12 @@
       "title": "Batch Edit Connections",
       "editSelected": "Edit Selected",
       "noChange":"No change",
-      "selectedItems":"{count} items selected"
+      "selectedItems":"{count} items selected",
+      "deleteSelectedButton": "Delete Selected",
+      "deleteSelectedTooltip": "Delete selected connections",
+      "confirmMessage": "Are you sure you want to delete the selected {count} connections? This action cannot be undone.",
+      "successMessage": "Selected connections have been successfully deleted.",
+      "errorMessage": "Batch delete connections failed: {error}"
     },
     "actions": {
       "testAllFiltered":"Test All",
