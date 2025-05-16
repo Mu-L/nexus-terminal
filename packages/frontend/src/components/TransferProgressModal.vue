@@ -11,7 +11,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits(['update:visible']);
-const { t } = useI18n();
+const { t, locale } = useI18n(); // +++ 解构出 locale +++
 const connectionsStore = useConnectionsStore();
 
 // Helper function to get connection name by ID
@@ -123,7 +123,8 @@ const getDisplayStatus = (status: string): string => {
 const formatDate = (dateInput: string | Date): string => {
   if (!dateInput) return '';
   try {
-    return new Date(dateInput).toLocaleString(navigator.language, {
+    // +++ 使用 i18n 的 locale 进行日期格式化 +++
+    return new Date(dateInput).toLocaleString(locale.value, {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });

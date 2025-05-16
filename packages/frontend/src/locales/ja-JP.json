@@ -1385,7 +1385,56 @@
       "resumeErrorBackend": "バックエンドがセッションの再開に失敗しました: {error}",
       "autoTerminated": "中断されたセッション「{name}」は、理由: {reason} によりバックエンドによって自動終了されました。"
     }
-  },  
+  },
+  "transferProgressModal": {
+    "title": "ファイル転送進捗",
+    "loading": "転送タスクを読み込み中...",
+    "errorLoadingTitle": "読み込みエラー",
+    "errorLoading": "転送タスクの読み込みに失敗しました：{error}",
+    "error": {
+      "unknown": "不明なエラー",
+      "cancelFailed": "タスクの中止に失敗しました。"
+    },
+    "noTasks": "現在アクティブな転送タスクはありません。",
+    "task": {
+      "idLabel": "タスク",
+      "createdAt": "作成日時",
+      "overallProgress": "全体進捗"
+    },
+    "status": {
+      "queued": "待機中",
+      "inProgress": "進行中",
+      "completed": "完了",
+      "failed": "失敗",
+      "partiallyCompleted": "一部完了",
+      "connecting": "接続中",
+      "transferring": "転送中",
+      "cancelling": "中止中",
+      "cancelled": "中止済み"
+    },
+    "confirmCancel": "この転送タスクを中止してもよろしいですか？",
+    "cancelRequested": "中止リクエストを送信しました。",
+    "cancelTaskTooltip": "タスクを中止",
+    "cancellingTooltip": "中止中...",
+    "cancelButton": "中止",
+    "cancellingButton": "中止中",
+    "subTasks": {
+      "titleToggle": "{count} 個のサブタスクを表示",
+      "noSubTasks": "サブタスクはありません。"
+    },
+    "subTask": {
+      "source": "送信元ファイル",
+      "connectionId": "宛先接続",
+      "status": "状態",
+      "method": "方法",
+      "error": "エラー"
+    },
+    "connectionIdFallback": "接続ID: {connectionId}",
+    "unknownFileName": "[ファイル名不明]",
+    "unknownSourceServer": "[送信元サーバー不明]",
+    "unknownTargetPath": "[宛先パス不明]",
+    "taskIdFallback": "タスクID: {taskId}"
+  },
   "sendFilesModal": {
     "title": "ファイル送信",
     "searchConnectionsPlaceholder": "接続を検索...",

@@ -1425,6 +1425,55 @@
       "logExportError": "Failed to export suspended session log: {error}"
     }
   },
+  "transferProgressModal": {
+    "title": "File Transfer Progress",
+    "loading": "Loading transfer tasks...",
+    "errorLoadingTitle": "Loading Error",
+    "errorLoading": "Failed to load transfer tasks: {error}",
+    "error": {
+      "unknown": "Unknown error",
+      "cancelFailed": "Failed to cancel task."
+    },
+    "noTasks": "There are no active transfer tasks currently.",
+    "task": {
+      "idLabel": "Task",
+      "createdAt": "Created at",
+      "overallProgress": "Overall Progress"
+    },
+    "status": {
+      "queued": "Queued",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "partiallyCompleted": "Partially Completed",
+      "connecting": "Connecting",
+      "transferring": "Transferring",
+      "cancelling": "Cancelling",
+      "cancelled": "Cancelled"
+    },
+    "confirmCancel": "Are you sure you want to cancel this transfer task?",
+    "cancelRequested": "Cancel request sent.",
+    "cancelTaskTooltip": "Cancel Task",
+    "cancellingTooltip": "Cancelling...",
+    "cancelButton": "Cancel",
+    "cancellingButton": "Cancelling",
+    "subTasks": {
+      "titleToggle": "View {count} Sub-tasks",
+      "noSubTasks": "No sub-tasks."
+    },
+    "subTask": {
+      "source": "Source File",
+      "connectionId": "Target Connection",
+      "status": "Status",
+      "method": "Method",
+      "error": "Error"
+    },
+    "connectionIdFallback": "Connection ID: {connectionId}",
+    "unknownFileName": "[Unknown File Name]",
+    "unknownSourceServer": "[Unknown Source Server]",
+    "unknownTargetPath": "[Unknown Target Path]",
+    "taskIdFallback": "Task ID: {taskId}"
+  },
   "sendFilesModal": {
     "title": "Send Files",
     "searchConnectionsPlaceholder": "Search connections...",
