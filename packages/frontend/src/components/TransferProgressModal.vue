@@ -254,7 +254,7 @@ const handleCancelTask = async (taskId: string) => {
     class="fixed inset-0 bg-overlay flex justify-center items-center z-50 p-4"
     @click.self="handleClose"
   >
-    <div class="bg-background text-foreground p-6 rounded-lg shadow-xl border border-border w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <div class="bg-background text-foreground p-6 rounded-lg shadow-xl border w-full max-w-3xl max-h-[85vh] flex flex-col" :style="{ borderColor: 'var(--border-color)' }">
       <!-- Header -->
       <h3 class="text-xl font-semibold text-center mb-6 flex-shrink-0">
         {{ t('transferProgressModal.title', '文件传输进度') }}
@@ -280,7 +280,7 @@ const handleCancelTask = async (taskId: string) => {
           {{ t('transferProgressModal.noTasks', '当前没有活动的传输任务。') }}
         </div>
         <div v-else class="space-y-3">
-          <div v-for="task in displayedTasks" :key="task.taskId" class="bg-background-alt p-3 rounded-lg border border-border-alt shadow-sm hover:shadow-md transition-shadow">
+          <div v-for="task in displayedTasks" :key="task.taskId" class="bg-background-alt p-3 rounded-lg border shadow-sm hover:shadow-md transition-shadow" :style="{ borderColor: 'var(--border-color)' }">
             <div class="flex justify-between items-start mb-2">
               <div>
                 <span class="font-semibold text-md block">{{ t('transferProgressModal.task.idLabel', '任务') }}: {{ formatTaskTitle(task) }}</span>
@@ -324,13 +324,23 @@ const handleCancelTask = async (taskId: string) => {
                 {{ t('transferProgressModal.subTasks.titleToggle', { count: task.subTasks.length }) }}
                 <span class="group-open:hidden">+</span><span class="hidden group-open:inline">-</span>
               </summary>
-              <ul class="mt-2 space-y-1.5 pl-3 border-l border-border-alt ml-1">
-                <li v-for="subTask in task.subTasks" :key="subTask.subTaskId" class="text-xs p-1.5 rounded bg-background border border-border-alt/50">
+              <ul class="mt-2 space-y-1.5 pl-3 border-l ml-1" :style="{ borderLeftColor: 'var(--border-color)' }">
+                <li v-for="subTask in task.subTasks" :key="subTask.subTaskId" class="text-xs p-1.5 rounded bg-background border" :style="{ borderColor: 'var(--border-color)' }">
                   <p><strong>{{ t('transferProgressModal.subTask.source', '源文件') }}:</strong> {{ subTask.sourceItemName }}</p>
                   <p><strong>{{ t('transferProgressModal.subTask.connectionId', '目标连接') }}:</strong> {{ getConnectionName(subTask.connectionId) }}</p>
-                  <p><strong>{{ t('transferProgressModal.subTask.status', '状态') }}:</strong> {{ getDisplayStatus(subTask.status) }}
-                    <span v-if="subTask.progress !== undefined"> ({{ subTask.progress }}%)</span>
-                  </p>
+                  <div class="flex items-center">
+                    <strong class="mr-1">{{ t('transferProgressModal.subTask.status', '状态') }}:</strong>
+                    <span :class="['px-2 py-0.5 text-xs font-semibold rounded-full',
+                      { 'bg-green-100 text-green-700': subTask.status === 'completed' },
+                      { 'bg-red-100 text-red-700': subTask.status === 'failed' },
+                      { 'bg-yellow-100 text-yellow-700': subTask.status === 'queued' || subTask.status === 'cancelling' },
+                      { 'bg-blue-100 text-blue-700': subTask.status === 'transferring' || subTask.status === 'connecting' }, // 'connecting' and 'transferring' use blue
+                      { 'bg-gray-100 text-gray-700': subTask.status === 'cancelled' }
+                    ]">
+                      {{ getDisplayStatus(subTask.status) }}
+                    </span>
+                    <span v-if="subTask.progress !== undefined" class="ml-1 text-xs text-text-secondary"> ({{ subTask.progress }}%)</span>
+                  </div>
                   <p v-if="subTask.transferMethodUsed"><strong>{{ t('transferProgressModal.subTask.method', '方法') }}:</strong> {{ subTask.transferMethodUsed }}</p>
                   <p v-if="subTask.status === 'failed' && subTask.message" class="text-red-600">
                     <strong>{{ t('transferProgressModal.subTask.error', '错误') }}:</strong> {{ subTask.message }}
@@ -346,7 +356,7 @@ const handleCancelTask = async (taskId: string) => {
       </div>
 
       <!-- Footer -->
-      <div class="flex justify-end items-center pt-4 mt-auto flex-shrink-0 border-t border-border">
+      <div class="flex justify-end items-center pt-4 mt-auto flex-shrink-0 border-t" :style="{ borderTopColor: 'var(--border-color)' }">
         <button
           @click="handleClose"
           class="px-4 py-2 bg-button text-button-text rounded-md shadow-sm hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
