@@ -85,6 +85,12 @@ export const useAppearanceStore = defineStore('appearance', () => {
         return typeof enabled === 'boolean' ? enabled : true; // 默认启用
     });
  
+    // 终端背景蒙版透明度
+    const currentTerminalBackgroundOverlayOpacity = computed<number>(() => {
+        const opacity = appearanceSettings.value.terminalBackgroundOverlayOpacity;
+        return typeof opacity === 'number' && opacity >= 0 && opacity <= 1 ? opacity : 0.5; // 默认 0.5
+    });
+
     // --- Actions ---
 
     /**
@@ -234,6 +240,14 @@ export const useAppearanceStore = defineStore('appearance', () => {
         console.log(`[AppearanceStore LOG] setTerminalBackgroundEnabled 更新后端调用完成。`); // 添加日志
     }
  
+    /**
+     * 设置终端背景蒙版透明度
+     * @param opacity 透明度 (0-1)
+     */
+    async function setTerminalBackgroundOverlayOpacity(opacity: number) {
+        await updateAppearanceSettings({ terminalBackgroundOverlayOpacity: opacity });
+    }
+
     // --- 终端主题列表管理 Actions ---
 
     /**
@@ -567,6 +581,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
         // pageBackgroundOpacity, // Removed
         terminalBackgroundImage,
         // terminalBackgroundOpacity, // Removed
+        currentTerminalBackgroundOverlayOpacity, // <-- 新增导出
         // Actions
         loadInitialAppearanceData,
         updateAppearanceSettings,
@@ -586,6 +601,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
         uploadTerminalBackground,
         // setPageBackgroundOpacity, // Removed
         // setTerminalBackgroundOpacity, // Removed
+        setTerminalBackgroundOverlayOpacity, // <-- 新增导出
         removePageBackground,
         removeTerminalBackground,
         loadTerminalThemeData, // <-- 新增导出

@@ -9,7 +9,12 @@ import * as terminalThemeRepository from '../repositories/terminal-theme.reposit
  * @returns Promise<AppearanceSettings>
  */
 export const getSettings = async (): Promise<AppearanceSettings> => {
-  return appearanceRepository.getAppearanceSettings();
+  const settings = await appearanceRepository.getAppearanceSettings();
+  // 为 terminalBackgroundOverlayOpacity 提供默认值
+  if (settings.terminalBackgroundOverlayOpacity === undefined || settings.terminalBackgroundOverlayOpacity === null) {
+    settings.terminalBackgroundOverlayOpacity = 0.5; // 默认透明度为 0.5
+  }
+  return settings;
 };
 
 /**
@@ -62,6 +67,15 @@ export const updateSettings = async (settingsDto: UpdateAppearanceDto): Promise<
       }
       // 确保类型正确传递给仓库层
       settingsDto.editorFontSize = size;
+  }
+
+  // 验证 terminalBackgroundOverlayOpacity (如果提供了)
+  if (settingsDto.terminalBackgroundOverlayOpacity !== undefined && settingsDto.terminalBackgroundOverlayOpacity !== null) {
+    const opacity = Number(settingsDto.terminalBackgroundOverlayOpacity);
+    if (isNaN(opacity) || opacity < 0 || opacity > 1) {
+      throw new Error(`无效的终端背景蒙版透明度: ${settingsDto.terminalBackgroundOverlayOpacity}。必须是一个 0 到 1 之间的数字。`);
+    }
+    settingsDto.terminalBackgroundOverlayOpacity = opacity; // 确保类型正确
   }
 
   // TODO: 如果实现了背景图片上传，这里需要处理文件路径或 URL 的验证/保存逻辑

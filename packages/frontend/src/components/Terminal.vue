@@ -23,7 +23,8 @@ const props = defineProps<{
 
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 
-const terminalRef = ref<HTMLElement | null>(null); // 终端容器的引用
+const terminalRef = ref<HTMLElement | null>(null); // xterm 挂载点的引用 (内部容器)
+const terminalOuterWrapperRef = ref<HTMLElement | null>(null); // 最外层容器的引用，用于背景图
 let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let searchAddon: SearchAddon | null = null; // *** 添加 searchAddon 变量 ***
@@ -40,7 +41,8 @@ const {
   currentTerminalFontFamily,
   terminalBackgroundImage,
   currentTerminalFontSize,
-  isTerminalBackgroundEnabled 
+  isTerminalBackgroundEnabled,
+  currentTerminalBackgroundOverlayOpacity, // 获取蒙版透明度
 } = storeToRefs(appearanceStore);
  
 // --- Settings Store ---
@@ -85,7 +87,8 @@ const debouncedEmitResize = debounce((term: Terminal) => {
 
 // 立即执行 Fit 并发送 Resize 的函数
 const fitAndEmitResizeNow = (term: Terminal) => {
-    if (!term || !terminalRef.value) return; // 添加 terminalRef.value 检查
+    // terminalRef 现在指向内部容器，检查它即可
+    if (!term || !terminalRef.value) return;
     try {
         // 确保容器可见且有尺寸
         if (terminalRef.value.offsetHeight > 0 && terminalRef.value.offsetWidth > 0) {
@@ -98,6 +101,7 @@ const fitAndEmitResizeNow = (term: Terminal) => {
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
             nextTick(() => {
                 // 再次检查终端实例是否仍然存在
+                // terminalRef 现在指向内部容器
                 if (terminal && terminalRef.value) {
                     console.log(`[Terminal ${props.sessionId}] Triggering window resize event after immediate fit.`);
                     window.dispatchEvent(new Event('resize'));
@@ -160,6 +164,7 @@ const removeContextMenuListener = () => {
 
 // 初始化终端
 onMounted(() => {
+  // xterm 挂载到 terminalRef (内部容器)
   if (terminalRef.value) {
     terminal = new Terminal({
       cursorBlink: true,
@@ -198,8 +203,9 @@ onMounted(() => {
     });
 
     // 监听终端大小变化 (通过 ResizeObserver) - 主要处理浏览器窗口大小变化等
+    // ResizeObserver 观察内部容器 terminalRef
     if (terminalRef.value) {
-        observedElement = terminalRef.value; // +++ Store the element to be observed +++
+        observedElement = terminalRef.value;
         resizeObserver = new ResizeObserver((entries) => {
             // Only process if the terminal is active
             if (!props.isActive || !terminal) return;
@@ -242,6 +248,7 @@ onMounted(() => {
                 nextTick(() => {
                     setTimeout(() => {
                         // Re-check if still active and terminal exists
+                        // 检查内部容器 terminalRef
                         if (props.isActive && terminal && terminalRef.value && terminalRef.value.offsetHeight > 0) {
                             fitAndEmitResizeNow(terminal);
                             // Also ensure focus when becoming active
@@ -445,7 +452,7 @@ onMounted(() => {
     });
 
 
-    // 重新添加鼠标滚轮缩放功能
+    // 重新添加鼠标滚轮缩放功能到内部容器 terminalRef
     if (terminalRef.value) {
       terminalRef.value.addEventListener('wheel', (event: WheelEvent) => {
     //     // 只在按下Ctrl键时才触发缩放
@@ -534,9 +541,9 @@ onBeforeUnmount(() => {
     // 确保在卸载时移除右键监听器
     removeContextMenuListener();
   
-    if (terminalRef.value) {
-  
-    }
+    // terminalRef 是内部容器，不需要特别处理
+    // if (terminalRef.value) {
+    // }
   });
 // 暴露 write 方法给父组件 (可选)
 const write = (data: string | Uint8Array) => {
@@ -572,60 +579,40 @@ defineExpose({ write, findNext, findPrevious, clearSearch, clear }); // 暴露 c
  
 // --- 应用终端背景 ---
 const applyTerminalBackground = () => {
-    if (terminalRef.value) {
-        // 首先检查背景功能是否启用
+    // 背景应用到 terminalOuterWrapperRef
+    if (terminalOuterWrapperRef.value) {
         if (!isTerminalBackgroundEnabled.value) {
-            // 如果禁用，则移除背景并返回
             nextTick(() => {
-                 if (terminalRef.value) {
-                    terminalRef.value.style.backgroundImage = 'none';
-                    terminalRef.value.classList.remove('has-terminal-background');
+                 if (terminalOuterWrapperRef.value) {
+                    terminalOuterWrapperRef.value.style.backgroundImage = 'none';
+                    terminalOuterWrapperRef.value.classList.remove('has-terminal-background');
                  }
             });
             console.log(`[Terminal ${props.sessionId}] 终端背景已禁用，移除背景。`);
-            return; // 提前退出
+            return;
         }
  
-        // 如果启用，再检查是否有背景图片
         if (terminalBackgroundImage.value) {
-            // --- 修改开始 ---
-            // 使用环境变量获取后端基础 URL
-            const backendUrl = import.meta.env.VITE_API_BASE_URL || ''; // 提供一个默认空字符串以防万一
+            const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
             const imagePath = terminalBackgroundImage.value;
-            console.log(`[Terminal applyTerminalBackground] backendUrl: "${backendUrl}", imagePath: "${imagePath}"`); // 详细日志
             const fullImageUrl = `${backendUrl}${imagePath}`;
-            console.log(`[Terminal applyTerminalBackground] fullImageUrl: "${fullImageUrl}"`); // 打印完整 URL
-            // --- 修改结束 ---
-            // --- 使用 nextTick 包装样式应用 ---
             nextTick(() => {
-                if (terminalRef.value) { // 再次检查 ref 是否存在
-                    terminalRef.value.style.backgroundImage = `url(${fullImageUrl})`;
-                    terminalRef.value.style.backgroundSize = 'cover'; // Or 'contain', 'auto', etc.
-                    terminalRef.value.style.backgroundPosition = 'center';
-                    terminalRef.value.style.backgroundRepeat = 'no-repeat';
-                    // 添加 CSS 类
-                    terminalRef.value.classList.add('has-terminal-background');
+                if (terminalOuterWrapperRef.value) {
+                    terminalOuterWrapperRef.value.style.backgroundImage = `url(${fullImageUrl})`;
+                    terminalOuterWrapperRef.value.style.backgroundSize = 'cover';
+                    terminalOuterWrapperRef.value.style.backgroundPosition = 'center';
+                    terminalOuterWrapperRef.value.style.backgroundRepeat = 'no-repeat';
+                    terminalOuterWrapperRef.value.classList.add('has-terminal-background');
                 }
             });
-            // 应用透明度: 通过设置背景色实现，需要 xterm 的 allowTransparency: true
-            // 注意：这会影响整个终端的背景，包括文本后的背景
-            // 一个常见的做法是设置一个稍微透明的背景色，让图片透出来
-            // 例如，将 xterm 主题的 background 设置为 rgba(r, g, b, opacity)
-            // 这里我们简单设置容器的 opacity，但这会影响文本！更好的方法是修改主题。
-            // 另一种方法是用伪元素做背景层。
-            // 为了简单起见，我们暂时只设置背景图，透明度让用户在主题中调整 background 的 alpha 值。
-            // terminalRef.value.style.opacity = terminalBackgroundOpacity.value.toString(); // 不推荐直接设置 opacity
             console.log(`[Terminal ${props.sessionId}] 应用终端背景图片: ${terminalBackgroundImage.value}`);
         } else {
-            // --- 使用 nextTick 包装样式移除 ---
             nextTick(() => {
-                 if (terminalRef.value) { // 再次检查 ref 是否存在
-                    terminalRef.value.style.backgroundImage = 'none';
-                    // 移除 CSS 类
-                    terminalRef.value.classList.remove('has-terminal-background');
+                 if (terminalOuterWrapperRef.value) {
+                    terminalOuterWrapperRef.value.style.backgroundImage = 'none';
+                    terminalOuterWrapperRef.value.classList.remove('has-terminal-background');
                  }
             });
-            // terminalRef.value.style.opacity = '1'; // 移除背景时恢复不透明
              console.log(`[Terminal ${props.sessionId}] 移除终端背景图片。`);
         }
     }
@@ -634,41 +621,46 @@ const applyTerminalBackground = () => {
 </script>
 
 <template>
-  <div ref="terminalRef" class="terminal-container"></div>
+  <div ref="terminalOuterWrapperRef" class="terminal-outer-wrapper">
+    <!-- 蒙版层 -->
+    <div
+      v-if="isTerminalBackgroundEnabled && terminalBackgroundImage"
+      class="terminal-background-overlay"
+      :style="{ backgroundColor: `rgba(0, 0, 0, ${currentTerminalBackgroundOverlayOpacity})` }"
+    ></div>
+    <!-- xterm 实际挂载点 -->
+    <div ref="terminalRef" class="terminal-inner-container"></div>
+  </div>
 </template>
 
 <style scoped>
-/* 容器样式，确保填满并隐藏自身滚动条 */
-.terminal-container {
+.terminal-outer-wrapper {
   width: 100%;
-  height: 100%; /* 高度需要由父容器控制 */
-  overflow: hidden; /* 阻止此容器本身产生滚动条 */
-  position: relative; /* 用于可能的伪元素背景 */
+  height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
-/* 移除 :deep 样式，让 xterm 内部自然处理滚动 */
-
-/* 示例：使用伪元素添加带透明度的背景层 (如果需要独立于主题的透明度) */
-/*
-.terminal-container::before {
-  content: '';
+.terminal-background-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: var(--terminal-bg-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: var(--terminal-bg-opacity);
-  z-index: -1; // 确保在 xterm 内容后面
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* 允许鼠标事件穿透 */
+  z-index: 1; /* 在背景图之上 */
 }
-*/
 
-/* 当容器有背景图时，强制内部 xterm 视口和屏幕背景透明 */
-.terminal-container.has-terminal-background :deep(.xterm-viewport),
-.terminal-container.has-terminal-background :deep(.xterm-screen) {
+.terminal-inner-container {
+  width: 100%;
+  height: 100%;
+  position: relative; /* 使 z-index 生效 */
+  z-index: 2; /* 在蒙版之上 */
+}
+
+/* 当最外层容器有背景图时，强制内部 xterm 视口和屏幕背景透明 */
+.terminal-outer-wrapper.has-terminal-background .terminal-inner-container :deep(.xterm-viewport),
+.terminal-outer-wrapper.has-terminal-background .terminal-inner-container :deep(.xterm-screen) {
   background-color: transparent !important;
 }
 </style>

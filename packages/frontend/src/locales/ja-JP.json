@@ -1260,9 +1260,14 @@
         "uiThemeSaveFailed": "UI テーマの保存に失敗しました: {message}",
         "uploadFailed": "アップロードに失敗しました: {message}",
         "uploadPageBg": "ページの背景をアップロード",
-        "uploadTerminalBg": "ターミナルの背景をアップロード"
-    },
-    "tags": {
+        "uploadTerminalBg": "ターミナルの背景をアップロード",
+        "terminalBgOverlayOpacity": "ターミナル背景オーバーレイの不透明度:",
+        "terminalBgOverlayOpacityDesc": "背景画像上の黒いオーバーレイの不透明度を制御します。0は完全に透明、1は完全に不透明です。",
+        "errorInvalidOpacityValue": "無効な不透明度の値です。0から1の間でなければなりません。",
+        "terminalBgOverlayOpacitySaved": "ターミナル背景オーバーレイの不透明度が保存されました。",
+        "terminalBgOverlayOpacitySaveFailed": "ターミナル背景オーバーレイの不透明度の保存に失敗しました: {message}"
+      },
+      "tags": {
         "addTag": "新しいタグを追加",
         "deleteTagGlobally": "このタグをグローバルに削除",
         "error": "タグリストのロードに失敗しました: {error}",

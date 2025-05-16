@@ -91,7 +91,12 @@
     "defaultMode": "Default Mode",
     "darkMode": "Dark Mode",
     "darkModeApplied": "Dark mode applied",
-    "darkModeApplyFailed": "Failed to apply dark mode: {message}"
+    "darkModeApplyFailed": "Failed to apply dark mode: {message}",
+    "terminalBgOverlayOpacity": "Terminal Background Overlay Opacity:",
+    "terminalBgOverlayOpacityDesc": "Controls the opacity of the black overlay on top of the background image. 0 is fully transparent, 1 is fully opaque.",
+    "errorInvalidOpacityValue": "Invalid opacity value. Must be between 0 and 1.",
+    "terminalBgOverlayOpacitySaved": "Terminal background overlay opacity saved.",
+    "terminalBgOverlayOpacitySaveFailed": "Failed to save terminal background overlay opacity: {message}"
   },
   "login": {
     "title": "User Login",

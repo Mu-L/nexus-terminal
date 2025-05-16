@@ -17,6 +17,7 @@ export interface AppearanceSettings {
   pageBackgroundImage?: string; // 页面背景图片 URL 或路径
   editorFontSize?: number; // 编辑器字体大小 (px)
   terminalBackgroundEnabled?: boolean; // 终端背景是否启用
+  terminalBackgroundOverlayOpacity?: number; // 终端背景蒙版透明度 (0-1)
   updatedAt?: number;
 }
  

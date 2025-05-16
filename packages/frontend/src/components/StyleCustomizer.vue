@@ -22,7 +22,8 @@ const {
   
   terminalBackgroundImage,
   
-  isTerminalBackgroundEnabled, 
+  isTerminalBackgroundEnabled,
+  currentTerminalBackgroundOverlayOpacity, // 从 store 解构
 } = storeToRefs(appearanceStore);
  
 
@@ -34,7 +35,8 @@ const editableEditorFontSize = ref(14);
 
 const editableUiThemeString = ref(''); 
 const themeParseError = ref<string | null>(null); 
-const localTerminalBackgroundEnabled = ref(true); 
+const localTerminalBackgroundEnabled = ref(true);
+const editableTerminalBackgroundOverlayOpacity = ref(0.5); // 本地编辑状态，默认 0.5
  
 // 终端主题管理相关状态
 const isEditingTheme = ref(false); // 是否正在编辑某个主题
@@ -95,7 +97,9 @@ const initializeEditableState = () => {
   editableTerminalFontSize.value = currentTerminalFontSize.value;
   editableEditorFontSize.value = currentEditorFontSize.value; // <-- 新增
   localTerminalBackgroundEnabled.value = isTerminalBackgroundEnabled.value; // <-- 重新添加：在此处初始化
+  editableTerminalBackgroundOverlayOpacity.value = currentTerminalBackgroundOverlayOpacity.value; // 初始化蒙版透明度
   console.log(`[StyleCustomizer initializeEditableState] Initializing localTerminalBackgroundEnabled to: ${localTerminalBackgroundEnabled.value} (from store: ${isTerminalBackgroundEnabled.value})`); // 添加日志
+  console.log(`[StyleCustomizer initializeEditableState] Initializing editableTerminalBackgroundOverlayOpacity to: ${editableTerminalBackgroundOverlayOpacity.value} (from store: ${currentTerminalBackgroundOverlayOpacity.value})`); // 新增日志
   uploadError.value = null;
   importError.value = null;
   saveThemeError.value = null;
@@ -135,7 +139,9 @@ watch([
     const oldActiveThemeId = oldVals ? oldVals[1] : null;
 
     // 仅当非编辑状态时，或活动终端主题ID变化时，或 UI 主题/终端背景启用状态设置本身发生变化时 (例如重置或外部更改)，才重新初始化
-    const settingsChanged = newSettings?.customUiTheme !== oldSettings?.customUiTheme || newSettings?.terminalBackgroundEnabled !== oldSettings?.terminalBackgroundEnabled; // 检查相关设置是否变化
+    const settingsChanged = newSettings?.customUiTheme !== oldSettings?.customUiTheme ||
+                            newSettings?.terminalBackgroundEnabled !== oldSettings?.terminalBackgroundEnabled ||
+                            newSettings?.terminalBackgroundOverlayOpacity !== oldSettings?.terminalBackgroundOverlayOpacity; // 检查相关设置是否变化
     if (!isEditingTheme.value || newActiveThemeId !== oldActiveThemeId || settingsChanged) {
         console.log(`[StyleCustomizer Watch] Triggering re-initialization. isEditing: ${isEditingTheme.value}, themeIdChanged: ${newActiveThemeId !== oldActiveThemeId}, settingsChanged: ${settingsChanged}`); // 添加日志
         initializeEditableState(); // 调用修改后的初始化函数
@@ -150,6 +156,7 @@ watch([
         editableTerminalFontSize.value = newSettings?.terminalFontSize || 14;
         editableEditorFontSize.value = newSettings?.editorFontSize || 14; // <-- 新增同步
         // localTerminalBackgroundEnabled.value = newSettings?.terminalBackgroundEnabled ?? true; // <-- 移除此行，避免冲突
+        // editableTerminalBackgroundOverlayOpacity.value = newSettings?.terminalBackgroundOverlayOpacity ?? 0.5; // 在 initializeEditableState 中处理
     }
 }, { deep: true });
  
@@ -165,6 +172,14 @@ watch(isTerminalBackgroundEnabled, (newValue) => {
   }
 });
 // 移除单独监听 isTerminalBackgroundEnabled 的 watcher
+
+// 监听 store 中 currentTerminalBackgroundOverlayOpacity 的变化，以同步本地状态
+watch(currentTerminalBackgroundOverlayOpacity, (newValue) => {
+  if (editableTerminalBackgroundOverlayOpacity.value !== newValue) {
+    console.log(`[StyleCustomizer Watch currentTerminalBackgroundOverlayOpacity] Store changed to ${newValue}, updating local state.`);
+    editableTerminalBackgroundOverlayOpacity.value = newValue;
+  }
+});
  
 const emit = defineEmits(['close']);
  
@@ -791,6 +806,22 @@ const handleToggleTerminalBackground = async () => {
     }
 };
  
+// 保存终端背景蒙版透明度
+const handleSaveTerminalBackgroundOverlayOpacity = async () => {
+  try {
+    const opacity = Number(editableTerminalBackgroundOverlayOpacity.value);
+    if (isNaN(opacity) || opacity < 0 || opacity > 1) {
+      alert(t('styleCustomizer.errorInvalidOpacityValue')); // 需要添加翻译 "无效的透明度值，必须在0到1之间"
+      return;
+    }
+    await appearanceStore.setTerminalBackgroundOverlayOpacity(opacity);
+    alert(t('styleCustomizer.terminalBgOverlayOpacitySaved')); // 需要添加翻译 "终端背景蒙版透明度已保存"
+  } catch (error: any) {
+    console.error("保存终端背景蒙版透明度失败:", error);
+    alert(t('styleCustomizer.terminalBgOverlayOpacitySaveFailed', { message: error.message })); // 需要添加翻译 "终端背景蒙版透明度保存失败"
+  }
+};
+
 // Removed handlePageOpacityChange and handleTerminalOpacityChange functions
  
 // --- 辅助函数 ---
@@ -1188,13 +1219,38 @@ const handleFocusAndSelect = (event: FocusEvent) => {
 
                  
                  <div v-if="localTerminalBackgroundEnabled">
-                   <div class="w-full h-[100px] md:h-[150px] border border-dashed border-border mb-2 flex justify-center items-center text-text-secondary bg-cover bg-center bg-no-repeat rounded bg-header relative overflow-hidden" :style="{ backgroundImage: terminalBackgroundImage ? `url(${terminalBackgroundImage})` : 'none' }"> 
-                       <span v-if="!terminalBackgroundImage" class="bg-white/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm">{{ t('styleCustomizer.noBackground') }}</span>
+                   <div class="w-full h-[100px] md:h-[150px] border border-dashed border-border mb-2 flex justify-center items-center text-text-secondary bg-cover bg-center bg-no-repeat rounded bg-header relative overflow-hidden" :style="{ backgroundImage: terminalBackgroundImage ? `url(${terminalBackgroundImage})` : 'none' }">
+                       <!-- 实时预览蒙版 -->
+                       <div
+                         v-if="terminalBackgroundImage"
+                         class="absolute inset-0"
+                         :style="{ backgroundColor: `rgba(0, 0, 0, ${editableTerminalBackgroundOverlayOpacity})` }"
+                       ></div>
+                       <span v-if="!terminalBackgroundImage" class="bg-white/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm relative z-10">{{ t('styleCustomizer.noBackground') }}</span>
                    </div>
                  <div class="flex gap-2 mb-4 flex-wrap items-center">
                     <button @click="handleTriggerTerminalBgUpload" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.uploadTerminalBg') }}</button>
                     <button @click="handleRemoveTerminalBg" :disabled="!terminalBackgroundImage" class="px-3 py-1.5 text-sm border rounded transition duration-200 ease-in-out whitespace-nowrap bg-error/10 text-error border-error/30 hover:bg-error/20 disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.removeTerminalBg') }}</button>
                     <input type="file" ref="terminalBgFileInput" @change="handleTerminalBgUpload" accept="image/*" class="hidden" />
+                 </div>
+
+                 <!-- 终端背景蒙版透明度控制 -->
+                 <div class="mt-4 pt-4 border-t border-border/50">
+                    <label for="terminalBgOverlayOpacity" class="block text-sm font-medium text-foreground mb-1">{{ t('styleCustomizer.terminalBgOverlayOpacity', '终端背景蒙版透明度:') }}</label>
+                    <div class="flex items-center gap-3">
+                        <input
+                          type="range"
+                          id="terminalBgOverlayOpacity"
+                          v-model.number="editableTerminalBackgroundOverlayOpacity"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          class="w-full cursor-pointer accent-primary"
+                        />
+                        <span class="text-sm text-foreground min-w-[3em] text-right">{{ editableTerminalBackgroundOverlayOpacity.toFixed(2) }}</span>
+                        <button @click="handleSaveTerminalBackgroundOverlayOpacity" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap">{{ t('common.save') }}</button>
+                    </div>
+                    <!-- <p class="text-xs text-text-secondary mt-1">{{ t('styleCustomizer.terminalBgOverlayOpacityDesc', '控制背景图片上方黑色蒙版的透明度。0为完全透明，1为完全不透明。') }}</p> -->
                  </div>
                 </div>
                 <div v-else class="p-4 text-center text-text-secondary italic border border-dashed border-border/50 rounded-md">

@@ -19,6 +19,7 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
     const settings: Partial<AppearanceSettings> = {};
     let latestUpdatedAt = 0;
     let terminalBackgroundEnabledFound = false; // 标记是否在数据库中找到该设置
+    let terminalBackgroundOverlayOpacityFound = false; // 标记是否找到蒙版透明度设置
  
     for (const row of rows) {
         // 更新 latestUpdatedAt
@@ -51,7 +52,11 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
                 break;
             case 'terminalBackgroundEnabled':
                 settings.terminalBackgroundEnabled = row.value === 'true'; // 将 'true'/'false' 字符串转为 boolean
-                terminalBackgroundEnabledFound = true; // 标记已找到
+                terminalBackgroundEnabledFound = true;
+                break;
+            case 'terminalBackgroundOverlayOpacity':
+                settings.terminalBackgroundOverlayOpacity = parseFloat(row.value);
+                terminalBackgroundOverlayOpacityFound = true;
                 break;
         }
     }
@@ -70,6 +75,9 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
         terminalBackgroundEnabled: terminalBackgroundEnabledFound
             ? settings.terminalBackgroundEnabled // 使用数据库找到的值 (true 或 false)
             : defaults.terminalBackgroundEnabled, // 否则使用默认值 (true)
+        terminalBackgroundOverlayOpacity: terminalBackgroundOverlayOpacityFound
+            ? settings.terminalBackgroundOverlayOpacity // 使用数据库找到的值
+            : defaults.terminalBackgroundOverlayOpacity, // 否则使用默认值
         updatedAt: latestUpdatedAt || defaults.updatedAt, // 使用最新的更新时间，否则使用默认时间戳
     };
 };
@@ -86,6 +94,7 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         terminalBackgroundImage: undefined,
         pageBackgroundImage: undefined,
         terminalBackgroundEnabled: true, // 默认启用
+        terminalBackgroundOverlayOpacity: 0.5, // 默认蒙版透明度
         updatedAt: Date.now(), // 提供默认时间戳
     };
 };
@@ -110,7 +119,8 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'editorFontSize', value: defaults.editorFontSize },
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'pageBackgroundImage', value: defaults.pageBackgroundImage ?? '' }, // 数据库中使用空字符串
-        { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled }, // 新增
+        { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled },
+        { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity }, // 新增
     ];
  
     try {

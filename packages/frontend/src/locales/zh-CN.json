@@ -90,7 +90,12 @@
     "defaultMode": "默认模式",
     "darkMode": "黑暗模式",
     "darkModeApplied": "黑暗模式已应用",
-    "darkModeApplyFailed": "应用黑暗模式失败: {message}"
+    "darkModeApplyFailed": "应用黑暗模式失败: {message}",
+    "terminalBgOverlayOpacity": "终端背景蒙版透明度:",
+    "terminalBgOverlayOpacityDesc": "控制背景图片上方黑色蒙版的透明度。0为完全透明，1为完全不透明。",
+    "errorInvalidOpacityValue": "无效的透明度值，必须在0到1之间",
+    "terminalBgOverlayOpacitySaved": "终端背景蒙版透明度已保存",
+    "terminalBgOverlayOpacitySaveFailed": "终端背景蒙版透明度保存失败: {message}"
   },
   "login": {
     "title": "用户登录",
