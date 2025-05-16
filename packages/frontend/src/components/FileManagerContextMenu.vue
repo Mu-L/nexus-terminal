@@ -218,11 +218,23 @@ onUnmounted(() => {
             @click.stop="handleItemClick(subItem)"
             :class="[
               'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-              'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
+              'hover:bg-primary/10 hover:text-primary'
             ]"
           >
             {{ subItem.label }}
           </li>
+          <!-- 如果 menuItem (作为移动端子菜单容器) 是 "压缩", 在其子项后添加 "发送到" -->
+          <template v-if="menuItem.label === t('fileManager.contextMenu.compress')">
+            <li
+              @click.stop="handleSendToClick"
+              :class="[
+                'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+                'hover:bg-primary/10 hover:text-primary'
+              ]"
+            >
+              {{ t('fileManager.contextMenu.sendTo', 'Send to...') }}
+            </li>
+          </template>
         </template>
         <!-- 否则，按原有逻辑渲染一级菜单或带子菜单的一级菜单 -->
         <li
@@ -230,11 +242,23 @@ onUnmounted(() => {
           @click.stop="handleItemClick(menuItem)"
           :class="[
             'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-            'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
+            'hover:bg-primary/10 hover:text-primary'
           ]"
         >
           {{ menuItem.label }}
         </li>
+        <!-- 如果普通菜单项是 "压缩", 在其后添加 "发送到" -->
+        <template v-if="!menuItem.submenu && menuItem.label === t('fileManager.contextMenu.compress')">
+          <li
+            @click.stop="handleSendToClick"
+            :class="[
+              'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+              'hover:bg-primary/10 hover:text-primary'
+            ]"
+          >
+            {{ t('fileManager.contextMenu.sendTo', 'Send to...') }}
+          </li>
+        </template>
         <li
           v-if="menuItem.submenu && !isMobile"
           class="px-4 py-1.5 text-foreground text-sm flex items-center justify-between transition-colors duration-150 rounded mx-1 hover:bg-primary/10 hover:text-primary relative"
@@ -255,23 +279,26 @@ onUnmounted(() => {
               @click.stop="handleItemClick(subItem)"
               :class="[
                 'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-                'hover:bg-primary/10 hover:text-primary' // 始终应用可点击样式
+                'hover:bg-primary/10 hover:text-primary'
               ]"
             >
               {{ subItem.label }}
             </li>
           </ul>
         </li>
+        <!-- 如果桌面端带子菜单的项是 "压缩", 在其后添加 "发送到" -->
+        <template v-if="menuItem.submenu && !isMobile && menuItem.label === t('fileManager.contextMenu.compress')">
+          <li
+            @click.stop="handleSendToClick"
+            :class="[
+              'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+              'hover:bg-primary/10 hover:text-primary'
+            ]"
+          >
+            {{ t('fileManager.contextMenu.sendTo', 'Send to...') }}
+          </li>
+        </template>
       </template>
-      <li
-        @click.stop="handleSendToClick"
-        :class="[
-          'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
-          'hover:bg-primary/10 hover:text-primary'
-        ]"
-      >
-        {{ t('fileManager.contextMenu.sendTo', 'Send to...') }}
-      </li>
     </ul>
   </div>
   <SendFilesModal
