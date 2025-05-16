@@ -86,10 +86,11 @@ const {
     startFileUpload,
     cancelUpload,
 } = useFileUploader(
+    computed(() => props.sessionId),
     // 传递 manager 的 currentPath 和 fileList ref
-    computed(() => currentSftpManager.value?.currentPath.value ?? '/'), // 提供默认值
-    computed(() => currentSftpManager.value?.fileList.value ?? []), // 提供默认值
-    props.wsDeps
+    computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
+    computed(() => currentSftpManager.value?.fileList.value ?? []),
+    computed(() => props.wsDeps)
 );
 
 // 实例化其他 Stores
@@ -732,7 +733,7 @@ const {
   handleDragLeaveRow,
   handleDropOnRow,
 } = useFileManagerDragAndDrop({
-  isConnected: props.wsDeps.isConnected,
+  isConnected: computed(() => props.wsDeps.isConnected.value), 
   // 修改：传递 manager 的 currentPath (保持 computed)
   currentPath: computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
   fileListContainerRef: fileListContainerRef,
@@ -807,7 +808,6 @@ const saveLayoutSettings = () => {
 
 // --- 生命周期钩子 ---
 onMounted(() => {
-    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Component mounted.`);
     // --- 移除 onMounted 中的加载逻辑 ---
     // Initial load logic is handled by watchEffect below and the main sftp loading watchEffect
 });
@@ -960,7 +960,6 @@ watch(() => focusSwitcherStore.activateFileManagerSearchTrigger, (newValue, oldV
 // --- 监听 sessionId prop 的变化 ---
 watch(() => props.sessionId, (newSessionId, oldSessionId) => {
     if (newSessionId && newSessionId !== oldSessionId) {
-        console.log(`[FileManager ${newSessionId}-${props.instanceId}] Session ID changed from ${oldSessionId} to ${newSessionId}. Re-initializing.`);
 
         // 1. 重新初始化 SFTP 管理器
         initializeSftpManager(newSessionId, props.instanceId);

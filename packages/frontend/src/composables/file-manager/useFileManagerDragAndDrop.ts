@@ -194,7 +194,6 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
   // 处理蒙版上的 Drop 事件
   const handleOverlayDrop = (event: DragEvent) => {
     event.preventDefault(); // 必须阻止，以防浏览器打开文件
-    // console.log("[DragDrop] Drop event on overlay.");
     showExternalDropOverlay.value = false; // 隐藏蒙版
     stopAutoScroll(); // 停止滚动
 
@@ -210,7 +209,6 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
         if (item.kind === 'file') {
             const entry = item.webkitGetAsEntry();
             if (entry) {
-                // console.log(`[DragDrop] Processing entry from overlay: ${entry.name}`);
                 traverseFileTree(entry); // 处理文件/文件夹
             } else {
                  console.warn(`[DragDrop] Could not get entry for item ${i} from overlay.`);

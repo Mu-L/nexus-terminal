@@ -79,18 +79,18 @@ export function createWebSocketConnectionManager(
      * 安排 WebSocket 重连尝试
      */
     const scheduleReconnect = () => {
-        if (intentionalDisconnect) return; // 如果是主动断开，则不重连
+        if (intentionalDisconnect) {
+            return; // 如果是主动断开，则不重连
+        }
 
         // +++ 检查是否标记为待挂起 +++
         if (getIsMarkedForSuspend && getIsMarkedForSuspend()) {
-            console.log(`[WebSocket ${instanceSessionId}] 会话已标记为待挂起，不执行自动重连。`);
             statusMessage.value = getStatusText('markedForSuspendNoReconnect'); // 可以为此添加新的i18n文本
             connectionStatus.value = 'disconnected'; // 保持断开状态或设为特定状态
             return;
         }
 
         if (reconnectAttempts >= maxReconnectAttempts) {
-            console.log(`[WebSocket ${instanceSessionId}] 已达到最大重连次数 (${maxReconnectAttempts})，停止重连。`);
             statusMessage.value = getStatusText('reconnectFailed');
             connectionStatus.value = 'error'; // 标记为错误状态
             return;
@@ -99,7 +99,6 @@ export function createWebSocketConnectionManager(
         reconnectAttempts++;
         // 指数退避延迟 (例如: 2s, 4s, 8s, 16s, 32s)
         const delay = Math.pow(2, reconnectAttempts) * 1000;
-        console.log(`[WebSocket ${instanceSessionId}] 连接丢失，将在 ${delay / 1000} 秒后尝试第 ${reconnectAttempts} 次重连...`);
         statusMessage.value = getStatusText('reconnecting', { attempt: reconnectAttempts, delay: delay / 1000 });
         connectionStatus.value = 'connecting'; // 更新状态为正在连接
 
@@ -162,7 +161,6 @@ export function createWebSocketConnectionManager(
         }
         // 如果 ws.value 存在且 readyState 是 CLOSED，它应该已经在 onclose 中被设为 null
 
-        console.log(`[WebSocket ${instanceSessionId}] 尝试连接到: ${url} (DB Conn ID: ${instanceDbConnectionId})`);
         statusMessage.value = getStatusText('connectingWs', { url });
         connectionStatus.value = 'connecting'; // 确保状态设置为 connecting
         isSftpReady.value = false; // 重置 SFTP 状态
@@ -180,7 +178,6 @@ export function createWebSocketConnectionManager(
             ws.value = new WebSocket(secureUrl);
 
             ws.value.onopen = () => {
-                console.log(`[WebSocket ${instanceSessionId}] 连接已打开 (${secureUrl})。`); // 在日志中包含使用的 URL
                 reconnectAttempts = 0; // 连接成功，重置尝试次数
                 statusMessage.value = getStatusText('wsConnected');
                 // 状态保持 'connecting' 直到收到 ssh:connected
@@ -191,7 +188,6 @@ export function createWebSocketConnectionManager(
                     // 对于恢复流程，WebSocket 打开即表示连接基础已建立
                     // 后续的 SSH_SUSPEND_RESUME_REQUEST 会完成会话的恢复
                     connectionStatus.value = 'connected';
-                    console.log(`[WebSocket ${instanceSessionId}] 恢复流程：WebSocket 打开，状态直接设为 connected。`);
                 }
                 dispatchMessage('internal:opened', {}, { type: 'internal:opened' }); // 触发内部打开事件
             };
@@ -199,27 +195,22 @@ export function createWebSocketConnectionManager(
             ws.value.onmessage = (event: MessageEvent) => {
                 try {
                     const rawData = event.data;
-                    // console.log(`[WebSocket ${instanceSessionId}] onmessage: 收到原始数据 (类型: ${typeof rawData}, 长度: ${rawData.toString().length}) 前100字符:`, rawData.toString().substring(0, 100));
                     const message: WebSocketMessage = JSON.parse(rawData.toString());
-                    // console.log(`[WebSocket ${instanceSessionId}] onmessage: 解析后消息类型: ${message.type}, 会话ID (消息内): ${message.sessionId || 'N/A'}, Payload keys: ${message.payload ? Object.keys(message.payload).join(', ') : 'N/A'}`);
 
                     // --- 更新此实例的连接状态 ---
                     if (message.type === 'ssh:connected') {
                         if (connectionStatus.value !== 'connected') {
-                            console.log(`[WebSocket ${instanceSessionId}] SSH 会话已连接。`);
                             connectionStatus.value = 'connected';
                             statusMessage.value = getStatusText('connected');
                         }
                     } else if (message.type === 'ssh:disconnected') {
                         if (connectionStatus.value !== 'disconnected') {
-                            console.log(`[WebSocket ${instanceSessionId}] SSH 会话已断开。`);
                             connectionStatus.value = 'disconnected';
                             statusMessage.value = getStatusText('disconnected', { reason: message.payload || '未知原因' });
                             isSftpReady.value = false; // SSH 断开，SFTP 也应不可用
                         }
                     } else if (message.type === 'ssh:error' || message.type === 'error') {
                         if (connectionStatus.value !== 'disconnected' && connectionStatus.value !== 'error') {
-                            console.error(`[WebSocket ${instanceSessionId}] 收到错误消息:`, message.payload);
                             connectionStatus.value = 'error';
                             let errorMsg = message.payload || '未知错误';
                             if (typeof errorMsg === 'object' && errorMsg.message) errorMsg = errorMsg.message;
@@ -242,10 +233,10 @@ export function createWebSocketConnectionManager(
             };
 
             ws.value.onerror = (event) => {
-                console.error(`[WebSocket ${instanceSessionId}] 连接错误:`, event);
-                if (connectionStatus.value !== 'disconnected') {
+                if (connectionStatus.value !== 'disconnected' && connectionStatus.value !== 'error') { // Don't override if already explicitly disconnected
                     connectionStatus.value = 'error';
                     statusMessage.value = getStatusText('wsError');
+                } else {
                 }
                 dispatchMessage('internal:error', event, { type: 'internal:error' });
                 isSftpReady.value = false;
@@ -257,12 +248,11 @@ export function createWebSocketConnectionManager(
             };
 
             ws.value.onclose = (event) => {
-                console.log(`[WebSocket ${instanceSessionId}] 连接已关闭: Code=${event.code}, Reason=${event.reason}`);
                 // 只有在非错误状态下才更新为 disconnected
-                if (connectionStatus.value !== 'error') {
+                if (connectionStatus.value !== 'error' && connectionStatus.value !== 'disconnected') { // Avoid redundant sets or overriding 'error'
                     connectionStatus.value = 'disconnected';
                     // 如果不是主动断开，显示尝试重连的消息
-                    if (!intentionalDisconnect && event.code !== 1000) {
+                    if (!intentionalDisconnect && event.code !== 1000) { // 1000 is normal closure
                          statusMessage.value = getStatusText('wsClosedWillRetry', { code: event.code });
                     } else {
                          statusMessage.value = getStatusText('wsClosed', { code: event.code });
@@ -273,12 +263,11 @@ export function createWebSocketConnectionManager(
                 ws.value = null; // 清理实例引用
 
                 // 如果不是主动断开 (code 1000)，尝试重连
-                if (!intentionalDisconnect && event.code !== 1000) {
+                if (!intentionalDisconnect && event.code !== 1000) { // 1000 is normal closure
                     scheduleReconnect();
                 }
             };
         } catch (err) {
-             console.error(`[WebSocket ${instanceSessionId}] 创建 WebSocket 实例失败:`, err);
              connectionStatus.value = 'error';
              statusMessage.value = getStatusText('wsError');
              isSftpReady.value = false;
@@ -296,7 +285,6 @@ export function createWebSocketConnectionManager(
             reconnectTimeoutId = null;
         }
         if (ws.value) {
-            console.log(`[WebSocket ${instanceSessionId}] 手动关闭连接...`);
             if (connectionStatus.value !== 'disconnected') {
                  connectionStatus.value = 'disconnected';
                  statusMessage.value = getStatusText('disconnected', { reason: '手动断开' });
@@ -306,8 +294,6 @@ export function createWebSocketConnectionManager(
              isSftpReady.value = false;
              // 手动断开时可以考虑清除处理器，取决于是否需要重连逻辑
              // messageHandlers.clear();
-        } else {
-             console.log(`[WebSocket ${instanceSessionId}] 连接已关闭或不存在，无需断开。`);
         }
     };
 
@@ -319,9 +305,7 @@ export function createWebSocketConnectionManager(
         if (ws.value && ws.value.readyState === WebSocket.OPEN) {
             try {
                 const messageString = JSON.stringify(message);
-                // console.log(`[WebSocket ${instanceSessionId}] sendMessage: 准备发送消息。类型: ${message.type}, 会话ID (消息内): ${message.sessionId || 'N/A'}, Payload keys: ${message.payload ? Object.keys(message.payload).join(', ') : 'N/A'}`);
                 ws.value.send(messageString);
-                // console.log(`[WebSocket ${instanceSessionId}] sendMessage: 消息已发送。类型: ${message.type}`);
             } catch (e) {
                 console.error(`[WebSocket ${instanceSessionId}] 序列化或发送消息失败:`, e, message);
             }

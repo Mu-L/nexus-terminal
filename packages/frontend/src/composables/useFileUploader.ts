@@ -1,4 +1,4 @@
-import { ref, reactive, nextTick, onUnmounted, readonly, type Ref } from 'vue'; 
+import { ref, reactive, nextTick, onUnmounted, readonly, type Ref, watchEffect } from 'vue';
 import { createWebSocketConnectionManager } from './useWebSocketConnection'; 
 import { useI18n } from 'vue-i18n';
 import type { FileListItem } from '../types/sftp.types'; 
@@ -21,12 +21,13 @@ const joinPath = (base: string, name: string): string => {
 };
 
 export function useFileUploader(
+    sessionIdForLog: Ref<string>,
     currentPathRef: Ref<string>,
     fileListRef: Readonly<Ref<readonly FileListItem[]>>, // 使用 Readonly 类型
-    wsDeps: WebSocketDependencies // 注入 WebSocket 依赖项
+    wsDeps: Ref<WebSocketDependencies> 
 ) {
     const { t } = useI18n();
-    const { sendMessage, onMessage, isConnected } = wsDeps; // 使用注入的依赖项
+wsDeps;
 
     // 对 uploads 字典使用 reactive 以获得更好的深度响应性
     const uploads = reactive<Record<string, UploadItem>>({});
@@ -36,8 +37,8 @@ export function useFileUploader(
     const sendFileChunks = (uploadId: string, file: File, startByte = 0) => {
         const upload = uploads[uploadId];
         // 在继续之前检查连接和上传状态
-        if (!isConnected.value || !upload || upload.status !== 'uploading') {
-            console.warn(`[文件上传模块] 无法为 ${uploadId} 发送块。连接状态: ${isConnected.value}, 上传状态: ${upload?.status}`);
+        if (!wsDeps.value.isConnected.value || !upload || upload.status !== 'uploading') { 
+            console.warn(`[FileUploader ${sessionIdForLog.value}] Cannot send chunk for ${uploadId}. Connection: ${wsDeps.value.isConnected.value}, Upload status: ${upload?.status}`);
             return;
         }
 
@@ -50,8 +51,8 @@ export function useFileUploader(
         reader.onload = (e) => {
             const currentUpload = uploads[uploadId];
             // *发送前* 再次检查连接和状态
-            if (!isConnected.value || !currentUpload || currentUpload.status !== 'uploading') {
-                 console.warn(`[文件上传模块] 上传 ${uploadId} 在发送偏移量 ${offset} 的块之前状态已更改或连接已断开。`);
+            if (!wsDeps.value.isConnected.value || !currentUpload || currentUpload.status !== 'uploading') { 
+                 console.warn(`[FileUploader ${sessionIdForLog.value}] Upload ${uploadId} status changed or disconnected before sending chunk at offset ${offset}.`);
                  return; // 如果状态改变或断开连接，则停止发送
             }
 
@@ -61,33 +62,30 @@ export function useFileUploader(
                 const chunkBase64 = chunkResult.split(',')[1];
                 const isLast = offset + chunkSize >= file.size;
 
-                sendMessage({
+                wsDeps.value.sendMessage({ 
                     type: 'sftp:upload:chunk',
-                    payload: { uploadId, chunkIndex: chunkIndex++, data: chunkBase64, isLast } 
+                    payload: { uploadId, chunkIndex: chunkIndex++, data: chunkBase64, isLast }
                 });
 
                 
                 offset += currentChunkSize; 
                 
 
-                if (!isLast) {
-                    
-                    
+                if (!isLast) {                                     
                     nextTick(readNextChunk);
                 } else {
-                    console.log(`[文件上传模块] 已发送 ${uploadId} 的最后一个块`);
+                    console.log(`[FileUploader ${sessionIdForLog.value}] Sent last chunk for ${uploadId}`);
                     
                 }
             } else {
-                 console.error(`[文件上传模块] FileReader 为 ${uploadId} 返回了意外结果:`, chunkResult);
-                 
+                 console.error(`[FileUploader ${sessionIdForLog.value}] FileReader returned unexpected result for ${uploadId}:`, chunkResult);
                  currentUpload.status = 'error';
                  currentUpload.error = t('fileManager.errors.readFileError');
             }
         };
 
         reader.onerror = () => {
-            console.error(`[文件上传模块] FileReader 错误，上传 ID: ${uploadId}`);
+            console.error(`[FileUploader ${sessionIdForLog.value}] FileReader error for upload ID: ${uploadId}`);
             const failedUpload = uploads[uploadId];
             if (failedUpload) {
                 failedUpload.status = 'error';
@@ -109,18 +107,19 @@ export function useFileUploader(
              readNextChunk();
         } else {
              // 立即处理零字节文件
-             console.log(`[文件上传模块] 处理零字节文件 ${uploadId}`);
+             console.log(`[FileUploader ${sessionIdForLog.value}] Processing zero-byte file ${uploadId}`);
              // Send chunkIndex 0 for zero-byte file
-             sendMessage({ type: 'sftp:upload:chunk', payload: { uploadId, chunkIndex: 0, data: '', isLast: true } });
+             wsDeps.value.sendMessage({ type: 'sftp:upload:chunk', payload: { uploadId, chunkIndex: 0, data: '', isLast: true } });
              upload.progress = 100;
              
         }
     };
 
 
-    const startFileUpload = (file: File, relativePath?: string) => { 
-        if (!isConnected.value) {
-            console.warn('[文件上传模块] 无法开始上传：WebSocket 未连接。');
+    const startFileUpload = (file: File, relativePath?: string) => {
+        // Roo: 使用 .value 访问响应式的 sessionIdForLog
+        if (!wsDeps.value.isConnected.value) { 
+            console.warn(`[FileUploader ${sessionIdForLog.value}] Cannot start upload: WebSocket not connected.`);
             
             return;
         }
@@ -142,7 +141,7 @@ export function useFileUploader(
         }
         // 规范化路径，移除多余的斜杠 e.g. /root//dir -> /root/dir
         finalRemotePath = finalRemotePath.replace(/\/+/g, '/');
-        console.log(`[文件上传模块] Calculated finalRemotePath: ${finalRemotePath} (current: ${currentPathRef.value}, relative: ${relativePath}, filename: ${file.name})`); // 添加日志
+        console.log(`[FileUploader ${sessionIdForLog.value}] Calculated finalRemotePath: ${finalRemotePath} (current: ${currentPathRef.value}, relative: ${relativePath}, filename: ${file.name}) // wsDeps.isSftpReady: ${wsDeps.value.isSftpReady.value}`); 
         // --- 结束修正 ---
 
 
@@ -155,10 +154,10 @@ export function useFileUploader(
             status: 'pending' // 初始状态
         };
 
-        console.log(`[文件上传模块] 开始上传 ${uploadId} 到 ${finalRemotePath}`); // 使用 finalRemotePath
-        sendMessage({
+        console.log(`[FileUploader ${sessionIdForLog.value}] Starting upload ${uploadId} to ${finalRemotePath}`);
+        wsDeps.value.sendMessage({ 
             type: 'sftp:upload:start',
-            payload: { uploadId, remotePath: finalRemotePath, size: file.size, relativePath: relativePath || undefined } // 发送修正后的 remotePath
+            payload: { uploadId, remotePath: finalRemotePath, size: file.size, relativePath: relativePath || undefined }
         });
         // 后端应该响应 sftp:upload:ready
     };
@@ -166,11 +165,11 @@ export function useFileUploader(
     const cancelUpload = (uploadId: string, notifyBackend = true) => {
         const upload = uploads[uploadId];
         if (upload && ['pending', 'uploading', 'paused'].includes(upload.status)) {
-            console.log(`[文件上传模块] 取消上传 ${uploadId}`);
+            console.log(`[FileUploader ${sessionIdForLog.value}] Cancelling upload ${uploadId}`);
             upload.status = 'cancelled'; // 立即更新状态
 
-            if (notifyBackend && isConnected.value) {
-                sendMessage({ type: 'sftp:upload:cancel', payload: { uploadId } });
+            if (notifyBackend && wsDeps.value.isConnected.value) { 
+                wsDeps.value.sendMessage({ type: 'sftp:upload:cancel', payload: { uploadId } }); 
             }
 
             // 短暂延迟后从列表中移除，以显示取消状态
@@ -190,11 +189,11 @@ export function useFileUploader(
 
         const upload = uploads[uploadId];
         if (upload && upload.status === 'pending') {
-            console.log(`[文件上传模块] 上传 ${uploadId} 已就绪，开始发送块。`);
+            console.log(`[FileUploader ${sessionIdForLog.value}] Upload ${uploadId} ready, starting chunk sending.`);
             upload.status = 'uploading';
             sendFileChunks(uploadId, upload.file); // 开始发送块
         } else {
-             console.warn(`[文件上传模块] 收到未知或非待处理状态的上传 ID 的 upload:ready 消息: ${uploadId}`);
+             console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:ready for unknown or non-pending upload ID: ${uploadId}`);
         }
     };
 
@@ -204,7 +203,7 @@ export function useFileUploader(
 
         const upload = uploads[uploadId];
         if (upload) {
-            console.log(`[文件上传模块] 上传 ${uploadId} 成功`);
+            console.log(`[FileUploader ${sessionIdForLog.value}] Upload ${uploadId} successful.`);
             upload.status = 'success';
             upload.progress = 100;
 
@@ -215,7 +214,7 @@ export function useFileUploader(
             }
 
         } else {
-            console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:success 消息: ${uploadId}`);
+            console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:success for unknown upload ID: ${uploadId}`);
         }
     };
 
@@ -223,14 +222,14 @@ export function useFileUploader(
         // 从 message 中获取 uploadId，因为 payload 此时是错误字符串
         const uploadId = message.uploadId;
         if (!uploadId) {
-             console.warn(`[文件上传模块] 收到缺少 uploadId 的 upload:error 消息:`, message);
+             console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:error with missing uploadId:`, message);
              return;
         }
 
         const upload = uploads[uploadId];
         if (upload) {
             const errorMessage = typeof payload === 'string' ? payload : t('fileManager.errors.uploadFailed');
-            console.error(`[文件上传模块] 上传 ${uploadId} 出错:`, errorMessage);
+            console.error(`[FileUploader ${sessionIdForLog.value}] Upload ${uploadId} error:`, errorMessage);
             upload.status = 'error';
             upload.error = errorMessage; // 使用 payload 作为错误消息
 
@@ -241,7 +240,7 @@ export function useFileUploader(
                 }
             }, 5000);
         } else {
-             console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:error 消息: ${uploadId}`);
+             console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:error for unknown upload ID: ${uploadId}`);
         }
     };
 
@@ -250,7 +249,7 @@ export function useFileUploader(
         if (!uploadId) return;
         const upload = uploads[uploadId];
         if (upload && upload.status === 'uploading') {
-            console.log(`[文件上传模块] 上传 ${uploadId} 已暂停`);
+            console.log(`[FileUploader ${sessionIdForLog.value}] Upload ${uploadId} paused.`);
             upload.status = 'paused';
         }
     };
@@ -260,7 +259,7 @@ export function useFileUploader(
         if (!uploadId) return;
         const upload = uploads[uploadId];
         if (upload && upload.status === 'paused') {
-            console.log(`[文件上传模块] 恢复上传 ${uploadId}`);
+            console.log(`[FileUploader ${sessionIdForLog.value}] Resuming upload ${uploadId}`);
             upload.status = 'uploading';
             sendFileChunks(uploadId, upload.file);
         }
@@ -271,7 +270,6 @@ export function useFileUploader(
         if (!uploadId) return;
         const upload = uploads[uploadId];
         if (upload) {
-            console.log(`[文件上传模块] 后端确认上传 ${uploadId} 已取消。`);
             // 状态可能已经由用户操作设置为 'cancelled'
             if (upload.status !== 'cancelled') {
                  upload.status = 'cancelled';
@@ -289,7 +287,6 @@ export function useFileUploader(
     const onUploadProgress = (payload: MessagePayload, message: WebSocketMessage) => {
         const uploadId = message.uploadId || payload?.uploadId; // 从顶层获取 uploadId
         if (!uploadId) {
-            console.warn(`[文件上传模块] 收到缺少 uploadId 的 upload:progress 消息:`, message);
             return;
         }
 
@@ -300,35 +297,47 @@ export function useFileUploader(
                 upload.progress = Math.min(100, Math.round((payload.bytesWritten / payload.totalSize) * 100));
                 
             } else {
-                console.warn(`[文件上传模块] 收到 upload:progress 消息，但 payload 格式不正确:`, payload);
+                console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:progress with incorrect payload format:`, payload);
             }
         } else if (upload) {
             
         } else {
-            console.warn(`[文件上传模块] 收到未知上传 ID 的 upload:progress 消息: ${uploadId}`);
+            console.warn(`[FileUploader ${sessionIdForLog.value}] Received upload:progress for unknown upload ID: ${uploadId}`);
         }
     };
     
 
-    // --- 注册处理器 ---
-    const unregisterUploadReady = onMessage('sftp:upload:ready', onUploadReady);
-    const unregisterUploadSuccess = onMessage('sftp:upload:success', onUploadSuccess);
-    const unregisterUploadError = onMessage('sftp:upload:error', onUploadError);
-    const unregisterUploadPause = onMessage('sftp:upload:pause', onUploadPause);
-    const unregisterUploadResume = onMessage('sftp:upload:resume', onUploadResume);
-    const unregisterUploadCancelled = onMessage('sftp:upload:cancelled', onUploadCancelled);
-    const unregisterUploadProgress = onMessage('sftp:upload:progress', onUploadProgress); // +++ 注册新处理器 +++
+    // --- 动态注册和注销处理器 ---
+    watchEffect((onCleanup) => {
+        // 当 wsDeps.value 变化时，此 effect 会重新运行
+        if (!wsDeps.value || !wsDeps.value.onMessage) {
+            console.warn(`[FileUploader ${sessionIdForLog.value}] wsDeps.value or wsDeps.value.onMessage is not available for registering listeners.`);
+            return;
+        }
 
-    // --- 清理 ---
+        const unregisterUploadReady = wsDeps.value.onMessage('sftp:upload:ready', onUploadReady);
+        const unregisterUploadSuccess = wsDeps.value.onMessage('sftp:upload:success', onUploadSuccess);
+        const unregisterUploadError = wsDeps.value.onMessage('sftp:upload:error', onUploadError);
+        const unregisterUploadPause = wsDeps.value.onMessage('sftp:upload:pause', onUploadPause);
+        const unregisterUploadResume = wsDeps.value.onMessage('sftp:upload:resume', onUploadResume);
+        const unregisterUploadCancelled = wsDeps.value.onMessage('sftp:upload:cancelled', onUploadCancelled);
+        const unregisterUploadProgress = wsDeps.value.onMessage('sftp:upload:progress', onUploadProgress);
+
+        onCleanup(() => {
+            unregisterUploadReady?.();
+            unregisterUploadSuccess?.();
+            unregisterUploadError?.();
+            unregisterUploadPause?.();
+            unregisterUploadResume?.();
+            unregisterUploadCancelled?.();
+            unregisterUploadProgress?.();
+        });
+    });
+
+    // --- 清理 (onUnmounted 仍然用于组件生命周期结束时的清理) ---
     onUnmounted(() => {
-        console.log('[文件上传模块] 卸载并注销处理器。');
-        unregisterUploadReady?.();
-        unregisterUploadSuccess?.();
-        unregisterUploadError?.();
-        unregisterUploadPause?.();
-        unregisterUploadResume?.();
-        unregisterUploadCancelled?.();
-        unregisterUploadProgress?.();
+        // 注意：消息监听器的注销现在主要由 watchEffect 的 onCleanup 处理。
+        // onUnmounted 仍然负责取消正在进行的上传。
 
         // 当使用此 composable 的组件卸载时，取消任何正在进行的上传
         Object.keys(uploads).forEach(uploadId => {

@@ -674,7 +674,6 @@ const handleFileManagerOpenRequest = (payload: { sessionId: string }) => {
       isConnected: session.wsManager.isConnected,
       isSftpReady: session.wsManager.isSftpReady,
   };
-  console.log(`[WorkspaceView] Retrieved wsDeps from session.wsManager for session ${sessionId}.`);
 
   if (!wsDeps) {
       // 如果 wsDeps 仍然为 null，则无法继续
