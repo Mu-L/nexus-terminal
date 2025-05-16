@@ -44,6 +44,7 @@ export type WorkspaceEventPayloads = {
 
   // UI Interaction Events
   'ui:openLayoutConfigurator': void;
+'ui:openTransferProgressModal': void; // 请求打开文件传输进度模态框
   // 'ui:toggleVirtualKeyboard': void; // 如果决定迁移 CommandInputBar 的这个事件
   'fileManager:openModalRequest': { sessionId: string }; // 请求打开文件管理器模态框
 

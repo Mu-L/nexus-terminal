@@ -86,7 +86,6 @@ export function createSshTerminalManager(sessionId: string, wsDeps: SshTerminalD
     };
 
     const handleTerminalResize = (dimensions: { cols: number; rows: number }) => {
-        // 添加日志，确认从 WorkspaceView 收到的尺寸
         console.log(`[SSH ${sessionId}] handleTerminalResize called with:`, dimensions);
         // 只有在连接状态下才发送 resize 命令给后端
         if (isConnected.value) {

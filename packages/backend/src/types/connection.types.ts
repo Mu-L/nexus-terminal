@@ -1,5 +1,3 @@
-
-
 export interface ConnectionBase {
     id: number;
     name: string | null;
@@ -12,7 +10,7 @@ export interface ConnectionBase {
     created_at: number;
     updated_at: number;
     last_connected_at: number | null;
-notes?: string | null; // 新增备注字段
+notes?: string | null; 
 }
 
 export interface ConnectionWithTags extends ConnectionBase {
@@ -33,7 +31,7 @@ export interface CreateConnectionInput {
     ssh_key_id?: number | null; // +++ Add ssh_key_id +++
     proxy_id?: number | null;
     tag_ids?: number[];
-notes?: string | null; // 新增备注字段
+notes?: string | null; 
 }
 
 
@@ -49,7 +47,7 @@ export interface UpdateConnectionInput {
     passphrase?: string;
     ssh_key_id?: number | null; // +++ Add ssh_key_id +++
     proxy_id?: number | null;
-notes?: string | null; // 新增备注字段
+notes?: string | null; 
     tag_ids?: number[];
 }
 
@@ -65,10 +63,16 @@ export interface FullConnectionData {
     encrypted_password: string | null;
     encrypted_private_key: string | null;
     encrypted_passphrase: string | null;
-    ssh_key_id?: number | null; // +++ Add ssh_key_id +++
+    ssh_key_id?: number | null; 
     proxy_id: number | null;
     created_at: number;
-notes: string | null; // 新增备注字段 (数据库原始字段)
+notes: string | null; 
     updated_at: number;
     last_connected_at: number | null;
+}
+
+export interface DecryptedConnectionCredentials {
+    decryptedPassword?: string;
+    decryptedPrivateKey?: string;
+    decryptedPassphrase?: string;
 }

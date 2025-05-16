@@ -107,7 +107,7 @@ export const getDbInstance = (): Promise<sqlite3.Database> => {
                     await runDatabaseInitializations(db);
                     // +++ 运行数据库迁移 +++
                     await runMigrations(db);
-                    console.log('[数据库] 初始化和迁移完成。'); // 添加日志确认
+                    console.log('[数据库] 初始化和迁移完成。'); 
                     resolve(db);
                 } catch (initError) {
                     console.error('[数据库] 连接后初始化失败，正在关闭连接...');

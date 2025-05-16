@@ -28,8 +28,8 @@ const connectionStatus = ref<'disconnected' | 'connecting' | 'connected' | 'erro
 const isResizing = ref(false);
 const resizeStartX = ref(0);
 const resizeStartY = ref(0);
-const initialModalWidthForResize = ref(0); // Renamed to avoid conflict if other 'initialModalWidth' exists
-const initialModalHeightForResize = ref(0); // Renamed
+const initialModalWidthForResize = ref(0); 
+const initialModalHeightForResize = ref(0); 
 const statusMessage = ref('');
 const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
@@ -42,7 +42,7 @@ const isDraggingRestoreButton = ref(false);
 const restoreButtonPosition = ref({ x: 16, y: window.innerHeight / 2 - 25 }); // 16px from left, vertically centered
 let dragOffsetX = 0;
 let dragOffsetY = 0;
-let hasDragged = false; // 新增 hasDragged 标志
+let hasDragged = false; 
 
 const MIN_MODAL_WIDTH = 1024;
 const MIN_MODAL_HEIGHT = 768;
@@ -431,7 +431,7 @@ watch(desiredModalWidth, (newWidth, oldWidth) => {
       console.log(`[RDP 模态框] 宽度监听触发，但值 (${newWidth}) 未改变。跳过保存。`);
       return;
   }
-  console.log(`[RDP 模态框] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`); // 添加日志
+  console.log(`[RDP 模态框] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`);
   // 保存前验证新宽度
   const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
   // 防抖保存 *验证后* 的宽度

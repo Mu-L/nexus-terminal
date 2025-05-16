@@ -383,7 +383,7 @@ const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // �
   closeContextMenu(); // 先关闭菜单
 
   if (action === 'add') {
-    console.log('[WorkspaceConnectionList] handleMenuAction called with action: add. Emitting request-add-connection...'); // 添加日志
+    console.log('[WorkspaceConnectionList] handleMenuAction called with action: add. Emitting request-add-connection...'); 
     // router.push('/connections/add'); // 改为触发事件
     emitWorkspaceEvent('connection:requestAdd');
   } else if (conn) {
@@ -516,7 +516,7 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConn
     // 确保是已标记的组
     if (group.tagId === null) {
         uiNotificationsStore.addNotification({
-            message: t('workspaceConnectionList.cannotDeleteFromUntagged'), // 新增i18n
+            message: t('workspaceConnectionList.cannotDeleteFromUntagged'), 
             type: 'warning',
         });
         return;
@@ -524,13 +524,13 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConn
     // 确保组内有连接
     if (group.connections.length === 0) {
       uiNotificationsStore.addNotification({
-        message: t('workspaceConnectionList.noConnectionsToDeleteInGroup', { groupName: group.groupName }), // 新增i18n
+        message: t('workspaceConnectionList.noConnectionsToDeleteInGroup', { groupName: group.groupName }), 
         type: 'info',
       });
       return;
     }
 
-    if (confirm(t('workspaceConnectionList.confirmDeleteAllConnectionsInGroup', { count: group.connections.length, groupName: group.groupName }))) { // 新增i18n
+    if (confirm(t('workspaceConnectionList.confirmDeleteAllConnectionsInGroup', { count: group.connections.length, groupName: group.groupName }))) { 
       const connectionIdsToDelete = group.connections.map(conn => conn.id);
       
       const deletePromises = connectionIdsToDelete.map(connId =>
@@ -547,13 +547,13 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConn
 
           if (successfulDeletes > 0) {
             uiNotificationsStore.addNotification({
-              message: t('workspaceConnectionList.allConnectionsInGroupDeletedSuccess', { count: successfulDeletes, groupName: group.groupName }), // 新增i18n
+              message: t('workspaceConnectionList.allConnectionsInGroupDeletedSuccess', { count: successfulDeletes, groupName: group.groupName }), 
               type: 'success',
             });
           }
           if (failedDeletes > 0) {
              uiNotificationsStore.addNotification({
-              message: t('workspaceConnectionList.someConnectionsInGroupDeleteFailed', { count: failedDeletes, groupName: group.groupName }), // 新增i18n
+              message: t('workspaceConnectionList.someConnectionsInGroupDeleteFailed', { count: failedDeletes, groupName: group.groupName }), 
               type: 'error',
             });
           }

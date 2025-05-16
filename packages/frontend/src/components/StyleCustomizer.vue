@@ -98,8 +98,8 @@ const initializeEditableState = () => {
   editableEditorFontSize.value = currentEditorFontSize.value; // <-- 新增
   localTerminalBackgroundEnabled.value = isTerminalBackgroundEnabled.value; // <-- 重新添加：在此处初始化
   editableTerminalBackgroundOverlayOpacity.value = currentTerminalBackgroundOverlayOpacity.value; // 初始化蒙版透明度
-  console.log(`[StyleCustomizer initializeEditableState] Initializing localTerminalBackgroundEnabled to: ${localTerminalBackgroundEnabled.value} (from store: ${isTerminalBackgroundEnabled.value})`); // 添加日志
-  console.log(`[StyleCustomizer initializeEditableState] Initializing editableTerminalBackgroundOverlayOpacity to: ${editableTerminalBackgroundOverlayOpacity.value} (from store: ${currentTerminalBackgroundOverlayOpacity.value})`); // 新增日志
+  console.log(`[StyleCustomizer initializeEditableState] Initializing localTerminalBackgroundEnabled to: ${localTerminalBackgroundEnabled.value} (from store: ${isTerminalBackgroundEnabled.value})`); 
+  console.log(`[StyleCustomizer initializeEditableState] Initializing editableTerminalBackgroundOverlayOpacity to: ${editableTerminalBackgroundOverlayOpacity.value} (from store: ${currentTerminalBackgroundOverlayOpacity.value})`);
   uploadError.value = null;
   importError.value = null;
   saveThemeError.value = null;
@@ -143,7 +143,7 @@ watch([
                             newSettings?.terminalBackgroundEnabled !== oldSettings?.terminalBackgroundEnabled ||
                             newSettings?.terminalBackgroundOverlayOpacity !== oldSettings?.terminalBackgroundOverlayOpacity; // 检查相关设置是否变化
     if (!isEditingTheme.value || newActiveThemeId !== oldActiveThemeId || settingsChanged) {
-        console.log(`[StyleCustomizer Watch] Triggering re-initialization. isEditing: ${isEditingTheme.value}, themeIdChanged: ${newActiveThemeId !== oldActiveThemeId}, settingsChanged: ${settingsChanged}`); // 添加日志
+        console.log(`[StyleCustomizer Watch] Triggering re-initialization. isEditing: ${isEditingTheme.value}, themeIdChanged: ${newActiveThemeId !== oldActiveThemeId}, settingsChanged: ${settingsChanged}`);
         initializeEditableState(); // 调用修改后的初始化函数
     } else {
         // 如果正在编辑，只更新非编辑相关的部分 (不包括 UI 主题和终端背景开关，因为它们由 initializeEditableState 处理)
@@ -165,10 +165,10 @@ watch(isTerminalBackgroundEnabled, (newValue) => {
   // 只有当本地状态与 store 状态不一致时才更新本地状态
   // 这避免了 handleToggleTerminalBackground 触发的不必要更新
   if (localTerminalBackgroundEnabled.value !== newValue) {
-    console.log(`[StyleCustomizer Watch isTerminalBackgroundEnabled] Store changed to ${newValue}, updating local state.`); // 添加日志
+    console.log(`[StyleCustomizer Watch isTerminalBackgroundEnabled] Store changed to ${newValue}, updating local state.`); 
     localTerminalBackgroundEnabled.value = newValue;
   } else {
-     console.log(`[StyleCustomizer Watch isTerminalBackgroundEnabled] Store changed to ${newValue}, but local state already matches. No update needed.`); // 添加日志
+     console.log(`[StyleCustomizer Watch isTerminalBackgroundEnabled] Store changed to ${newValue}, but local state already matches. No update needed.`);
   }
 });
 // 移除单独监听 isTerminalBackgroundEnabled 的 watcher

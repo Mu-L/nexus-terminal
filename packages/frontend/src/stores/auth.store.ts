@@ -55,17 +55,17 @@ interface AuthState {
     user: UserInfo | null;
     isLoading: boolean;
     error: string | null;
-    loginRequires2FA: boolean; // 新增状态：标记登录是否需要 2FA
+    loginRequires2FA: boolean; 
     // 存储 IP 黑名单数据 (虽然 actions 在这里，但 state 结构保持)
     ipBlacklist: {
         entries: any[]; // TODO: Define a proper type for blacklist entries
         total: number;
     };
     needsSetup: boolean; // 是否需要初始设置
-    publicCaptchaConfig: PublicCaptchaConfig | null; //  Public CAPTCHA config
-    passkeys: PasskeyInfo[] | null; //  Store for user's passkeys
-    passkeysLoading: boolean; //  Loading state for passkeys
-    hasPasskeysAvailable: boolean; //  Indicates if passkeys are available for login
+    publicCaptchaConfig: PublicCaptchaConfig | null;
+    passkeys: PasskeyInfo[] | null; 
+    passkeysLoading: boolean; 
+    hasPasskeysAvailable: boolean; 
 }
 
 export const useAuthStore = defineStore('auth', {

@@ -365,8 +365,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
 
   // --- 返回状态和处理函数 ---
   return {
-    // isDraggingOver, // 不再导出
-    showExternalDropOverlay, // 新增导出
+    showExternalDropOverlay, 
     dragOverTarget,
     draggedItem, // 需要暴露以供 handleDragOverRow 等函数内部判断
     // --- 事件处理器 ---
@@ -374,7 +373,7 @@ export function useFileManagerDragAndDrop(options: UseFileManagerDragAndDropOpti
     handleDragOver,
     handleDragLeave,
     handleDrop, // 容器的 drop (主要用于清理)
-    handleOverlayDrop, // 新增导出：蒙版的 drop
+    handleOverlayDrop, 
     handleDragStart,
     handleDragEnd,
     handleDragOverRow,

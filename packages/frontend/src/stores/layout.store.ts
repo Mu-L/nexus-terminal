@@ -411,7 +411,7 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
   }
 
 
-  // 新增 Action: 更新特定容器节点的子节点大小
+  // 更新特定容器节点的子节点大小
   function updateNodeSizes(nodeId: string, childrenSizes: { index: number; size: number }[]) {
     console.log(`[Layout Store] 请求更新节点 ${nodeId} 的子节点大小:`, childrenSizes);
     const originalJson = JSON.stringify(layoutTree.value); // Store original state
@@ -426,14 +426,14 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
        console.log(`[Layout Store] 未找到节点 ${nodeId} 或大小未改变。`);
     }
   }
-  // 新增 Action: 切换布局（Header/Footer）的可见性
+  // 切换布局（Header/Footer）的可见性
   function toggleLayoutVisibility() {
     isLayoutVisible.value = !isLayoutVisible.value;
     console.log(`[Layout Store] 布局可见性切换为: ${isLayoutVisible.value}`);
     // 注意：这个状态目前不与后端同步
   }
 
-  // 新增 Action: 从后端加载主导航栏可见性设置
+  // 从后端加载主导航栏可见性设置
   async function loadHeaderVisibility() {
     console.log('[Layout Store] Attempting to load header visibility from backend...');
     try {
@@ -453,7 +453,7 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
     }
   }
 
-  // 新增 Action: 切换主导航栏可见性并同步到后端
+  // 切换主导航栏可见性并同步到后端
   async function toggleHeaderVisibility() {
     const newValue = !isHeaderVisible.value;
     console.log(`[Layout Store] Toggling header visibility to: ${newValue}`);
@@ -471,19 +471,19 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
     }
   }
 
- // 新增 Action: 获取系统内置的默认布局
+ // 获取系统内置的默认布局
  function getSystemDefaultLayout(): LayoutNode {
    console.log('[Layout Store] Getting system default layout.');
    return getDefaultLayout(); // 直接调用内部函数
  }
 
- // 新增 Action: 获取系统内置的默认侧栏配置
+ // 获取系统内置的默认侧栏配置
  function getSystemDefaultSidebarPanes(): { left: PaneName[], right: PaneName[] } {
      console.log('[Layout Store] Getting system default sidebar panes.');
      return getDefaultSidebarPanes();
  }
 
- // 新增 Action: 将当前主布局树持久化到后端和 localStorage
+ // 将当前主布局树持久化到后端和 localStorage
  async function persistLayoutTree() { // Make async
    // ... (existing try/catch logic for backend and localStorage) ...
    // Ensure apiClient calls are awaited if they return promises
@@ -504,7 +504,7 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
    }
  }
 
- // 新增 Action: 将当前侧栏配置持久化到后端和 localStorage
+ // 将当前侧栏配置持久化到后端和 localStorage
  async function persistSidebarPanes() { // Make async
     // ... (existing try/catch logic for backend and localStorage) ...
     try {

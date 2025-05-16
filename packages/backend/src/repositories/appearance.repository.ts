@@ -120,7 +120,7 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'pageBackgroundImage', value: defaults.pageBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled },
-        { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity }, // 新增
+        { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity }, 
     ];
  
     try {

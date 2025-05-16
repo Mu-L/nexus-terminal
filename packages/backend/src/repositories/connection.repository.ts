@@ -7,7 +7,7 @@ import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/conn
 interface ConnectionBase {
     id: number;
     name: string | null;
-    type: 'SSH' | 'RDP' | 'VNC'; // Add type field
+    type: 'SSH' | 'RDP' | 'VNC';
     host: string;
     port: number;
     username: string;
@@ -16,8 +16,8 @@ interface ConnectionBase {
     created_at: number;
     updated_at: number;
     last_connected_at: number | null;
-    ssh_key_id?: number | null; // +++ Add ssh_key_id here as well +++
-notes?: string | null; // 新增备注字段
+    ssh_key_id?: number | null;
+notes?: string | null; 
 }
 
 // ConnectionWithTagsRow implicitly includes 'type' and 'ssh_key_id' via ConnectionBase
@@ -36,7 +36,7 @@ export interface FullConnectionData extends ConnectionBase {
     encrypted_password?: string | null;
     encrypted_private_key?: string | null;
     encrypted_passphrase?: string | null;
-notes?: string | null; // 新增备注字段
+notes?: string | null; 
     tag_ids?: number[];
 }
 

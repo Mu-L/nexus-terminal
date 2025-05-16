@@ -6,17 +6,19 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import WorkspaceConnectionListComponent from './WorkspaceConnectionList.vue';
 import TabBarContextMenu from './TabBarContextMenu.vue';
+import TransferProgressModal from './TransferProgressModal.vue';
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
-import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber } from '../composables/workspaceEvents';
+import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber, useWorkspaceEventOff } from '../composables/workspaceEvents'; // +++ 导入 useWorkspaceEventOff +++
 
 import type { SessionTabInfoWithStatus } from '../stores/session/types'; // 路径修正
 
 
-const { t } = useI18n(); // 初始化 i18n
+const { t } = useI18n();
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const onWorkspaceEvent = useWorkspaceEventSubscriber(); // +++ 获取事件订阅器 +++
+const offWorkspaceEvent = useWorkspaceEventOff(); // +++ 获取事件取消订阅器 +++
 const layoutStore = useLayoutStore(); // 初始化布局 store
 const connectionsStore = useConnectionsStore();
 const { isHeaderVisible } = storeToRefs(layoutStore); // 从 layout store 获取主导航栏可见状态
@@ -60,6 +62,7 @@ const closeSession = (event: MouseEvent, sessionId: string) => {
 const sessionStore = useSessionStore(); // Session store 保持不变
 const showConnectionListPopup = ref(false); // 连接列表弹出状态
 const draggableSessions = ref<SessionTabInfoWithStatus[]>([]); // + Local state for draggable
+const showTransferProgressModal = ref(false); // 控制传输进度模态框的显示状态
 
 // + Watch prop changes to update local state
 watch(() => props.sessions, (newSessions) => {
@@ -279,6 +282,18 @@ onMounted(() => {
     console.log('[TabBar] Received connection:connect event:', payload);
     handlePopupConnect(payload.connectionId);
   });
+
+  // +++ 监听打开传输进度模态框事件 +++
+  const handleOpenTransferProgressModal = () => {
+    console.log('[TabBar] Received ui:openTransferProgressModal event, opening modal.');
+    showTransferProgressModal.value = true;
+  };
+  onWorkspaceEvent('ui:openTransferProgressModal', handleOpenTransferProgressModal);
+
+  // 在组件卸载前取消订阅
+  onBeforeUnmount(() => {
+    offWorkspaceEvent('ui:openTransferProgressModal', handleOpenTransferProgressModal); // +++ 正确取消订阅 +++
+  });
 });
 
 // +++ 组件卸载前移除全局监听器 +++
@@ -457,6 +472,13 @@ onBeforeUnmount(() => {
         >
           <i :class="[eyeIconClass, 'text-sm']"></i>
         </button>
+        <!-- 新增：查看传输进度按钮 -->
+        <button v-if="!isMobile"
+                class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
+                @click="showTransferProgressModal = true"
+                :title="t('terminalTabBar.showTransferProgressTooltip', '查看传输进度')">
+          <i class="fas fa-tasks text-sm"></i>
+        </button>
         <!-- +++ 使用 v-if 隐藏移动端的布局按钮 +++ -->
         <button v-if="!isMobile" class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
                 @click="openLayoutConfigurator" :title="t('layout.configure', '配置布局')">
@@ -492,5 +514,7 @@ onBeforeUnmount(() => {
       @menu-action="handleContextMenuAction"
       @close="closeContextMenu"
     />
+    <!-- 传输进度模态框 -->
+    <TransferProgressModal v-model:visible="showTransferProgressModal" />
   </div>
 </template>

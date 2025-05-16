@@ -315,6 +315,13 @@ const handleItemClick = (event: MouseEvent, item: FileListItem, forceMultiSelect
   originalHandleItemClick(event, item);
 };
 
+// +++ 计算属性：获取选中的完整文件对象列表 +++
+const computedSelectedFullItems = computed((): FileListItem[] => {
+  if (!selectedItems.value || selectedItems.value.size === 0) {
+    return [];
+  }
+  return filteredFileList.value.filter(item => selectedItems.value.has(item.filename));
+});
 
 // --- 操作模态框辅助函数 ---
 const openActionModal = (
@@ -677,6 +684,7 @@ const {
   contextMenuPosition,
   contextMenuItems,
   contextMenuRef, // 获取 ref 以传递给子组件
+  contextTargetItem, // Get the target item from the composable
   showContextMenu, // 使用 Composable 提供的函数
   hideContextMenu, // <-- 获取 hideContextMenu 函数
 } = useFileManagerContextMenu({
@@ -1617,6 +1625,9 @@ const handleOpenEditorClick = () => {
       :is-visible="contextMenuVisible"
       :position="contextMenuPosition"
       :items="contextMenuItems"
+      :active-context-item="contextTargetItem"
+      :selected-file-items="computedSelectedFullItems"
+      :current-directory-path="currentSftpManager?.currentPath?.value ?? '/'"
      @close-request="hideContextMenu"
    />
 

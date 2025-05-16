@@ -140,7 +140,11 @@
       "title": "批量编辑连接",
       "selectedItems": "已选项目",
       "noChange": "保持不变",
-      "tagsPlaceholder": "输入标签 (替换现有)"
+      "deleteSelectedButton": "删除选中",
+      "deleteSelectedTooltip": "删除选中的连接",
+      "confirmMessage": "您确定要删除选中的 {count} 个连接吗？此操作无法撤销。",
+      "successMessage": "选中的连接已成功删除。",
+      "errorMessage": "批量删除连接失败: {error}"
     },
     "actions": {
       "testAllFiltered":"测试全部",
@@ -358,7 +362,8 @@
       "compressZip": "压缩为 zip",
       "compressTarGz": "压缩为 tar.gz",
       "compressTarBz2": "压缩为 tar.bz2",
-      "decompress": "解压"
+      "decompress": "解压",
+      "sendTo": "发送到..."
     },
     "headers": {
       "type": "类型",
@@ -1330,7 +1335,8 @@
     "searchConnectionsPlaceholder": "搜索连接..."
   },
   "terminalTabBar": {
-    "selectServerTitle": "选择要连接的服务器"
+    "selectServerTitle": "选择要连接的服务器",
+    "showTransferProgressTooltip": "显示/隐藏传输进度"
   },
   "tabs": {
     "contextMenu": {
@@ -1396,6 +1402,79 @@
       "remove": "移除",
       "exportLog": "导出日志"
     }
+
+  },
+  "transferProgressModal": {
+    "title": "文件传输进度",
+    "loading": "正在加载传输任务...",
+    "errorLoadingTitle": "加载错误",
+    "errorLoading": "加载传输任务失败：{error}",
+    "error": {
+      "unknown": "未知错误",
+      "cancelFailed": "终止任务失败。"
+    },
+    "noTasks": "当前没有活动的传输任务。",
+    "task": {
+      "idLabel": "任务",
+      "createdAt": "创建于",
+      "overallProgress": "整体进度"
+    },
+    "status": {
+      "queued": "排队中",
+      "inProgress": "进行中",
+      "completed": "已完成",
+      "failed": "已失败",
+      "partiallyCompleted": "部分完成",
+      "connecting": "连接中",
+      "transferring": "传输中",
+      "cancelling": "正在终止...",
+      "cancelled": "已终止"
+    },
+    "confirmCancel": "您确定要终止此传输任务吗？",
+    "cancelRequested": "已发送终止请求。",
+    "cancelTaskTooltip": "终止任务",
+    "cancellingTooltip": "正在终止......",
+    "cancelButton": "终止",
+    "cancellingButton": "正在终止...",
+    "subTasks": {
+      "titleToggle": "查看 {count} 个子任务",
+      "noSubTasks": "没有子任务。"
+    },
+    "subTask": {
+      "source": "源文件",
+      "connectionId": "目标连接",
+      "status": "状态",
+      "method": "方法",
+      "error": "错误"
+    },
+    "connectionIdFallback": "连接ID: {connectionId}",
+    "unknownFileName": "[文件名未知]",
+    "unknownSourceServer": "[源服务器未知]",
+    "unknownTargetPath": "[目标路径未知]",
+    "taskIdFallback": "任务ID: {taskId}"
+  },
+  "sendFilesModal": {
+    "title": "发送文件",
+    "searchConnectionsPlaceholder": "搜索连接...",
+    "targetPathLabel": "目标路径",
+    "targetPathPlaceholder": "目标路径",
+    "transferMethodLabel": "传输方式",
+    "transferMethodAuto": "自动",
+    "loadingConnections": "正在加载连接...",
+    "noConnections": "没有可用的连接。请先添加连接。",
+    "noConnectionsFound": "未找到匹配搜索的连接。",
+    "untaggedConnections": "未标记",
+    "itemsToSendTitle": "待发送项目:",
+    "noItemsSelected": "未选择待发送的项目。",
+    "sendButton": "发送",
+    "cancelButton": "取消",
+    "errorFetchingData": "获取模态框数据时出错。",
+    "errorFetchingConnections": "获取连接数据时出错。",
+    "errorFetchingTags": "获取标签数据时出错。",
+    "validationError": "请至少选择一个连接并指定目标路径。",
+    "transferInitiated": "传输任务已创建，任务 ID: ",
+    "transferInitiatedGeneric": "传输任务创建成功。",
+    "transferFailedError": "发起传输失败。请重试。"
   },
   "time": {
     "unknown": "未知时间",

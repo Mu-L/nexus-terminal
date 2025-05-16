@@ -52,7 +52,8 @@ import terminalThemeRoutes from './terminal-themes/terminal-theme.routes';
 import appearanceRoutes from './appearance/appearance.routes';
 import sshKeysRouter from './ssh_keys/ssh_keys.routes'; 
 import quickCommandTagRoutes from './quick-command-tags/quick-command-tag.routes'; 
-import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes'; 
+import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes';
+import { transfersRoutes } from './transfers/transfers.routes';
 import { initializeWebSocket } from './websocket';
 import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
 
@@ -68,29 +69,19 @@ import './services/notification.dispatcher.service';
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
     console.error('---未处理的 Promise Rejection---');
     console.error('原因:', reason);
-    // 可以在这里添加更详细的日志记录，例如将错误发送到监控系统
-    // 注意：根据 Node.js 官方建议，未来版本的 Node.js 可能会默认在 unhandledRejection 时终止进程。
-    // 目前我们选择记录错误并继续运行，但这可能导致应用程序状态不一致。
   });
   
   // 捕获未捕获的同步异常
   process.on('uncaughtException', (error: Error) => {
     console.error('---未捕获的异常---');
     console.error('错误:', error);
-    // 记录错误，但避免退出进程，尝试让服务器继续运行（有风险）
-    // 在生产环境中，更安全的做法可能是记录错误后优雅地关闭服务器并重启。
-    // process.exit(1); // 强制退出（更安全，但会中断服务）
   });
-  // --- 结束全局错误处理 ---
+
   
 
 const initializeEnvironment = async () => {
-    // Env files (root and data/.env) are now loaded at the very top of the file.
-    // This function will now focus on generating keys if they are missing
-    // and setting defaults for GUACD variables.
 
-    // Use the globally defined path for data .env
-    const dataEnvPath = dataEnvPathGlobal; // Use the path defined at the top
+    const dataEnvPath = dataEnvPathGlobal; 
     let keysGenerated = false;
     let keysToAppend = '';
 
@@ -116,16 +107,10 @@ const initializeEnvironment = async () => {
     if (!process.env.GUACD_HOST) {
         console.warn('[ENV Init] GUACD_HOST 未设置，将使用默认值 "localhost"');
         process.env.GUACD_HOST = 'localhost';
-        // Optionally add to keysToAppend if you want to save the default
-        // keysToAppend += `\nGUACD_HOST=localhost`;
-        // keysGenerated = true; // Mark if you want to save
     }
     if (!process.env.GUACD_PORT) {
         console.warn('[ENV Init] GUACD_PORT 未设置，将使用默认值 "4822"');
         process.env.GUACD_PORT = '4822';
-        // Optionally add to keysToAppend
-        // keysToAppend += `\nGUACD_PORT=4822`;
-        // keysGenerated = true; // Mark if you want to save
     }
 
 
@@ -270,9 +255,10 @@ const startServer = () => {
     app.use('/api/v1/quick-commands', quickCommandsRoutes);
     app.use('/api/v1/terminal-themes', terminalThemeRoutes);
     app.use('/api/v1/appearance', appearanceRoutes);
-    app.use('/api/v1/ssh-keys', sshKeysRouter); // +++ Register SSH Key routes +++
-    app.use('/api/v1/quick-command-tags', quickCommandTagRoutes); // +++ Register Quick Command Tag routes +++
-    app.use('/api/v1/ssh-suspend', sshSuspendRouter); // +++ Register SSH Suspend routes +++
+    app.use('/api/v1/ssh-keys', sshKeysRouter); 
+    app.use('/api/v1/quick-command-tags', quickCommandTagRoutes);
+    app.use('/api/v1/ssh-suspend', sshSuspendRouter); 
+    app.use('/api/v1/transfers', transfersRoutes()); 
     
     // 状态检查接口
     app.get('/api/v1/status', (req: Request, res: Response) => {

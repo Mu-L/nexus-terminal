@@ -140,7 +140,12 @@
       "title": "Batch Edit Connections",
       "editSelected": "Edit Selected",
       "noChange":"No change",
-      "selectedItems":"{count} items selected"
+      "selectedItems":"{count} items selected",
+      "deleteSelectedButton": "Delete Selected",
+      "deleteSelectedTooltip": "Delete selected connections",
+      "confirmMessage": "Are you sure you want to delete the selected {count} connections? This action cannot be undone.",
+      "successMessage": "Selected connections have been successfully deleted.",
+      "errorMessage": "Batch delete connections failed: {error}"
     },
     "actions": {
       "testAllFiltered":"Test All",
@@ -358,7 +363,8 @@
       "compressZip": "Compress to zip",
       "compressTarGz": "Compress to tar.gz",
       "compressTarBz2": "Compress to tar.bz2",
-      "decompress": "Decompress"
+      "decompress": "Decompress",
+      "sendTo": "Send to..."
     },
     "headers": {
       "type": "Type",
@@ -1326,7 +1332,8 @@
     "searchConnectionsPlaceholder": "Search connections..."
   },
   "terminalTabBar": {
-    "selectServerTitle": "Select server to connect"
+    "selectServerTitle": "Select server to connect",
+    "showTransferProgressTooltip": "Show/Hide Transfer Progress"
   },
   "tabs": {
     "contextMenu": {
@@ -1424,5 +1431,77 @@
       "logExportSuccess": "Suspended session log {name} has started downloading.",
       "logExportError": "Failed to export suspended session log: {error}"
     }
+  },
+  "transferProgressModal": {
+    "title": "File Transfer Progress",
+    "loading": "Loading transfer tasks...",
+    "errorLoadingTitle": "Loading Error",
+    "errorLoading": "Failed to load transfer tasks: {error}",
+    "error": {
+      "unknown": "Unknown error",
+      "cancelFailed": "Failed to cancel task."
+    },
+    "noTasks": "There are no active transfer tasks currently.",
+    "task": {
+      "idLabel": "Task",
+      "createdAt": "Created at",
+      "overallProgress": "Overall Progress"
+    },
+    "status": {
+      "queued": "Queued",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "partiallyCompleted": "Partially Completed",
+      "connecting": "Connecting",
+      "transferring": "Transferring",
+      "cancelling": "Cancelling",
+      "cancelled": "Cancelled"
+    },
+    "confirmCancel": "Are you sure you want to cancel this transfer task?",
+    "cancelRequested": "Cancel request sent.",
+    "cancelTaskTooltip": "Cancel Task",
+    "cancellingTooltip": "Cancelling...",
+    "cancelButton": "Cancel",
+    "cancellingButton": "Cancelling",
+    "subTasks": {
+      "titleToggle": "View {count} Sub-tasks",
+      "noSubTasks": "No sub-tasks."
+    },
+    "subTask": {
+      "source": "Source File",
+      "connectionId": "Target Connection",
+      "status": "Status",
+      "method": "Method",
+      "error": "Error"
+    },
+    "connectionIdFallback": "Connection ID: {connectionId}",
+    "unknownFileName": "[Unknown File Name]",
+    "unknownSourceServer": "[Unknown Source Server]",
+    "unknownTargetPath": "[Unknown Target Path]",
+    "taskIdFallback": "Task ID: {taskId}"
+  },
+  "sendFilesModal": {
+    "title": "Send Files",
+    "searchConnectionsPlaceholder": "Search connections...",
+    "targetPathLabel": "Target Path",
+    "targetPathPlaceholder": "targetPath",
+    "transferMethodLabel": "Transfer Method",
+    "transferMethodAuto": "Auto",
+    "loadingConnections": "Loading connections...",
+    "noConnections": "No connections available. Please add connections first.",
+    "noConnectionsFound": "No connections found matching your search.",
+    "untaggedConnections": "Untagged",
+    "itemsToSendTitle": "Items to send:",
+    "noItemsSelected": "No items selected to send.",
+    "sendButton": "Send",
+    "cancelButton": "Cancel",
+    "errorFetchingData": "Error fetching data for modal.",
+    "errorFetchingConnections": "Error fetching connections.",
+    "errorFetchingTags": "Error fetching tags.",
+    "validationError": "Please select at least one connection and specify a target path.",
+    "transferInitiated": "Transfer task created, Task ID: ",
+    "transferInitiatedGeneric": "Transfer task created successfully.",
+    "transferFailedError": "Failed to initiate transfer. Please try again."
   }
 }

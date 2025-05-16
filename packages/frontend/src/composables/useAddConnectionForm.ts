@@ -38,20 +38,20 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
 
   // 表单数据模型
   const initialFormData = {
-    type: 'SSH' as 'SSH' | 'RDP' | 'VNC', // Use uppercase to match ConnectionInfo
+    type: 'SSH' as 'SSH' | 'RDP' | 'VNC', 
     name: '',
     host: '',
     port: 22,
     username: '',
-    auth_method: 'password' as 'password' | 'key', // SSH specific
+    auth_method: 'password' as 'password' | 'key', 
     password: '',
-    private_key: '', // SSH specific (for direct input) - This field seems unused in the new logic, but kept for initialData consistency
-    passphrase: '', // SSH specific (for direct input) - This field seems unused, kept for consistency
-    selected_ssh_key_id: null as number | null, // +++ Add field for selected key ID +++
+    private_key: '', 
+    passphrase: '', 
+    selected_ssh_key_id: null as number | null,
     proxy_id: null as number | null,
-    tag_ids: [] as number[], // 新增 tag_ids 字段
-    notes: '', // 新增备注字段
-    vncPassword: '', // VNC specific password
+    tag_ids: [] as number[], 
+    notes: '', 
+    vncPassword: '', 
   };
   const formData = reactive({ ...initialFormData });
 
