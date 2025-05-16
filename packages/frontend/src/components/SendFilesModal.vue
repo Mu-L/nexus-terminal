@@ -69,21 +69,33 @@
             <p>{{ t('sendFilesModal.noConnectionsFound') }}</p>
           </div>
           <div v-else class="space-y-3">
-            <div v-for="group in filteredGroupedConnections" :key="group.tag ? group.tag.id : 'untagged'" class="tag-group">
-              <div class="flex items-center py-1.5">
+            <div v-for="group in filteredGroupedConnections" :key="getGroupId(group)" class="tag-group">
+              <div
+                class="flex items-center py-1.5 cursor-pointer group"
+                @click="toggleTagGroupExpansion(group)"
+              >
                 <input
                   type="checkbox"
-                  :id="'tag-' + (group.tag ? group.tag.id : 'untagged')"
+                  :id="'tag-cb-' + getGroupId(group)"
                   :checked="isTagGroupSelected(group)"
                   :indeterminate="isTagGroupIndeterminate(group)"
                   @change="toggleTagGroupSelection(group)"
-                  class="mr-2 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                  @click.stop
+                  class="mr-1.5 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
                 />
-                <label :for="'tag-' + (group.tag ? group.tag.id : 'untagged')" class="font-semibold text-foreground select-none cursor-pointer text-sm">
+                <i
+                  :class="['fas', expandedTagGroups[getGroupId(group)] ? 'fa-chevron-down' : 'fa-chevron-right', 'mr-2 w-3 text-center text-text-secondary/80 group-hover:text-text-secondary transition-transform duration-150 ease-in-out']"
+                  style="font-size: 0.75rem;"
+                ></i>
+                <label
+                  :for="'tag-cb-' + getGroupId(group)"
+                  class="font-semibold text-foreground select-none cursor-pointer text-sm"
+                  @click.stop
+                >
                   {{ group.tag ? group.tag.name : t('sendFilesModal.untaggedConnections') }} ({{ group.connections.length }})
                 </label>
               </div>
-              <ul class="pl-7 space-y-0.5">
+              <ul v-show="expandedTagGroups[getGroupId(group)] ?? true" class="pl-7 space-y-0.5">
                 <li
                   v-for="connection in group.connections"
                   :key="connection.id"
@@ -190,7 +202,23 @@ const selectedConnectionIds = ref<number[]>([]);
 const isLoadingConnections = ref(false);
 const isLoadingTags = ref(false);
 
-// Simulate data for itemsToSend for development if not provided
+const expandedTagGroups = ref<Record<string, boolean>>({});
+
+const getGroupId = (group: GroupedConnection): string => {
+  return group.tag ? String(group.tag.id) : 'untagged';
+};
+
+const toggleTagGroupExpansion = (group: GroupedConnection) => {
+  const groupId = getGroupId(group);
+  // If state is undefined, default to true (expanded), then toggle it.
+  // So, if undefined, it becomes !(true) = false. If defined, it's just toggled.
+  // To make it default to expanded and then collapse on first click:
+  // expandedTagGroups.value[groupId] = !(expandedTagGroups.value[groupId] ?? true);
+  // To make it default to collapsed and then expand on first click (if true means expanded):
+    expandedTagGroups.value[groupId] = !(expandedTagGroups.value[groupId] ?? true);
+  };
+  
+  // Simulate data for itemsToSend for development if not provided
 const itemsToSendInternal = computed<ItemToSend[]>(() => {
   if (props.itemsToSend && props.itemsToSend.length > 0) {
     return props.itemsToSend;
@@ -269,19 +297,38 @@ const groupedConnections = computed<GroupedConnection[]>(() => {
 });
 
 const filteredGroupedConnections = computed<GroupedConnection[]>(() => {
+  const baseGroups = groupedConnections.value;
+
   if (!searchTerm.value.trim()) {
-    return groupedConnections.value;
+    // If no search term, filter out groups that initially have no connections.
+    return baseGroups.filter(group => group.connections.length > 0);
   }
+
   const lowerSearchTerm = searchTerm.value.toLowerCase();
-  return groupedConnections.value
+  
+  const result = baseGroups
     .map(group => {
-      const filteredConns = group.connections.filter(conn =>
-        conn.type?.toLowerCase() === 'ssh' && // 只包括 SSH 连接
+      const groupDisplayName = group.tag ? group.tag.name : t('sendFilesModal.untaggedConnections');
+      const isTagMatch = groupDisplayName.toLowerCase().includes(lowerSearchTerm);
+
+      const connsMatchingSearchByName = group.connections.filter(conn =>
         conn.name.toLowerCase().includes(lowerSearchTerm)
+        // conn.type filtering is already handled in groupedConnections
       );
-      return { ...group, connections: filteredConns };
+
+      if (isTagMatch) {
+        // Tag name matches. Show all connections of this group.
+        return { ...group, connections: group.connections };
+      } else if (connsMatchingSearchByName.length > 0) {
+        // Tag name doesn't match, but some connection names do. Show only those connections.
+        return { ...group, connections: connsMatchingSearchByName };
+      }
+      
+      return null; // Group doesn't match by tag name and has no connections matching by name
     })
-    .filter(group => group.connections.length > 0); // 只包括仍有连接的分组
+    .filter(group => group !== null && group.connections.length > 0) as GroupedConnection[];
+    
+  return result;
 });
 
 const isTagGroupSelected = (group: GroupedConnection): boolean => {
