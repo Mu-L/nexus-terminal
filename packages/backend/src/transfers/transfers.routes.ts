@@ -18,5 +18,8 @@ export const transfersRoutes = (): Router => {
   // GET /api/transfers/status/:taskId - 获取特定传输任务的详细状态
   router.get('/status/:taskId', controller.getTaskStatus);
 
+  // POST /api/transfers/cancel/:taskId - 请求取消一个传输任务
+  router.post('/cancel/:taskId', controller.cancelTransfer);
+
   return router;
 };

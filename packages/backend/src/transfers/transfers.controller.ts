@@ -11,6 +11,7 @@ export class TransfersController {
     this.initiateTransfer = this.initiateTransfer.bind(this);
     this.getAllStatuses = this.getAllStatuses.bind(this);
     this.getTaskStatus = this.getTaskStatus.bind(this);
+    this.cancelTransfer = this.cancelTransfer.bind(this); // +++ 绑定新方法 +++
   }
 
   public async initiateTransfer(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -88,6 +89,34 @@ export class TransfersController {
     } catch (error) {
       console.error(`[TransfersController] Error getting status for task ${req.params.taskId}:`, error);
       res.status(500).json({ message: 'Failed to retrieve task status.', error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  public async cancelTransfer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // @ts-ignore
+      const userId = req.session?.userId;
+      if (!userId) {
+        res.status(401).json({ message: '用户未认证或会话无效。' });
+        return;
+      }
+
+      const { taskId } = req.params;
+      if (!taskId) {
+        res.status(400).json({ message: 'Task ID is required for cancellation.' });
+        return;
+      }
+
+      const success = await this.transfersService.cancelTransferTask(taskId, userId);
+      if (success) {
+        res.status(200).json({ message: `Transfer task ${taskId} cancellation initiated.` });
+      } else {
+        // 可能任务不存在，或不属于该用户，或无法取消
+        res.status(404).json({ message: `Failed to initiate cancellation for task ${taskId}. It may not exist, not be accessible, or already be in a final state.` });
+      }
+    } catch (error) {
+      console.error(`[TransfersController] Error cancelling task ${req.params.taskId}:`, error);
+      res.status(500).json({ message: 'Failed to cancel task.', error: error instanceof Error ? error.message : String(error) });
     }
   }
 }

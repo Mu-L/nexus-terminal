@@ -52,7 +52,7 @@ interface TransferSubTask {
   subTaskId: string;
   connectionId: number;
   sourceItemName: string;
-  status: 'queued' | 'connecting' | 'transferring' | 'completed' | 'failed';
+  status: 'queued' | 'connecting' | 'transferring' | 'completed' | 'failed' | 'cancelling' | 'cancelled'; // +++ 新增状态 +++
   progress?: number; // 0-100
   message?: string;
   transferMethodUsed?: 'rsync' | 'scp';
@@ -60,7 +60,7 @@ interface TransferSubTask {
 
 interface TransferTask {
   taskId: string;
-  status: 'queued' | 'in-progress' | 'completed' | 'failed' | 'partially-completed';
+  status: 'queued' | 'in-progress' | 'completed' | 'failed' | 'partially-completed' | 'cancelling' | 'cancelled'; // +++ 新增状态 +++
   createdAt: string | Date;
   updatedAt: string | Date;
   subTasks: TransferSubTask[];
@@ -112,6 +112,8 @@ const getDisplayStatus = (status: string): string => {
     'partially-completed': 'transferProgressModal.status.partiallyCompleted',
     'connecting': 'transferProgressModal.status.connecting',
     'transferring': 'transferProgressModal.status.transferring',
+    'cancelling': 'transferProgressModal.status.cancelling', // +++ 新增状态翻译键 +++
+    'cancelled': 'transferProgressModal.status.cancelled',   // +++ 新增状态翻译键 +++
   };
   // 提供一个默认的回退文本，以防i18n key缺失
   const defaultText = status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ');
@@ -180,6 +182,41 @@ const handleClose = () => {
   internalVisible.value = false;
 };
 
+const isTaskCancellable = (taskStatus: TransferTask['status']): boolean => {
+  return ['queued', 'in-progress', 'connecting', 'transferring', 'cancelling'].includes(taskStatus);
+};
+
+const isTaskCancelling = (taskStatus: TransferTask['status']): boolean => {
+  return taskStatus === 'cancelling';
+};
+
+const handleCancelTask = async (taskId: string) => {
+  // 可以在这里添加一个确认对话框
+  // const confirmed = window.confirm(t('transferProgressModal.confirmCancel', '您确定要中止此传输任务吗？'));
+  // if (!confirmed) return;
+
+  try {
+    // 更新UI，将任务状态临时设置为 'cancelling' 或禁用按钮
+    const task = transferTasks.value.find(t => t.taskId === taskId);
+    if (task) {
+      // 优选: 如果后端会快速更新状态并通过轮询反映, 前端可能不需要立即改变状态。
+      // 否则, 可以临时改变: task.status = 'cancelling';
+      // 另一种方法是添加一个 loading 状态到按钮上
+    }
+
+    await apiClient.post(`/transfers/cancel/${taskId}`);
+    // 可以添加成功提示
+    // uiNotificationsStore.showSuccess(t('transferProgressModal.cancelRequested', '已发送中止请求。'));
+    
+    // 立即刷新一次列表，或者等待下一次轮询
+    fetchTransferTasks();
+  } catch (error: any) {
+    console.error(`Failed to cancel task ${taskId}:`, error);
+    // uiNotificationsStore.showError(error.response?.data?.message || error.message || t('transferProgressModal.error.cancelFailed', '中止任务失败。'));
+    // 如果任务状态之前被临时修改，可能需要回滚
+  }
+};
+
 </script>
 
 <template>
@@ -220,14 +257,27 @@ const handleClose = () => {
                 <span class="font-semibold text-md block">{{ t('transferProgressModal.task.idLabel', '任务') }}: {{ formatTaskTitle(task) }}</span>
                 <span class="text-xs text-text-muted">{{ t('transferProgressModal.task.createdAt', '创建于') }}: {{ formatDate(task.createdAt) }}</span>
               </div>
-              <span :class="['px-2.5 py-1 text-xs font-semibold rounded-full',
-                { 'bg-green-100 text-green-700': task.status === 'completed' },
-                { 'bg-red-100 text-red-700': task.status === 'failed' },
-                { 'bg-yellow-100 text-yellow-700': task.status === 'partially-completed' || task.status === 'queued' },
-                { 'bg-blue-100 text-blue-700': task.status === 'in-progress' }
-              ]">
-                {{ getDisplayStatus(task.status) }}
-              </span>
+              <div class="flex items-center space-x-2">
+                <span :class="['px-2.5 py-1 text-xs font-semibold rounded-full',
+                  { 'bg-green-100 text-green-700': task.status === 'completed' },
+                  { 'bg-red-100 text-red-700': task.status === 'failed' },
+                  { 'bg-yellow-100 text-yellow-700': task.status === 'partially-completed' || task.status === 'queued' || task.status === 'cancelling' }, // cancelling 也用黄色
+                  { 'bg-blue-100 text-blue-700': task.status === 'in-progress' },
+                  { 'bg-gray-100 text-gray-700': task.status === 'cancelled' } // cancelled 用灰色
+                ]">
+                  {{ getDisplayStatus(task.status) }}
+                </span>
+                <button
+                  v-if="isTaskCancellable(task.status)"
+                  @click="handleCancelTask(task.taskId)"
+                  :disabled="isTaskCancelling(task.status)"
+                  class="px-2 py-0.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  :title="isTaskCancelling(task.status) ? t('transferProgressModal.cancellingTooltip', '中止中...') : t('transferProgressModal.cancelTaskTooltip', '中止任务')"
+                >
+                  <i v-if="isTaskCancelling(task.status)" class="fas fa-spinner fa-spin mr-1"></i>
+                  {{ isTaskCancelling(task.status) ? t('transferProgressModal.cancellingButton', '中止中') : t('transferProgressModal.cancelButton', '中止') }}
+                </button>
+              </div>
             </div>
 
             <div v-if="task.overallProgress !== undefined" class="mb-2">

@@ -10,7 +10,7 @@ export interface TransferSubTask {
   subTaskId: string;
   connectionId: number;
   sourceItemName: string;
-  status: 'queued' | 'connecting' | 'transferring' | 'completed' | 'failed';
+  status: 'queued' | 'connecting' | 'transferring' | 'completed' | 'failed' | 'cancelling' | 'cancelled'; // +++ 新增状态 +++
   progress?: number; // 0-100
   message?: string; // 例如错误信息
   transferMethodUsed?: 'rsync' | 'scp';
@@ -20,7 +20,7 @@ export interface TransferSubTask {
 
 export interface TransferTask {
   taskId: string;
-  status: 'queued' | 'in-progress' | 'completed' | 'failed' | 'partially-completed';
+  status: 'queued' | 'in-progress' | 'completed' | 'failed' | 'partially-completed' | 'cancelling' | 'cancelled'; // +++ 新增状态 +++
   userId: string | number; // 添加用户ID字段
   createdAt: Date;
   updatedAt: Date;
