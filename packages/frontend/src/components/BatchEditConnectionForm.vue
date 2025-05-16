@@ -149,19 +149,13 @@ const handleSave = async () => {
     }
 
     if (successCount > 0) {
-      uiNotificationsStore.addNotification({ message: t('connections.batchEdit.updateSuccess', { count: successCount }), type: 'success' });
+      uiNotificationsStore.addNotification({ message: t('common.updateSuccess', { count: successCount }), type: 'success' });
       emit('saved');
-    }
-    if (successCount < props.connectionIds.length) {
-      uiNotificationsStore.addNotification({ message: t('connections.batchEdit.updatePartialFail', { failCount: props.connectionIds.length - successCount }), type: 'warning' });
-    }
-    if (successCount === 0 && props.connectionIds.length > 0) {
-       uiNotificationsStore.addNotification({ message: t('connections.batchEdit.updateAllFail', '所有连接更新失败'), type: 'error' });
     }
     emit('update:visible', false);
   } catch (error: any) {
     console.error("Batch update error:", error);
-    uiNotificationsStore.addNotification({ message: error.message || t('connections.batchEdit.updateError', '批量更新时发生错误'), type: 'error' });
+    uiNotificationsStore.addNotification({ message: error.message , type: 'error' });
   } finally {
     isLoading.value = false;
   }

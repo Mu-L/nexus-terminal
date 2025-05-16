@@ -981,6 +981,7 @@
     "restore": "Restore",
     "minimize": "Minimize",
     "send":"Send",
+    "updateSuccess":"Update successful",
     "copied": "Copied to clipboard"
   },
   "layoutConfigurator": {
