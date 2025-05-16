@@ -1424,5 +1424,28 @@
       "logExportSuccess": "Suspended session log {name} has started downloading.",
       "logExportError": "Failed to export suspended session log: {error}"
     }
+  },
+  "sendFilesModal": {
+    "title": "Send Files",
+    "searchConnectionsPlaceholder": "Search connections...",
+    "targetPathLabel": "Target Path",
+    "targetPathPlaceholder": "/remote/path/to/destination",
+    "transferMethodLabel": "Transfer Method",
+    "transferMethodAuto": "Auto",
+    "loadingConnections": "Loading connections...",
+    "noConnections": "No connections available. Please add connections first.",
+    "noConnectionsFound": "No connections found matching your search.",
+    "untaggedConnections": "Untagged",
+    "itemsToSendTitle": "Items to send:",
+    "noItemsSelected": "No items selected to send.",
+    "sendButton": "Send",
+    "cancelButton": "Cancel",
+    "errorFetchingData": "Error fetching data for modal.",
+    "errorFetchingConnections": "Error fetching connections.",
+    "errorFetchingTags": "Error fetching tags.",
+    "validationError": "Please select at least one connection and specify a target path.",
+    "transferInitiated": "Transfer task created, Task ID: ",
+    "transferInitiatedGeneric": "Transfer task created successfully.",
+    "transferFailedError": "Failed to initiate transfer. Please try again."
   }
 }

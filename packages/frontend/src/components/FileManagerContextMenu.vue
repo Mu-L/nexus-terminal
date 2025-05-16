@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, type PropType } from 'vue';
-import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu'; 
-import { onUnmounted } from 'vue';
+import { ref, watch, nextTick, type PropType, onUnmounted } from 'vue'; // Added watch, nextTick
+import { useI18n } from 'vue-i18n';
+import SendFilesModal from './SendFilesModal.vue';
+import type { ContextMenuItem } from '../composables/file-manager/useFileManagerContextMenu';
+import type { FileListItem } from '../types/sftp.types'; // Import FileListItem
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 
-defineProps({
+const props = defineProps({
   isVisible: {
     type: Boolean,
     required: true,
@@ -17,9 +19,82 @@ defineProps({
     type: Array as PropType<ContextMenuItem[]>,
     required: true,
   },
+  activeContextItem: { // Item that was right-clicked
+    type: Object as PropType<FileListItem | null>,
+    default: null,
+  },
+  currentDirectoryPath: { // Current path of the file manager
+    type: String,
+    required: true,
+  }
 });
 
 const { isMobile } = useDeviceDetection();
+const { t } = useI18n();
+const showSendFilesModal = ref(false);
+// Update the type for itemsToSendData
+const itemsToSendData = ref<{ name: string; path: string; type: 'file' | 'directory' }[]>([]);
+
+// +++ 新增：用于菜单位置调整的 ref +++
+const contextMenuRef = ref<HTMLDivElement | null>(null);
+const computedRenderPosition = ref({ x: props.position.x, y: props.position.y });
+
+watch(
+  [() => props.isVisible, () => props.position],
+  ([newIsVisible, newPosition], [oldIsVisible, oldPosition]) => {
+    if (newIsVisible) {
+      // 仅当菜单从不可见变为可见，或当菜单可见时其初始位置改变时，才进行位置计算
+      // oldPosition 可能为 undefined，所以需要检查
+      const positionChangedWhileVisible = oldIsVisible && oldPosition && (newPosition.x !== oldPosition.x || newPosition.y !== oldPosition.y);
+      
+      if (!oldIsVisible || positionChangedWhileVisible) {
+        computedRenderPosition.value = { ...newPosition }; // 设置初始位置为当前点击位置
+
+        nextTick(() => {
+          if (contextMenuRef.value) {
+            const menuElement = contextMenuRef.value;
+            const menuRect = menuElement.getBoundingClientRect();
+
+            // 如果菜单没有实际尺寸 (例如，内容为空或未渲染)，则不进行调整
+            if (menuRect.width === 0 && menuRect.height === 0) {
+              // console.debug("[FileManagerContextMenu] Menu dimensions are zero, sticking to initial position.");
+              return;
+            }
+
+            let finalX = newPosition.x;
+            let finalY = newPosition.y;
+            const menuWidth = menuRect.width;
+            const menuHeight = menuRect.height;
+            const margin = 10; // 距离窗口边缘的最小间距
+
+            // console.debug(`[FileManagerContextMenu] Initial pos: (${finalX}, ${finalY}), Menu size: (${menuWidth}x${menuHeight}), Window: (${window.innerWidth}x${window.innerHeight})`);
+
+            // 调整水平位置，防止溢出右侧
+            if (finalX + menuWidth > window.innerWidth) {
+              finalX = window.innerWidth - menuWidth - margin;
+            }
+
+            // 调整垂直位置，防止溢出底部
+            if (finalY + menuHeight > window.innerHeight) {
+              finalY = window.innerHeight - menuHeight - margin;
+            }
+
+            // 确保菜单不超出屏幕左上角
+            finalX = Math.max(margin, finalX);
+            finalY = Math.max(margin, finalY);
+            
+            // console.debug(`[FileManagerContextMenu] Adjusted pos: (${finalX}, ${finalY})`);
+            computedRenderPosition.value = { x: finalX, y: finalY };
+          }
+        });
+      }
+    } else {
+      // 如果菜单不可见，确保 computedRenderPosition 与 props.position 同步，为下次显示做准备
+      computedRenderPosition.value = { ...newPosition };
+    }
+  },
+  { deep: true, immediate: true } // immediate 确保初始状态（如果isVisible为true）也设置正确
+);
 
 // 隐藏菜单的逻辑由 useFileManagerContextMenu 中的全局点击监听器处理
 // 但我们仍然需要触发菜单项的 action，并通知父组件关闭菜单
@@ -30,6 +105,43 @@ const handleItemClick = (item: ContextMenuItem) => {
     item.action(); // 只有当 action 存在时才执行
     emit('close-request'); // <-- 发出关闭请求
   }
+};
+
+const handleSendToClick = () => {
+  if (props.activeContextItem) {
+    const item = props.activeContextItem;
+    const type = item.attrs.isDirectory ? 'directory' : 'file';
+    // Ensure path is constructed correctly, assuming currentDirectoryPath ends with / or is root '/'
+    // And filename does not start with /
+    let fullPath = props.currentDirectoryPath;
+    if (!fullPath.endsWith('/')) {
+      fullPath += '/';
+    }
+    fullPath += item.filename;
+    
+    // Normalize path to remove any double slashes, except for protocol like sftp://
+    fullPath = fullPath.replace(/(?<!:)\/\//g, '/');
+
+
+    itemsToSendData.value = [{
+      name: item.filename,
+      path: fullPath,
+      type: type,
+    }];
+  } else {
+    // No specific item clicked, perhaps send selected items? Or disable "Send To"?
+    // For now, sending an empty array if no activeContextItem.
+    // This scenario should ideally be handled by disabling the "Send to..." option
+    // if no item is targeted or no selection is made that can be sent.
+    itemsToSendData.value = [];
+  }
+  showSendFilesModal.value = true;
+  emit('close-request');
+};
+
+const handleFilesSent = (payload: any) => {
+  console.log('Files to send (from FileManagerContextMenu):', payload);
+  // 实际发送逻辑可以后续添加或委派
 };
 
 
@@ -62,9 +174,10 @@ onUnmounted(() => {
 
 <template>
   <div
+    ref="contextMenuRef"
     v-if="isVisible"
     class="fixed bg-background border border-border shadow-lg rounded-md z-[1002] min-w-[150px]"
-    :style="{ top: `${position.y}px`, left: `${position.x}px` }"
+    :style="{ top: `${computedRenderPosition.y}px`, left: `${computedRenderPosition.x}px` }"
     @click.stop
   >
     <ul class="list-none p-1 m-0">
@@ -123,6 +236,20 @@ onUnmounted(() => {
           </ul>
         </li>
       </template>
+      <li
+        @click.stop="handleSendToClick"
+        :class="[
+          'px-4 py-1.5 cursor-pointer text-foreground text-sm flex items-center transition-colors duration-150 rounded mx-1',
+          'hover:bg-primary/10 hover:text-primary'
+        ]"
+      >
+        {{ t('fileManager.contextMenu.sendTo', 'Send to...') }}
+      </li>
     </ul>
   </div>
+  <SendFilesModal
+    v-model:visible="showSendFilesModal"
+    :items-to-send="itemsToSendData"
+    @send="handleFilesSent"
+  />
 </template>

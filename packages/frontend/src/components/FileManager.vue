@@ -677,6 +677,7 @@ const {
   contextMenuPosition,
   contextMenuItems,
   contextMenuRef, // 获取 ref 以传递给子组件
+  contextTargetItem, // Get the target item from the composable
   showContextMenu, // 使用 Composable 提供的函数
   hideContextMenu, // <-- 获取 hideContextMenu 函数
 } = useFileManagerContextMenu({
@@ -1617,6 +1618,8 @@ const handleOpenEditorClick = () => {
       :is-visible="contextMenuVisible"
       :position="contextMenuPosition"
       :items="contextMenuItems"
+      :active-context-item="contextTargetItem"
+      :current-directory-path="currentSftpManager?.currentPath?.value ?? '/'"
      @close-request="hideContextMenu"
    />
 

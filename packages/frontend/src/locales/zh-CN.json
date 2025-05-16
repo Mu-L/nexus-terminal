@@ -1396,6 +1396,65 @@
       "remove": "移除",
       "exportLog": "导出日志"
     }
+
+  },
+"transferProgressModal": {
+    "title": "文件传输进度",
+    "loading": "正在加载传输任务...",
+    "errorLoadingTitle": "加载错误",
+    "errorLoading": "加载传输任务时出错: {error}",
+    "noTasks": "当前没有活动的传输任务。",
+    "error": {
+      "unknown": "发生未知错误"
+    },
+    "status": {
+      "queued": "排队中",
+      "inProgress": "进行中",
+      "completed": "已完成",
+      "failed": "已失败",
+      "partiallyCompleted": "部分完成",
+      "connecting": "连接中",
+      "transferring": "传输中"
+    },
+    "task": {
+      "idLabel": "任务",
+      "createdAt": "创建于",
+      "overallProgress": "整体进度"
+    },
+    "subTasks": {
+      "titleToggle": "查看/隐藏 {count} 个子任务",
+      "noSubTasks": "没有子任务。"
+    },
+    "subTask": {
+      "source": "源文件",
+      "connectionId": "目标连接",
+      "status": "状态",
+      "method": "方法",
+      "error": "错误"
+    }
+  },
+  "sendFilesModal": {
+    "title": "发送文件",
+    "searchConnectionsPlaceholder": "搜索连接...",
+    "targetPathLabel": "目标路径",
+    "targetPathPlaceholder": "/远程/路径/到/目的地",
+    "transferMethodLabel": "传输方式",
+    "transferMethodAuto": "自动",
+    "loadingConnections": "正在加载连接...",
+    "noConnections": "没有可用的连接。请先添加连接。",
+    "noConnectionsFound": "未找到匹配搜索的连接。",
+    "untaggedConnections": "未标记",
+    "itemsToSendTitle": "待发送项目:",
+    "noItemsSelected": "未选择待发送的项目。",
+    "sendButton": "发送",
+    "cancelButton": "取消",
+    "errorFetchingData": "获取模态框数据时出错。",
+    "errorFetchingConnections": "获取连接数据时出错。",
+    "errorFetchingTags": "获取标签数据时出错。",
+    "validationError": "请至少选择一个连接并指定目标路径。",
+    "transferInitiated": "传输任务已创建，任务 ID: ",
+    "transferInitiatedGeneric": "传输任务创建成功。",
+    "transferFailedError": "发起传输失败。请重试。"
   },
   "time": {
     "unknown": "未知时间",

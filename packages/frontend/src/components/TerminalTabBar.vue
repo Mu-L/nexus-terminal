@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import WorkspaceConnectionListComponent from './WorkspaceConnectionList.vue';
 import TabBarContextMenu from './TabBarContextMenu.vue';
+import TransferProgressModal from './TransferProgressModal.vue'; // 导入传输进度模态框
 import { useSessionStore } from '../stores/session.store';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useLayoutStore, type PaneName } from '../stores/layout.store';
@@ -60,6 +61,7 @@ const closeSession = (event: MouseEvent, sessionId: string) => {
 const sessionStore = useSessionStore(); // Session store 保持不变
 const showConnectionListPopup = ref(false); // 连接列表弹出状态
 const draggableSessions = ref<SessionTabInfoWithStatus[]>([]); // + Local state for draggable
+const showTransferProgressModal = ref(false); // 控制传输进度模态框的显示状态
 
 // + Watch prop changes to update local state
 watch(() => props.sessions, (newSessions) => {
@@ -457,6 +459,13 @@ onBeforeUnmount(() => {
         >
           <i :class="[eyeIconClass, 'text-sm']"></i>
         </button>
+        <!-- 新增：查看传输进度按钮 -->
+        <button v-if="!isMobile"
+                class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
+                @click="showTransferProgressModal = true"
+                :title="t('terminalTabBar.showTransferProgressTooltip', '查看传输进度')">
+          <i class="fas fa-tasks text-sm"></i>
+        </button>
         <!-- +++ 使用 v-if 隐藏移动端的布局按钮 +++ -->
         <button v-if="!isMobile" class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
                 @click="openLayoutConfigurator" :title="t('layout.configure', '配置布局')">
@@ -492,5 +501,7 @@ onBeforeUnmount(() => {
       @menu-action="handleContextMenuAction"
       @close="closeContextMenu"
     />
+    <!-- 传输进度模态框 -->
+    <TransferProgressModal v-model:visible="showTransferProgressModal" />
   </div>
 </template>
