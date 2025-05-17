@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { Terminal, ITerminalAddon, IDisposable } from 'xterm';
+import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useAppearanceStore } from '../stores/appearance.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { storeToRefs } from 'pinia';
-import { FitAddon } from '@xterm/addon-fit'; // Updated import path
+import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon, type ISearchOptions } from '@xterm/addon-search';
 import 'xterm/css/xterm.css';
@@ -33,6 +34,12 @@ let observedElement: HTMLElement | null = null; // +++ Store the observed elemen
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
 let selectionListenerDisposable: IDisposable | null = null; // +++ 提升声明并添加类型 +++
 // const fontSize = ref(14); // 移除本地字体大小状态，将由 store 管理
+
+
+const { isMobile } = useDeviceDetection(); // 设备检测
+
+let initialPinchDistance = 0;
+let currentFontSizeOnPinchStart = 0;
 
 // --- Appearance Store ---
 const appearanceStore = useAppearanceStore();
@@ -160,7 +167,50 @@ const removeContextMenuListener = () => {
     terminalRef.value.removeEventListener('contextmenu', handleContextMenuPaste);
   }
 };
-// --- 右键粘贴功能结束 ---
+
+
+// --- 移动端模式下通过双指放大缩小终端字号 ---
+const getDistanceBetweenTouches = (touches: TouchList): number => {
+  const touch1 = touches[0];
+  const touch2 = touches[1];
+  return Math.sqrt(
+    Math.pow(touch2.clientX - touch1.clientX, 2) +
+    Math.pow(touch2.clientY - touch1.clientY, 2)
+  );
+};
+
+const handleTouchStart = (event: TouchEvent) => {
+  if (event.touches.length === 2 && terminal) {
+    event.preventDefault(); 
+    initialPinchDistance = getDistanceBetweenTouches(event.touches);
+    currentFontSizeOnPinchStart = terminal.options.fontSize || currentTerminalFontSize.value;
+  }
+};
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (event.touches.length === 2 && terminal && initialPinchDistance > 0) {
+    event.preventDefault();
+    const currentDistance = getDistanceBetweenTouches(event.touches);
+    if (currentDistance > 0) {
+      const scale = currentDistance / initialPinchDistance;
+      let newSize = Math.round(currentFontSizeOnPinchStart * scale);
+      newSize = Math.max(8, Math.min(newSize, 72)); 
+
+      const currentTerminalOptFontSize = terminal.options.fontSize ?? currentTerminalFontSize.value;
+      if (newSize !== currentTerminalOptFontSize) {
+        terminal.options.fontSize = newSize;
+        fitAndEmitResizeNow(terminal);
+        debouncedSetTerminalFontSize(newSize);
+      }
+    }
+  }
+};
+
+const handleTouchEnd = (event: TouchEvent) => {
+  if (event.touches.length < 2) {
+    initialPinchDistance = 0; // Reset pinch distance
+  }
+};
 
 // 初始化终端
 onMounted(() => {
@@ -507,6 +557,15 @@ onMounted(() => {
         }
       });
     }
+
+    // Add touch listeners for pinch zoom on mobile
+    if (isMobile.value && terminalRef.value && terminal) {
+      console.log(`[Terminal ${props.sessionId}] Adding touch listeners for mobile pinch zoom.`);
+      terminalRef.value.addEventListener('touchstart', handleTouchStart, { passive: false });
+      terminalRef.value.addEventListener('touchmove', handleTouchMove, { passive: false });
+      terminalRef.value.addEventListener('touchend', handleTouchEnd, { passive: false });
+      terminalRef.value.addEventListener('touchcancel', handleTouchEnd, { passive: false }); // Also handle cancel
+    }
   }
 });
 
@@ -540,6 +599,15 @@ onBeforeUnmount(() => {
   
     // 确保在卸载时移除右键监听器
     removeContextMenuListener();
+
+    // Remove touch listeners on unmount
+    if (isMobile.value && terminalRef.value) {
+        console.log(`[Terminal ${props.sessionId}] Removing touch listeners.`);
+        terminalRef.value.removeEventListener('touchstart', handleTouchStart);
+        terminalRef.value.removeEventListener('touchmove', handleTouchMove);
+        terminalRef.value.removeEventListener('touchend', handleTouchEnd);
+        terminalRef.value.removeEventListener('touchcancel', handleTouchEnd);
+    }
   
     // terminalRef 是内部容器，不需要特别处理
     // if (terminalRef.value) {
@@ -664,3 +732,4 @@ const applyTerminalBackground = () => {
   background-color: transparent !important;
 }
 </style>
+
