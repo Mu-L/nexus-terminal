@@ -182,6 +182,7 @@ docker compose up -d
 2.  **多文本编辑器**：在同一布局中添加多个文本编辑器的功能尚未实现。
 3. ARMv7 用户请使用此处的 [docker-compose.yml](https://github.com/Heavrnl/nexus-terminal/blob/main/doc/arm/docker-compose.yml)。由于 Apache Guacamole 未提供 guacd 的 ARMv7 架构镜像，所以禁用 RDP 功能，相关镜像暂时不再拉取。
 4. 关于数据备份，请自行备份目录下的 data 文件夹，本项目不提供相关备份功能。
+5. 由于浏览器限制，非https或者localhost无法复制终端内容，请使用https访问
 
 
 ## ☕ 捐赠
