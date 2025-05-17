@@ -1461,7 +1461,7 @@
     "errorFetchingConnections": "接続データの取得中にエラーが発生しました。",
     "errorFetchingTags": "タグデータの取得中にエラーが発生しました。",
     "validationError": "少なくとも1つの接続を選択し、ターゲットパスを指定してください。",
-    "transferInitiated": "転送タスクが作成されました、タスクID: ",
+    "transferInitiated": "転送タスクが作成されました",
     "transferInitiatedGeneric": "転送タスクが正常に作成されました。",
     "transferFailedError": "転送の開始に失敗しました。もう一度お試しください。"
   }

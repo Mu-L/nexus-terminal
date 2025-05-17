@@ -1500,7 +1500,7 @@
     "errorFetchingConnections": "Error fetching connections.",
     "errorFetchingTags": "Error fetching tags.",
     "validationError": "Please select at least one connection and specify a target path.",
-    "transferInitiated": "Transfer task created, Task ID: ",
+    "transferInitiated": "Transfer task created",
     "transferInitiatedGeneric": "Transfer task created successfully.",
     "transferFailedError": "Failed to initiate transfer. Please try again."
   }
