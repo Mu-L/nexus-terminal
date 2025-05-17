@@ -8,6 +8,7 @@ export interface AppearanceSettings {
   activeTerminalThemeId?: number | null; // 终端主题 ID
   terminalFontFamily?: string;
   terminalFontSize?: number;
+  terminalFontSizeMobile?: number; // 移动端字体大小
   terminalBackgroundImage?: string;
   pageBackgroundImage?: string;
   editorFontSize?: number;

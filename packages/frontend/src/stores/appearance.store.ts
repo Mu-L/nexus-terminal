@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia';
-import apiClient from '../utils/apiClient'; // 使用统一的 apiClient
-import { ref, computed, watch, nextTick } from 'vue'; // 导入 nextTick
+import apiClient from '../utils/apiClient';
+import { ref, computed, watch, nextTick } from 'vue'; 
+import { useDeviceDetection } from '../composables/useDeviceDetection';
 import type { ITheme } from 'xterm';
-import type { TerminalTheme } from '../types/terminal-theme.types'; // 引用本地类型
-import type { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types'; // 引用本地类型
-import { defaultXtermTheme, defaultUiTheme } from '../features/appearance/config/default-themes'; // 保持 .ts
-import { presetTerminalThemes } from '../features/appearance/config/iterm-themes'; // <-- 导入预设主题
+import type { TerminalTheme } from '../types/terminal-theme.types'; 
+import type { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';
+import { defaultXtermTheme, defaultUiTheme } from '../features/appearance/config/default-themes';
 
 // Helper function to safely parse JSON
-export const safeJsonParse = <T>(jsonString: string | undefined | null, defaultValue: T): T => { // Add export
+export const safeJsonParse = <T>(jsonString: string | undefined | null, defaultValue: T): T => { 
     if (!jsonString) return defaultValue;
     try {
         return JSON.parse(jsonString);
@@ -19,6 +19,8 @@ export const safeJsonParse = <T>(jsonString: string | undefined | null, defaultV
 };
 
 export const useAppearanceStore = defineStore('appearance', () => {
+    const { isMobile } = useDeviceDetection(); // + 获取设备检测结果
+
     // --- State ---
     const isLoading = ref(false);
     const error = ref<string | null>(null);
@@ -61,7 +63,24 @@ export const useAppearanceStore = defineStore('appearance', () => {
     // 当前终端字体大小
     const currentTerminalFontSize = computed<number>(() => {
         // 提供默认值 14，如果后端没有设置或设置无效
+        let size;
+        if (isMobile.value) {
+            size = appearanceSettings.value.terminalFontSizeMobile;
+        } else {
+            size = appearanceSettings.value.terminalFontSize;
+        }
+        return typeof size === 'number' && size > 0 ? size : 14;
+    });
+
+    // 桌面端终端字体大小 (用于设置面板等处区分显示)
+    const terminalFontSizeDesktop = computed<number>(() => {
         const size = appearanceSettings.value.terminalFontSize;
+        return typeof size === 'number' && size > 0 ? size : 14;
+    });
+
+    // 移动端终端字体大小 (用于设置面板等处区分显示)
+    const terminalFontSizeMobile = computed<number>(() => {
+        const size = appearanceSettings.value.terminalFontSizeMobile;
         return typeof size === 'number' && size > 0 ? size : 14;
     });
 
@@ -218,8 +237,16 @@ export const useAppearanceStore = defineStore('appearance', () => {
      * 设置终端字体大小
      * @param size 字体大小 (数字)
      */
-    async function setTerminalFontSize(size: number) {
+    async function setTerminalFontSize(size: number) { // 此函数专用于桌面端
         await updateAppearanceSettings({ terminalFontSize: size });
+    }
+
+    /**
+     * 设置移动端终端字体大小
+     * @param size 字体大小 (数字)
+     */
+    async function setTerminalFontSizeMobile(size: number) {
+        await updateAppearanceSettings({ terminalFontSizeMobile: size });
     }
 
     /**
@@ -575,7 +602,9 @@ export const useAppearanceStore = defineStore('appearance', () => {
         activeTerminalThemeId,
         currentTerminalTheme,
         currentTerminalFontFamily,
-        currentTerminalFontSize,
+        currentTerminalFontSize, // 这个 getter 会自动根据设备类型返回正确的字体大小
+        terminalFontSizeDesktop, // + 用于在设置中分别显示/设置桌面端字号
+        terminalFontSizeMobile,  // + 用于在设置中分别显示/设置移动端字号
         currentEditorFontSize, // <-- 新增
         pageBackgroundImage,
         // pageBackgroundOpacity, // Removed
@@ -589,7 +618,8 @@ export const useAppearanceStore = defineStore('appearance', () => {
         resetCustomUiTheme,
         setActiveTerminalTheme,
         setTerminalFontFamily,
-        setTerminalFontSize,
+        setTerminalFontSize, // 设置桌面端字体大小
+        setTerminalFontSizeMobile, // + 设置移动端字体大小
         setEditorFontSize, // <-- 新增
         setTerminalBackgroundEnabled, // <-- 新增
         createTerminalTheme, // 保留

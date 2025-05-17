@@ -122,11 +122,16 @@ const fitAndEmitResizeNow = (term: Terminal) => {
     }
 };
 
-// 创建防抖版的字体大小保存函数
-const debouncedSetTerminalFontSize = debounce(async (size: number) => {
+// 创建防抖版的字体大小保存函数 (区分设备)
+const debouncedSaveFontSize = debounce(async (size: number) => {
     try {
-        await appearanceStore.setTerminalFontSize(size);
-        console.log(`[Terminal ${props.sessionId}] Debounced font size saved: ${size}`);
+        if (isMobile.value) {
+            await appearanceStore.setTerminalFontSizeMobile(size);
+            console.log(`[Terminal ${props.sessionId}] Debounced MOBILE font size saved: ${size}`);
+        } else {
+            await appearanceStore.setTerminalFontSize(size);
+            console.log(`[Terminal ${props.sessionId}] Debounced DESKTOP font size saved: ${size}`);
+        }
     } catch (error) {
         console.error(`[Terminal ${props.sessionId}] Debounced font size save failed:`, error);
         // Optionally show an error to the user
@@ -200,7 +205,7 @@ const handleTouchMove = (event: TouchEvent) => {
       if (newSize !== currentTerminalOptFontSize) {
         terminal.options.fontSize = newSize;
         fitAndEmitResizeNow(terminal);
-        debouncedSetTerminalFontSize(newSize);
+        debouncedSaveFontSize(newSize); // 使用新的区分设备的保存函数
       }
     }
   }
@@ -551,7 +556,7 @@ onMounted(() => {
                 fitAndEmitResizeNow(terminal); // 调用统一函数
 
                 // 调用防抖函数来保存设置
-                debouncedSetTerminalFontSize(newSize);
+                debouncedSaveFontSize(newSize); // 使用新的区分设备的保存函数
             }
           }
         }
