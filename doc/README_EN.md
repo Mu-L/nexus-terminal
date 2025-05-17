@@ -173,7 +173,8 @@ You can right-click in the SSH tab to select "Suspend Session" (long-press on mo
 ### Others
 
 1. After adjusting the layout, be sure to enable **"Lock Layout"** in the layout manager to prevent page flickering caused by accidental dragging of split lines when the mouse moves across the interface. This ensures the best user experience.
-2. To enable Passkey login, set the `RP_ID` and `RP_ORIGIN` environment variables in the `.env` file.
+2. 2. **On mobile devices, you can zoom in or out on the terminal font using a two-finger gesture.**
+3. To enable Passkey login, set the `RP_ID` and `RP_ORIGIN` environment variables in the `.env` file.
 
 
 
