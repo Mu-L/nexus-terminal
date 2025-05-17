@@ -20,6 +20,7 @@
 
 *   多标签页管理 SSH 与 SFTP 连接  
 *   支持 RDP/VNC 协议
+*   支持PWA
 *   采用 Monaco Editor，支持在线编辑文件  
 *   集成多重登录安全机制，包括人机验证（hCaptcha、Google reCAPTCHA）与双因素认证（2FA）  
 *   高度可定制的界面主题与布局风格
