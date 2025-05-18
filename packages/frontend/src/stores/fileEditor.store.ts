@@ -131,7 +131,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
 
     // --- 核心方法 ---
 
-    // 修改：triggerPopup 接收文件信息并存储
+    // triggerPopup 接收文件信息并存储
     const triggerPopup = (filePath: string, sessionId: string) => {
         console.log(`[文件编辑器 Store] Triggering popup for ${filePath} in session ${sessionId}.`);
         popupFileInfo.value = { filePath, sessionId };
@@ -145,7 +145,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
     // const setEditorVisibility = ...
 
     // 打开或切换到文件标签页
-    // 修改：添加 instanceId 参数
+    // 添加 instanceId 参数
     const openFile = async (targetFilePath: string, sessionId: string, instanceId: string) => {
         // 在共享模式下，我们仍然需要 sessionId 来构建唯一的 tabId
         // 并与 SFTP 管理器关联
@@ -285,7 +285,7 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
             return;
         }
 
-        // 修改：从 sftpManagers Map 获取第一个可用的管理器
+        // 从 sftpManagers Map 获取第一个可用的管理器
         const sftpManagersMap = session.sftpManagers;
         if (!sftpManagersMap || sftpManagersMap.size === 0) {
              console.error(`[文件编辑器 Store] 保存失败：会话 ${tab.sessionId} 没有可用的 SFTP 管理器实例。`);

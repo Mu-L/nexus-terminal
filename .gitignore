@@ -157,3 +157,7 @@ dist-scripts/
 /tsc
 
 /packages/backend/data
+
+# Electron app specific ignores
+electron-app/node_modules/
+electron-app/dist_electron/

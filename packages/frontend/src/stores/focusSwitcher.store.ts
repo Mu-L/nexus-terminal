@@ -267,7 +267,7 @@ export const useFocusSwitcherStore = defineStore('focusSwitcher', () => {
   //    console.warn("[FocusSwitcherStore] unregisterFocusAction(id) is deprecated. Use the function returned by registerFocusAction instead.");
   // }
 
-  // 修改：统一的聚焦目标 Action，现在迭代 Map 中的动作数组
+  // 统一的聚焦目标 Action，现在迭代 Map 中的动作数组
   async function focusTarget(id: string): Promise<boolean> {
     // console.log(`[FocusSwitcherStore] Attempting to focus target ID: ${id}`);
     const actions = registeredActions.value.get(id);

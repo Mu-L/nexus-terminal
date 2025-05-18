@@ -145,8 +145,8 @@ export const establishSshConnection = (
             privateKey: connDetails.privateKey,
             passphrase: connDetails.passphrase,
             readyTimeout: timeout,
-            keepaliveInterval: 5000,  // 修改：每 5 秒发送一次 keepalive
-            keepaliveCountMax: 10,     // 修改：最多尝试 10 次 (总超时约 10*5=50 秒)
+            keepaliveInterval: 5000,  // 每 5 秒发送一次 keepalive
+            keepaliveCountMax: 10,     // 最多尝试 10 次 (总超时约 10*5=50 秒)
         };
 
         const readyHandler = async () => { // 改为 async 函数

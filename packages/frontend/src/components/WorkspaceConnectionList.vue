@@ -129,7 +129,7 @@ const setTagInputRef = (el: any, id: string | number) => {
 
 // 计算属性：过滤并按标签分组连接 (仅在 showConnectionTagsBoolean 为 true 时使用)
 const filteredAndGroupedConnections = computed(() => {
-  const groups: Record<string, { connections: ConnectionInfo[], tagId: number | null }> = {}; // 修改：添加 tagId
+  const groups: Record<string, { connections: ConnectionInfo[], tagId: number | null }> = {}; // 添加 tagId
   const untagged: ConnectionInfo[] = [];
   const tagMap = new Map(tags.value.map(tag => [tag.id, tag]));
   const lowerSearchTerm = searchTerm.value.toLowerCase();
@@ -166,7 +166,7 @@ const filteredAndGroupedConnections = computed(() => {
         if (tag) {
           const groupName = tag.name;
           if (!groups[groupName]) {
-            groups[groupName] = { connections: [], tagId: tag.id }; // 修改：存储 tagId
+            groups[groupName] = { connections: [], tagId: tag.id }; // 存储 tagId
             // Initialize expanded state only if not already set
             if (expandedGroups.value[groupName] === undefined) {
                expandedGroups.value[groupName] = true; // Default to expanded
@@ -198,7 +198,7 @@ const filteredAndGroupedConnections = computed(() => {
   untagged.sort((a, b) => (a.name || a.host).localeCompare(b.name || b.host));
 
   const sortedGroupNames = Object.keys(groups).sort();
-  // 修改：结果包含 tagId
+  // 结果包含 tagId
   const result: { groupName: string; connections: ConnectionInfo[]; tagId: number | null }[] = sortedGroupNames.map(name => ({
       groupName: name,
       connections: groups[name].connections,
@@ -475,7 +475,7 @@ const closeTagContextMenu = () => {
 };
 
 // 处理标签右键菜单操作
-// 修改：允许直接传递 groupData，用于新的行内编辑按钮
+// 允许直接传递 groupData，用于新的行内编辑按钮
 const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConnections', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
   const group = directGroupData || contextTargetTagGroup.value; // 优先使用直接传递的 groupData
   closeTagContextMenu(); // 先关闭菜单

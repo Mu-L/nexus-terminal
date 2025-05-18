@@ -1,0 +1,80 @@
+{
+  "name": "nexus-electron-app",
+  "version": "1.0.0",
+  "description": "Electron application for Nexus Terminal",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "nexus",
+    "terminal"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^10.0.1",
+    "express": "^5.1.0"
+  },
+  "build": {
+    "appId": "com.nexus.terminal",
+    "productName": "Nexus Terminal",
+    "directories": {
+      "output": "dist_electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../packages/frontend/dist",
+        "to": "packages/frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../packages/backend/dist",
+        "to": "packages/backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../packages/backend/node_modules",
+        "to": "packages/backend/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../packages/backend/package.json",
+        "to": "packages/backend/package.json"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
+    },
+    "mac": {
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
+    },
+    "linux": {
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

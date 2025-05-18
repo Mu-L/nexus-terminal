@@ -31,6 +31,7 @@ if (dataConfigResultGlobal.error && (dataConfigResultGlobal.error as NodeJS.Errn
 import express = require('express');
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import http from 'http';
+import cors from 'cors';
 
 
 import crypto from 'crypto';
@@ -175,6 +176,14 @@ app.set('trust proxy', true);
 app.use(ipWhitelistMiddleware as RequestHandler);
 app.use(express.json());
 
+// --- CORS 配置 ---
+const corsOptions = {
+  origin: 'http://localhost:3001', // 允许来自前端的请求
+  credentials: true, // 允许携带凭据 (例如 cookies, authorization headers)
+};
+app.use(cors(corsOptions)); // 在所有路由之前使用 CORS 中间件
+
+
 // --- 静态文件服务 ---
 const uploadsPath = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsPath)) { // 确保 uploads 目录存在
@@ -191,7 +200,7 @@ declare module 'express-session' {
     }
 }
 
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
 
 // 初始化数据库
 const initializeDatabase = async () => {

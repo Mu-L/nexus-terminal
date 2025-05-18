@@ -3,8 +3,25 @@ import router from '../router';
 import { useAuthStore } from '../stores/auth.store'; 
 
 // 创建 axios 实例
+const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+const isProd = import.meta.env.PROD; // Vite specific for production build
+
+let effectiveBaseURL = '/api/v1'; // 默认 baseURL
+
+if (isElectron && isProd) {
+  // 在 Electron 生产打包应用中:
+  // - 前端由 Electron 内嵌的 Express 服务器提供 (例如 http://localhost:3001)
+  // - 后端由 Electron 主进程启动，并在特定端口监听 (例如 http://localhost:3000)
+  // API 请求需要直接指向后端的地址和端口。
+  const backendPort = 3000; // 与 main.js 中 PROD_BACKEND_PORT 对应
+  effectiveBaseURL = `http://localhost:${backendPort}/api/v1`;
+  console.log(`[Electron Prod Mode] apiClient baseURL set to: ${effectiveBaseURL}`);
+} else {
+  console.log(`[Dev Mode or Non-Electron] apiClient baseURL set to: ${effectiveBaseURL}`);
+}
+
 const apiClient = axios.create({
-  baseURL: '/api/v1', // 设置基础URL
+  baseURL: effectiveBaseURL, // 设置基础URL
   timeout: 10000, // 设置请求超时时间
   withCredentials: true, // 允许携带 cookie
 });
@@ -12,11 +29,6 @@ const apiClient = axios.create({
 // 请求拦截器 (可选，例如添加认证 Token)
 apiClient.interceptors.request.use(
   (config) => {
-    // 可以在这里添加逻辑，比如从 store 获取 token 并添加到请求头
-    // const authStore = useAuthStore();
-    // if (authStore.token) {
-    //   config.headers.Authorization = `Bearer ${authStore.token}`;
-    // }
     return config;
   },
   (error) => {

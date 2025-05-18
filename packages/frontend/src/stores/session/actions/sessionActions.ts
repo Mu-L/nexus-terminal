@@ -170,7 +170,7 @@ export const openNewSession = (
 
   // 4. 启动 WebSocket 连接
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHostAndPort = window.location.host;
+  const wsHostAndPort = 'localhost:3000'; // 直接指向后端 WebSocket 服务
   const wsUrl = `${protocol}//${wsHostAndPort}/ws/`;
   console.log(`[SessionActions] Generated WebSocket URL: ${wsUrl}`);
   wsManager.connect(wsUrl);
@@ -279,7 +279,7 @@ export const handleConnectRequest = (
           activeAndDisconnected = true;
           console.log(`[SessionActions] 活动会话 ${activeSessionId.value} 已断开或出错，尝试重连...`);
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const wsHostAndPort = window.location.host;
+          const wsHostAndPort = 'localhost:3000'; // 直接指向后端 WebSocket 服务
           const wsUrl = `${protocol}//${wsHostAndPort}/ws/`;
           console.log(`[SessionActions handleConnectRequest] Generated WebSocket URL for reconnect: ${wsUrl}`);
           currentActiveSession.wsManager.connect(wsUrl);

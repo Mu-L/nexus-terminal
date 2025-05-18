@@ -12,7 +12,7 @@ export interface UseFileManagerDragAndDropOptions {
 
   // 函数依赖
   joinPath: (base: string, target: string) => string; // 路径拼接函数
-  onFileUpload: (file: File, relativePath?: string) => void; // 修改：触发文件上传的回调，增加相对路径
+  onFileUpload: (file: File, relativePath?: string) => void; // 触发文件上传的回调，增加相对路径
   onItemMove: (sourceItem: FileListItem, newFullPath: string) => void; // 触发文件/文件夹移动的回调
 }
 

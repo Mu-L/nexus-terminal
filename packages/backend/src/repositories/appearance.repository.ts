@@ -71,7 +71,7 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
         editorFontSize: settings.editorFontSize ?? defaults.editorFontSize,
         terminalBackgroundImage: settings.terminalBackgroundImage ?? defaults.terminalBackgroundImage,
         pageBackgroundImage: settings.pageBackgroundImage ?? defaults.pageBackgroundImage,
-        // 修改：只有当数据库中未找到记录时才使用默认值
+        // 只有当数据库中未找到记录时才使用默认值
         terminalBackgroundEnabled: terminalBackgroundEnabledFound
             ? settings.terminalBackgroundEnabled // 使用数据库找到的值 (true 或 false)
             : defaults.terminalBackgroundEnabled, // 否则使用默认值 (true)

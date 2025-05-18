@@ -80,7 +80,7 @@ initializeSftpManager(props.sessionId, props.instanceId);
 
 
 // --- 文件上传模块 ---
-// 修改：依赖 currentSftpManager 的状态
+// 依赖 currentSftpManager 的状态
 const {
     uploads,
     startFileUpload,
@@ -180,7 +180,7 @@ const formatMode = (mode: number): string => {
 };
 
 // --- 排序与过滤逻辑 ---
-// 修改：依赖 currentSftpManager.value.fileList
+// 依赖 currentSftpManager.value.fileList
 const sortedFileList = computed(() => {
     if (!currentSftpManager.value?.fileList.value) return []; // 检查 manager 和 fileList 是否存在
     const list = [...currentSftpManager.value.fileList.value]; // 从 manager 获取列表
@@ -235,20 +235,20 @@ const handleSort = (key: keyof FileListItem | 'type' | 'size' | 'mtime') => {
 // --- 列表项点击与选择逻辑 (使用 Composable) ---
 // 定义单击时的动作回调 (移到 Selection 实例化之前)
 const handleItemAction = (item: FileListItem) => {
-    // 修改：检查 currentSftpManager 是否存在
+    // 检查 currentSftpManager 是否存在
     if (!currentSftpManager.value) return;
 
     if (item.attrs.isDirectory) {
-        // 修改：使用 currentSftpManager.value.isLoading
+        // 使用 currentSftpManager.value.isLoading
         if (currentSftpManager.value.isLoading.value) {
             console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Ignoring directory click, already loading...`);
             return;
         }
         const newPath = item.filename === '..'
-            // 修改：使用 currentSftpManager.value 的 currentPath 和 joinPath
+            // 使用 currentSftpManager.value 的 currentPath 和 joinPath
             ? currentSftpManager.value.currentPath.value.substring(0, currentSftpManager.value.currentPath.value.lastIndexOf('/')) || '/'
             : currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
-        // 修改：使用 currentSftpManager.value.loadDirectory
+        // 使用 currentSftpManager.value.loadDirectory
         currentSftpManager.value.loadDirectory(newPath);
     } else if (item.attrs.isFile) {
         // 在移动端多选模式下，不打开文件而是选择它
@@ -260,7 +260,7 @@ const handleItemAction = (item: FileListItem) => {
             }
             return;
         }
-        // 修改：使用 currentSftpManager.value 的 currentPath 和 joinPath
+        // 使用 currentSftpManager.value 的 currentPath 和 joinPath
         const filePath = currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
         const fileInfo: FileInfo = { name: item.filename, fullPath: filePath };
 
@@ -271,7 +271,7 @@ const handleItemAction = (item: FileListItem) => {
 
         if (shareFileEditorTabsBoolean.value) {
             console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Opening file in shared mode (store handles loading): ${filePath}`);
-            // 修改：传递 instanceId 给 openFile
+            // 传递 instanceId 给 openFile
             fileEditorStore.openFile(filePath, props.sessionId, props.instanceId);
         } else {
             // 独立模式由 sessionStore 处理，它内部应该已经知道 instanceId 或不需要它
@@ -409,7 +409,7 @@ const handleModalConfirm = (value?: string) => {
 
 // --- SFTP 操作处理函数 (定义在此处，供 Composable 使用) ---
 const handleDeleteSelectedClick = () => {
-    // 修改：检查 currentSftpManager 是否存在
+    // 检查 currentSftpManager 是否存在
     if (!currentSftpManager.value) return;
     // 使用 props.wsDeps 和 currentSftpManager.value.fileList
     if (!props.wsDeps.isConnected.value || selectedItems.value.size === 0) return;
@@ -515,7 +515,7 @@ const handlePaste = () => {
 const triggerFileUpload = () => { fileInputRef.value?.click(); };
 
 // --- 下载触发器 (定义在此处，供 Composable 使用) ---
-const triggerDownload = (items: FileListItem[]) => { // 修改：接受 FileListItem 数组
+const triggerDownload = (items: FileListItem[]) => { // 接受 FileListItem 数组
     // 恢复使用 props.wsDeps.isConnected
     if (!props.wsDeps.isConnected.value) {
         alert(t('fileManager.errors.notConnected'));
@@ -528,7 +528,7 @@ const triggerDownload = (items: FileListItem[]) => { // 修改：接受 FileList
         alert(t('fileManager.errors.missingConnectionId'));
         return;
     }
-    // 修改：简化检查
+    // 简化检查
     if (!currentSftpManager.value) {
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot download: SFTP manager is not available.`);
         alert(t('fileManager.errors.sftpManagerNotFound'));
@@ -690,7 +690,7 @@ const {
 } = useFileManagerContextMenu({
   selectedItems,
   lastClickedIndex,
-  // 修改：传递 manager 的 fileList 和 currentPath ref (保持 computed)
+  // 传递 manager 的 fileList 和 currentPath ref (保持 computed)
   fileList: computed(() => currentSftpManager.value?.fileList.value ?? []),
   currentPath: computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
   isConnected: props.wsDeps.isConnected,
@@ -698,7 +698,7 @@ const {
   clipboardState: readonly(clipboardState), // +++ 传递剪贴板状态 (只读) +++
   t,
   // --- 传递回调函数 ---
-  // 修改：确保在调用前检查 currentSftpManager.value
+  // 确保在调用前检查 currentSftpManager.value
   onRefresh: () => {
       if (currentSftpManager.value) {
           currentSftpManager.value.loadDirectory(currentSftpManager.value.currentPath.value, true);
@@ -742,20 +742,20 @@ const {
   handleDropOnRow,
 } = useFileManagerDragAndDrop({
   isConnected: computed(() => props.wsDeps.isConnected.value), 
-  // 修改：传递 manager 的 currentPath (保持 computed)
+  // 传递 manager 的 currentPath (保持 computed)
   currentPath: computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
   fileListContainerRef: fileListContainerRef,
-  // 修改：传递一个包装函数给 joinPath
+  // 传递一个包装函数给 joinPath
   joinPath: (base: string, target: string): string => {
       return currentSftpManager.value?.joinPath(base, target) ?? `${base}/${target}`.replace(/\/+/g, '/'); // 提供简单的默认实现
   },
   onFileUpload: startFileUpload,
-  // 修改：确保在调用前检查 currentSftpManager.value
+  // 确保在调用前检查 currentSftpManager.value
   onItemMove: (item, newName) => {
       currentSftpManager.value?.renameItem(item, newName);
   },
   selectedItems: selectedItems,
-  // 修改：传递 manager 的 fileList ref (保持 computed)
+  // 传递 manager 的 fileList ref (保持 computed)
   fileList: computed(() => currentSftpManager.value?.fileList.value ?? []),
 });
 
@@ -777,7 +777,7 @@ const {
   handleKeydown, // 使用 Composable 返回的 handleKeydown
 } = useFileManagerKeyboardNavigation({
   filteredFileList: filteredFileList,
-  // 修改：传递 manager 的 currentPath ref
+  // 传递 manager 的 currentPath ref
   currentPath: computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
   fileListContainerRef: fileListContainerRef,
   // 当 Enter 键按下时，模拟鼠标单击
@@ -786,7 +786,7 @@ const {
 
 
 // --- 重置选中索引和清空选择的 Watchers ---
-// 修改：监听 manager 的 currentPath
+// 监听 manager 的 currentPath
 watch(() => currentSftpManager.value?.currentPath.value, () => {
     selectedIndex.value = -1;
     clearSelection();
@@ -880,7 +880,7 @@ watchEffect((onCleanup) => {
 
     onCleanup(cleanupListeners);
 
-    // 修改：添加 ?. 访问 isLoading, 检查 manager 的 initialLoadDone
+    // 添加 ?. 访问 isLoading, 检查 manager 的 initialLoadDone
     // 只有在连接就绪、SFTP 就绪、管理器存在、未加载且 initialLoadDone 为 false 时才获取初始路径
     if (currentSftpManager.value && props.wsDeps.isConnected.value && props.wsDeps.isSftpReady.value && !currentSftpManager.value.isLoading.value && !currentSftpManager.value.initialLoadDone.value) {
         console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Connection ready for manager, fetching initial path for the first time (isLoading: ${currentSftpManager.value.isLoading.value}, initialLoadDone: ${currentSftpManager.value.initialLoadDone.value}).`);
@@ -893,11 +893,11 @@ watchEffect((onCleanup) => {
 
         unregisterSuccess = wsOnMessage('sftp:realpath:success', (payload: any, message: WebSocketMessage) => { // message 已有类型
             if (message.requestId === requestId && payload.requestedPath === requestedPath) {
-                // 修改：检查 currentSftpManager 是否存在
+                // 检查 currentSftpManager 是否存在
                 if (!currentSftpManager.value) return;
                 const absolutePath = payload.absolutePath;
                 console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Received initial absolute path for '.': ${absolutePath}. Loading directory.`);
-                // 修改：添加 ?. 访问 loadDirectory 和 setInitialLoadDone
+                // 添加 ?. 访问 loadDirectory 和 setInitialLoadDone
                 currentSftpManager.value?.loadDirectory(absolutePath);
                 currentSftpManager.value?.setInitialLoadDone(true); // 设置 manager 内部状态
                 cleanupListeners();
@@ -905,7 +905,7 @@ watchEffect((onCleanup) => {
         });
 
         unregisterError = wsOnMessage('sftp:realpath:error', (payload: any, message: WebSocketMessage) => { // message 已有类型
-            // 修改：使用 payload.requestedPath (如果存在) 或 message.requestId 匹配
+            // 使用 payload.requestedPath (如果存在) 或 message.requestId 匹配
             if (message.requestId === requestId && payload?.requestedPath === requestedPath) {
                 console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Failed to get realpath for '${requestedPath}':`, payload);
                 // TODO: 可以考虑通过 manager instance 暴露错误状态
@@ -1118,9 +1118,9 @@ const stopResize = () => {
 
 // --- 路径编辑逻辑 ---
 const startPathEdit = () => {
-    // 修改：检查 currentSftpManager 是否存在并使用其状态
+    // 检查 currentSftpManager 是否存在并使用其状态
     if (!currentSftpManager.value || currentSftpManager.value.isLoading.value || !props.wsDeps.isConnected.value) return;
-    // 修改：使用 currentSftpManager.value.currentPath 初始化编辑框
+    // 使用 currentSftpManager.value.currentPath 初始化编辑框
     editablePath.value = currentSftpManager.value.currentPath.value;
     isEditingPath.value = true;
     nextTick(() => {
@@ -1133,16 +1133,16 @@ const handlePathInput = async (event?: Event) => {
     if (event && event instanceof KeyboardEvent && event.key !== 'Enter') {
         return;
     }
-    // 修改：检查 currentSftpManager 是否存在
+    // 检查 currentSftpManager 是否存在
     if (!currentSftpManager.value) return;
     const newPath = editablePath.value.trim();
     isEditingPath.value = false;
-    // 修改：使用 currentSftpManager.value.currentPath 比较
+    // 使用 currentSftpManager.value.currentPath 比较
     if (newPath === currentSftpManager.value.currentPath.value || !newPath) {
         return;
     }
     console.log(`[FileManager ${props.sessionId}-${props.instanceId}] 尝试导航到新路径: ${newPath}`);
-    // 修改：使用 currentSftpManager.value.loadDirectory
+    // 使用 currentSftpManager.value.loadDirectory
     await currentSftpManager.value.loadDirectory(newPath);
 };
 
