@@ -19,6 +19,27 @@ import VncModal from './components/VncModal.vue';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
+
+// Electron API (will be available if running in Electron)
+const electronAPI = (window as any).electronAPI;
+
+const minimizeWindow = () => {
+  if (electronAPI && electronAPI.minimizeWindow) {
+    electronAPI.minimizeWindow();
+  }
+};
+
+const closeWindow = () => {
+  if (electronAPI && electronAPI.closeWindow) {
+    electronAPI.closeWindow();
+  }
+};
+
+const toggleMaximizeWindow = () => {
+  if (electronAPI && electronAPI.toggleMaximizeWindow) {
+    electronAPI.toggleMaximizeWindow();
+  }
+};
 const settingsStore = useSettingsStore();
 const appearanceStore = useAppearanceStore();
 const layoutStore = useLayoutStore();
@@ -262,33 +283,52 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
   <div id="app-container">
     <!-- *** 修改 v-if 条件以使用 isHeaderVisible *** -->
     <!-- Header with Tailwind classes using theme variables -->
-    <header v-if="!isWorkspaceRoute || isHeaderVisible" class="sticky top-0 z-10 flex items-center h-14 pl-3 pr-6 bg-header border-b border-border shadow-sm"> <!-- 减少左侧内边距 -->
+    <header v-if="!isWorkspaceRoute || isHeaderVisible" class="sticky top-0 z-10 flex items-center h-14 pl-3 pr-2 bg-header border-b border-border shadow-sm" style="-webkit-app-region: drag;"> <!-- 减少右侧内边距, 添加拖拽区域 -->
       <!-- Nav with Tailwind classes -->
       <nav ref="navRef" class="flex items-center justify-between w-full relative"> <!-- Added relative positioning for underline -->
         <!-- Left navigation links with Tailwind classes using theme variables -->
         <div class="flex items-center space-x-1">
           <!-- 项目 Logo -->
-          <img src="./assets/logo.png" alt="Project Logo" class="h-10 w-auto"> <!-- 移除右侧外边距，使其更靠左 -->
-            <RouterLink to="/" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.dashboard') }}</RouterLink> <!-- 恢复仪表盘链接, 始终可见 -->
-            <RouterLink to="/workspace" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.terminal') }}</RouterLink> <!-- 保持可见 -->
-            <RouterLink to="/connections" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.connections') }}</RouterLink> <!-- 连接管理链接 -->
-            <RouterLink to="/proxies" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.proxies') }}</RouterLink> <!-- 移动端隐藏 -->
-            <RouterLink to="/notifications" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.notifications') }}</RouterLink> <!-- 移动端隐藏 -->
-            <RouterLink to="/audit-logs" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.auditLogs') }}</RouterLink> <!-- 移动端隐藏 -->
-            <RouterLink to="/settings" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg">{{ t('nav.settings') }}</RouterLink> <!-- 保持可见 -->
+          <img src="./assets/logo.png" alt="Project Logo" class="h-10 w-auto" style="-webkit-app-region: no-drag;"> <!-- 移除右侧外边距，使其更靠左 -->
+            <RouterLink to="/" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.dashboard') }}</RouterLink> <!-- 恢复仪表盘链接, 始终可见 -->
+            <RouterLink to="/workspace" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.terminal') }}</RouterLink> <!-- 保持可见 -->
+            <RouterLink to="/connections" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.connections') }}</RouterLink> <!-- 连接管理链接 -->
+            <RouterLink to="/proxies" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.proxies') }}</RouterLink> <!-- 移动端隐藏 -->
+            <RouterLink to="/notifications" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.notifications') }}</RouterLink> <!-- 移动端隐藏 -->
+            <RouterLink to="/audit-logs" class="hidden md:inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.auditLogs') }}</RouterLink> <!-- 移动端隐藏 -->
+            <RouterLink to="/settings" class="inline-flex px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" active-class="text-link-active bg-nav-active-bg" style="-webkit-app-region: no-drag;">{{ t('nav.settings') }}</RouterLink> <!-- 保持可见 -->
         </div>
         <!-- Right navigation links with Tailwind classes using theme variables -->
         <div class="flex items-center space-x-1">
           <!-- GitHub Icon (Hide on mobile) -->
-          <a v-if="!isMobile" href="https://github.com/Heavrnl/nexus-terminal" target="_blank" rel="noopener noreferrer" title="Heavrnl/nexus-terminal" class="px-2 py-2 rounded-md text-lg text-icon hover:text-icon-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out">
+          <a v-if="!isMobile" href="https://github.com/Heavrnl/nexus-terminal" target="_blank" rel="noopener noreferrer" title="Heavrnl/nexus-terminal" class="px-2 py-2 rounded-md text-lg text-icon hover:text-icon-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out" style="-webkit-app-region: no-drag;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
             </svg>
           </a>
           <!-- PWA Install Button - REMOVED FROM HERE -->
-          <a href="#" @click.prevent="openStyleCustomizer" :title="t('nav.customizeStyle')" class="px-2 py-2 rounded-md text-lg text-icon hover:text-icon-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out"><i class="fas fa-paint-brush"></i></a>
-          <RouterLink v-if="!isAuthenticated" to="/login" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap">{{ t('nav.login') }}</RouterLink>
-          <a href="#" v-if="isAuthenticated" @click.prevent="handleLogout" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap">{{ t('nav.logout') }}</a>
+          <a href="#" @click.prevent="openStyleCustomizer" :title="t('nav.customizeStyle')" class="px-2 py-2 rounded-md text-lg text-icon hover:text-icon-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out" style="-webkit-app-region: no-drag;"><i class="fas fa-paint-brush"></i></a>
+          <RouterLink v-if="!isAuthenticated" to="/login" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" style="-webkit-app-region: no-drag;">{{ t('nav.login') }}</RouterLink>
+          <a href="#" v-if="isAuthenticated" @click.prevent="handleLogout" class="px-3 py-2 rounded-md text-sm font-medium text-secondary hover:text-link-hover hover:bg-nav-active-bg hover:no-underline transition duration-150 ease-in-out whitespace-nowrap" style="-webkit-app-region: no-drag;">{{ t('nav.logout') }}</a>
+          
+          <!-- Window Controls -->
+          <div v-if="electronAPI" class="flex items-center space-x-1 ml-2" style="-webkit-app-region: no-drag;">
+            <button @click="minimizeWindow" class="p-2 rounded-md text-icon hover:text-icon-hover hover:bg-nav-active-bg transition duration-150 ease-in-out focus:outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-lg" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8Z"/>
+              </svg>
+            </button>
+            <button @click="toggleMaximizeWindow"  class="p-2 rounded-md text-icon hover:text-icon-hover hover:bg-nav-active-bg transition duration-150 ease-in-out focus:outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-square" viewBox="0 0 16 16"> <!-- Adjusted size for consistency -->
+                <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+              </svg>
+            </button>
+            <button @click="closeWindow"  class="p-2 rounded-md text-icon hover:text-icon-hover hover:bg-nav-active-bg transition duration-150 ease-in-out focus:outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <!-- Sliding underline element with Tailwind classes using theme variables (JS still controls positioning) -->
         <div ref="underlineRef" class="absolute bottom-0 h-0.5 bg-link-active rounded transition-all duration-300 ease-in-out pointer-events-none opacity-0 transform translate-y-1.5"></div> <!-- Changed translate-y-1 to translate-y-1.5 -->

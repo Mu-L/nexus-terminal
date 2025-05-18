@@ -27,6 +27,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 移除所有特定频道的监听器
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
+  },
+  // 窗口控制
+  minimizeWindow: () => {
+    ipcRenderer.send('minimize-window');
+  },
+  closeWindow: () => {
+    ipcRenderer.send('close-window');
+  },
+  toggleMaximizeWindow: () => {
+    ipcRenderer.send('toggle-maximize-window');
   }
 });
 

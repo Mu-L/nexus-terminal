@@ -206,5 +206,28 @@ ipcMain.on('toMain', (event, args) => {
   // mainWindow.webContents.send('fromMain', { message: 'Hello from main process!' });
 });
 
+// IPC handlers for window controls
+ipcMain.on('minimize-window', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.on('close-window', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
+
+ipcMain.on('toggle-maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
 // 为了允许 localhost 加载，如果前端和后端都通过 localhost 提供服务
 app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors'); 
