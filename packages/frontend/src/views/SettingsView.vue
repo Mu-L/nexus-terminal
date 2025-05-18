@@ -41,6 +41,7 @@
         </div>
 
         <!-- IP Control Tab Content -->
+        <!--
         <div v-if="activeTab === 'ipControl'">
           <div v-if="settings" class="bg-background border border-border rounded-lg shadow-sm overflow-hidden mb-6">
             <h2 class="text-lg font-semibold text-foreground px-6 py-4 border-b border-border bg-header/50">{{ $t('settings.ipWhitelist.title') }}</h2>
@@ -51,7 +52,7 @@
           <IpBlacklistSettings v-if="settings" />
           <div v-else-if="!settings && activeTab === 'ipControl'" class="p-4 text-center text-muted-foreground">{{ $t('settings.loading', '加载中...') }}</div>
         </div>
-        
+        -->
         <!-- Workspace Tab Content -->
         <div v-if="activeTab === 'workspace'">
           <WorkspaceSettingsSection v-if="settings" />
@@ -97,8 +98,8 @@ import ChangePasswordForm from '../components/settings/ChangePasswordForm.vue';
 import PasskeyManagement from '../components/settings/PasskeyManagement.vue';
 import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue';
 import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue';
-import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue';
-import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue';
+// import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue';
+// import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue';
 import AboutSection from '../components/settings/AboutSection.vue';
 import WorkspaceSettingsSection from '../components/settings/WorkspaceSettingsSection.vue';
 import SystemSettingsSection from '../components/settings/SystemSettingsSection.vue';
@@ -116,7 +117,7 @@ const tabs = ref([
   { key: 'workspace', label: t('settings.tabs.workspace', '工作区') },
   { key: 'system', label: t('settings.tabs.system', '系统') },
   { key: 'security', label: t('settings.tabs.security', '安全') },
-  { key: 'ipControl', label: t('settings.tabs.ipControl', 'IP 管控') },
+  // { key: 'ipControl', label: t('settings.tabs.ipControl', 'IP 管控') },
   { key: 'dataManagement', label: t('settings.tabs.dataManagement', '数据管理') },
   { key: 'appearance', label: t('settings.tabs.appearance', '外观') },
   { key: 'about', label: t('settings.tabs.about', '关于') },
