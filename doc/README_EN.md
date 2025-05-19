@@ -61,8 +61,8 @@
 
 | Platform | Download Link                                                                                                                             |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Linux    | [Nexus\_Terminal\_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal-1.0.0.AppImage)   |
-| Windows  | [Nexus\_Terminal\_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal.Setup.1.0.0.exe) |
+| Linux    | [Nexus\_Terminal\_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_1.0.0.AppImage)   |
+| Windows  | [Nexus\_Terminal\_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_Setup.1.0.0.exe) |
 
 ## 🚀 Quick Start
 
