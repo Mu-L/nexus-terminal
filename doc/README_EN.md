@@ -202,6 +202,11 @@ If you find this project helpful, feel free to buy me a coffee through the follo
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/0heavrnl)
 
 
+## 💐 Acknowledgements
+
+* The preset theme schemes are based on the excellent [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) project.
+
+
 ## 📄 License
 
 This project is licensed under the [GPL-3.0](LICENSE) license. See the [LICENSE](LICENSE) file for details.
