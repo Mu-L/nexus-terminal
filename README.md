@@ -14,7 +14,7 @@
 
 ## 📖 概述
 
-**星枢终端（Nexus Terminal）** 是一款现代化、功能丰富的 Web SSH / RDP / VNC 客户端，致力于提供高度可定制的远程连接体验。
+**星枢终端（Nexus Terminal）** 是一款现代化、功能丰富的 Web SSH / RDP / VNC 客户端，致力于提供高度可定制的远程连接体验。提供单独的桌面端
 
 ## ✨ 功能特性
 
@@ -59,7 +59,12 @@
 | ![RDP.png](https://lsky.tuyu.me/i/2025/04/30/68123a318b817.png) |
 
 
-
+## 桌面端
+> 移除了web端的特有功能，如各种登录验证，会话挂起等功能
+| 平台   | 下载链接                                                                 |
+|--------|--------------------------------------------------------------------------|
+| Linux  | [Nexus_Terminal_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal-1.0.0.AppImage)         |
+| Windows| [Nexus_Terminal_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal.Setup.1.0.0.exe)       |
 
 ## 🚀 快速开始
 
