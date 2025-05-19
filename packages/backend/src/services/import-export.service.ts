@@ -204,9 +204,9 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
 };
 
 /**
- * 导出所有连接配置为一个 ZIP 文件。
+ * 导出所有连接配置为一个加密的 ZIP 文件。
  * @param includeSshKeys 是否包含 SSH 密钥
- * @returns Buffer 包含 ZIP 文件内容。
+ * @returns Buffer 包含加密的 ZIP 文件内容 (IV + Ciphertext + AuthTag)。
  */
 
 // 辅助函数：安全地转义 CLI 参数，如果参数包含空格或引号，则用双引号括起来
@@ -224,7 +224,7 @@ function escapeCliArgument(value: string | number | null | undefined): string {
 }
 
 
-export const exportConnectionsAsZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
+export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
     try {
         const connectionsData = await getPlaintextConnectionsData(); // This now returns PlaintextExportConnectionData[]
         const allTags = await TagService.getAllTags();
