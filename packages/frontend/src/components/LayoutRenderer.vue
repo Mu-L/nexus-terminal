@@ -533,7 +533,7 @@ onMounted(() => {
     <div ref="leftSidebarPanelRef"
          :class="['fixed bottom-0 left-0 max-w-[80vw] bg-background z-[110] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-r border-border', // Removed top-0 from class
                   {'translate-x-0': !!activeLeftSidebarPane, '-translate-x-full': !activeLeftSidebarPane}]"
-         :style="{ width: getSidebarPaneWidth(activeLeftSidebarPane), top: '0px', '-webkit-app-region': 'no-drag' }">
+         :style="{ width: getSidebarPaneWidth(activeLeftSidebarPane), top: '0px', ['-webkit-app-region' as any]: 'no-drag' }">
        <div ref="leftResizeHandleRef" class="absolute top-0 bottom-0 w-2 cursor-col-resize z-[120] bg-transparent transition-colors duration-200 ease-in-out hover:bg-primary-light right-[-4px]"></div>
         <div class="flex items-center justify-end h-10 px-2 border-b border-border flex-shrink-0">
             <button class="p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-10" @click="closeSidebars" title="Close Sidebar">&times;</button>
@@ -567,7 +567,7 @@ onMounted(() => {
      <div ref="rightSidebarPanelRef"
           :class="['fixed bottom-0 right-0 max-w-[80vw] bg-background z-[110] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-l border-border', // Removed top-0 from class
                    {'translate-x-0': !!activeRightSidebarPane, 'translate-x-full': !activeRightSidebarPane}]"
-          :style="{ width: getSidebarPaneWidth(activeRightSidebarPane), top: '0px', '-webkit-app-region': 'no-drag' }">
+          :style="{ width: getSidebarPaneWidth(activeRightSidebarPane), top: '0px', ['-webkit-app-region' as any]: 'no-drag' }">
         <div ref="rightResizeHandleRef" class="absolute top-0 bottom-0 w-2 cursor-col-resize z-[120] bg-transparent transition-colors duration-200 ease-in-out hover:bg-primary-light left-[-4px]"></div>
         <div class="flex items-center justify-end h-10 px-2 border-b border-border flex-shrink-0">
             <button class="p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-10" @click="closeSidebars" title="Close Sidebar">&times;</button>
