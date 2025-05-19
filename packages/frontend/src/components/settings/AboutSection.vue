@@ -53,7 +53,7 @@ const {
 } = useVersionCheck();
 
 onMounted(async () => {
-  await checkLatestVersion();
+  await checkLatestVersion('electron');
 });
 </script>
 
