@@ -55,7 +55,14 @@
 |:-------------------------------------------------------------:|:-------------------------------------------------------------:|:-------------------------------------------------------------:|
 | ![ui_en.png](https://lsky.tuyu.me/i/2025/04/30/68123e40570cc.png) | ![layout_en.png](https://lsky.tuyu.me/i/2025/04/30/68123e4122276.png) | ![settings_en.png](https://lsky.tuyu.me/i/2025/04/30/68123e4036cd6.png) |
 
+## 🖥️ Desktop Client
 
+> Removed web-specific features such as various login verifications and session suspension.
+
+| Platform | Download Link                                                                                                                             |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux    | [Nexus\_Terminal\_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal-1.0.0.AppImage)   |
+| Windows  | [Nexus\_Terminal\_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal.Setup.1.0.0.exe) |
 
 ## 🚀 Quick Start
 
