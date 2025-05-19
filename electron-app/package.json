@@ -26,6 +26,7 @@
   "build": {
     "appId": "com.nexus.terminal",
     "productName": "Nexus Terminal",
+    "asar": false,
     "directories": {
       "output": "dist_electron",
       "buildResources": "build"
@@ -49,17 +50,6 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "../packages/backend/node_modules",
-        "to": "packages/backend/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "../packages/backend/package.json",
-        "to": "packages/backend/package.json"
       }
     ],
     "win": {
