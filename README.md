@@ -191,6 +191,10 @@ docker compose up -d
 5. 由于浏览器限制，非https或者localhost无法复制终端内容，请使用https访问
 
 
+## 💐 致谢
+
+*   预设主题方案来源于优秀的 [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) 项目。
+
 ## ☕ 捐赠
 
 如果你觉得这个项目对你有帮助，欢迎通过以下方式请我喝杯咖啡：
