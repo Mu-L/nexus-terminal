@@ -13,7 +13,11 @@
     "nexus",
     "terminal"
   ],
-  "author": "",
+  "author": {
+    "name": "Heavrnl",
+    "email": "heavrnl@example.com"
+  },
+  "homepage": "https://github.com/Heavrnl/nexus-terminal",
   "license": "ISC",
   "devDependencies": {
     "electron": "^28.0.0",
@@ -67,7 +71,8 @@
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "maintainer": "Heavrnl"
     },
     "nsis": {
       "oneClick": false,
