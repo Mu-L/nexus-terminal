@@ -56,7 +56,7 @@ import quickCommandTagRoutes from './quick-command-tags/quick-command-tag.routes
 import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes';
 import { transfersRoutes } from './transfers/transfers.routes';
 import { initializeWebSocket } from './websocket';
-import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
+// import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
 
 
 import './services/event.service'; 
@@ -173,7 +173,7 @@ const server = http.createServer(app);
 app.set('trust proxy', true);
 
 // --- 中间件 ---
-app.use(ipWhitelistMiddleware as RequestHandler);
+// app.use(ipWhitelistMiddleware as RequestHandler);
 app.use(express.json());
 
 // --- CORS 配置 ---

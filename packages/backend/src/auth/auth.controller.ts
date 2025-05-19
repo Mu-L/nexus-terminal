@@ -5,7 +5,7 @@ import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import { NotificationService } from '../services/notification.service';
 import { AuditLogService } from '../services/audit.service';
-import { ipBlacklistService } from '../services/ip-blacklist.service';
+// import { ipBlacklistService } from '../services/ip-blacklist.service';
 import { captchaService } from '../services/captcha.service';
 import { settingsService } from '../services/settings.service';
 import { passkeyService } from '../services/passkey.service'; // +++ Passkey Service
@@ -362,7 +362,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
                 if (!isCaptchaValid) {
                     console.log(`[AuthController] 登录尝试失败: CAPTCHA 验证失败 - ${username}`);
                     const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
-                    ipBlacklistService.recordFailedAttempt(clientIp);
+                    // ipBlacklistService.recordFailedAttempt(clientIp);
                     auditLogService.logAction('LOGIN_FAILURE', { username, reason: 'Invalid CAPTCHA token', ip: clientIp });
                     notificationService.sendNotification('LOGIN_FAILURE', { username, reason: 'Invalid CAPTCHA token', ip: clientIp }); 
                     res.status(401).json({ message: 'CAPTCHA 验证失败。' });
@@ -386,8 +386,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         if (!user) {
             console.log(`登录尝试失败: 用户未找到 - ${username}`);
-            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown'; 
-            ipBlacklistService.recordFailedAttempt(clientIp);
+            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+            // ipBlacklistService.recordFailedAttempt(clientIp);
             auditLogService.logAction('LOGIN_FAILURE', { username, reason: 'User not found', ip: clientIp });
             notificationService.sendNotification('LOGIN_FAILURE', { username, reason: 'User not found', ip: clientIp }); 
             res.status(401).json({ message: '无效的凭据。' });
@@ -398,8 +398,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         if (!isMatch) {
             console.log(`登录尝试失败: 密码错误 - ${username}`);
-            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown'; 
-            ipBlacklistService.recordFailedAttempt(clientIp);
+            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+            // ipBlacklistService.recordFailedAttempt(clientIp);
             auditLogService.logAction('LOGIN_FAILURE', { username, reason: 'Invalid password', ip: clientIp });
             notificationService.sendNotification('LOGIN_FAILURE', { username, reason: 'Invalid password', ip: clientIp }); 
             res.status(401).json({ message: '无效的凭据。' });
@@ -415,8 +415,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             res.status(200).json({ message: '需要进行两步验证。', requiresTwoFactor: true });
         } else {
             console.log(`登录成功 (无 2FA): ${username}`);
-            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown'; 
-            ipBlacklistService.resetAttempts(clientIp);
+            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+            // ipBlacklistService.resetAttempts(clientIp);
             auditLogService.logAction('LOGIN_SUCCESS', { userId: user.id, username, ip: clientIp });
             notificationService.sendNotification('LOGIN_SUCCESS', { userId: user.id, username, ip: clientIp }); 
             req.session.userId = user.id;
@@ -514,8 +514,8 @@ export const verifyLogin2FA = async (req: Request, res: Response): Promise<void>
 
         if (verified) {
             console.log(`用户 ${user.username} 2FA 验证成功。`);
-            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown'; 
-            ipBlacklistService.resetAttempts(clientIp);
+            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+            // ipBlacklistService.resetAttempts(clientIp);
             auditLogService.logAction('LOGIN_SUCCESS', { userId: user.id, username: user.username, ip: clientIp, twoFactor: true });
             notificationService.sendNotification('LOGIN_SUCCESS', { userId: user.id, username: user.username, ip: clientIp, twoFactor: true }); 
             req.session.username = user.username;
@@ -534,8 +534,8 @@ export const verifyLogin2FA = async (req: Request, res: Response): Promise<void>
             });
         } else {
             console.log(`用户 ${user.username} 2FA 验证失败: 验证码错误。`);
-            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown'; 
-            ipBlacklistService.recordFailedAttempt(clientIp);
+            const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+            // ipBlacklistService.recordFailedAttempt(clientIp);
             auditLogService.logAction('LOGIN_FAILURE', { userId: user.id, username: user.username, reason: 'Invalid 2FA token', ip: clientIp });
             notificationService.sendNotification('LOGIN_FAILURE', { userId: user.id, username: user.username, reason: 'Invalid 2FA token', ip: clientIp }); 
             res.status(401).json({ message: '验证码无效。' });

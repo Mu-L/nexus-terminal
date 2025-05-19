@@ -29,12 +29,12 @@
             <h2 class="text-lg font-semibold text-foreground px-6 py-4 border-b border-border bg-header/50">{{ $t('settings.category.security') }}</h2>
             <div class="p-6 space-y-6">
               <ChangePasswordForm />
-              <hr class="border-border/50">
+              <!-- <hr class="border-border/50">
               <PasskeyManagement />
               <hr class="border-border/50">
               <TwoFactorAuthSettings />
               <hr class="border-border/50">
-              <CaptchaSettingsForm />
+              <CaptchaSettingsForm /> -->
             </div>
           </div>
           <div v-else class="p-4 text-center text-muted-foreground">{{ $t('settings.loading', '加载中...') }}</div>
@@ -95,9 +95,9 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useVersionCheck } from '../composables/settings/useVersionCheck';
 import ChangePasswordForm from '../components/settings/ChangePasswordForm.vue';
-import PasskeyManagement from '../components/settings/PasskeyManagement.vue';
-import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue';
-import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue';
+// import PasskeyManagement from '../components/settings/PasskeyManagement.vue';
+// import TwoFactorAuthSettings from '../components/settings/TwoFactorAuthSettings.vue';
+// import CaptchaSettingsForm from '../components/settings/CaptchaSettingsForm.vue';
 // import IpWhitelistSettings from '../components/settings/IpWhitelistSettings.vue';
 // import IpBlacklistSettings from '../components/settings/IpBlacklistSettings.vue';
 import AboutSection from '../components/settings/AboutSection.vue';

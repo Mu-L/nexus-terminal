@@ -23,7 +23,7 @@ import {
   checkHasPasskeys
 } from './auth.controller';
 import { isAuthenticated } from './auth.middleware';
-import { ipBlacklistCheckMiddleware } from './ipBlacklistCheck.middleware';
+// import { ipBlacklistCheckMiddleware } from './ipBlacklistCheck.middleware';
 
 const router = Router();
 
@@ -38,15 +38,15 @@ router.get('/needs-setup', needsSetup);
 // POST /api/v1/auth/setup - 执行初始管理员设置 (公开访问，控制器内部检查)
 router.post('/setup', setupAdmin);
 
-// POST /api/v1/auth/login - 用户登录接口 (添加黑名单检查)
-router.post('/login', ipBlacklistCheckMiddleware, login);
+// POST /api/v1/auth/login - 用户登录接口
+router.post('/login', login);
 
 // PUT /api/v1/auth/password - 修改密码接口 (需要认证)
 router.put('/password', isAuthenticated, changePassword);
 
-// POST /api/v1/auth/login/2fa - 登录时的 2FA 验证接口 (添加黑名单检查)
+// POST /api/v1/auth/login/2fa - 登录时的 2FA 验证接口
 // (不需要单独的 isAuthenticated，依赖 login 接口设置的临时 session)
-router.post('/login/2fa', ipBlacklistCheckMiddleware, verifyLogin2FA);
+router.post('/login/2fa', verifyLogin2FA);
 
 // --- 2FA 管理接口 (都需要认证) ---
 // POST /api/v1/auth/2fa/setup - 开始 2FA 设置，生成密钥和二维码
@@ -73,7 +73,7 @@ router.post('/passkey/authentication-options', generatePasskeyAuthenticationOpti
 
 
 // POST /api/v1/auth/passkey/authenticate - 验证 Passkey 并登录用户 (公开)
-router.post('/passkey/authenticate', ipBlacklistCheckMiddleware, verifyPasskeyAuthenticationHandler);
+router.post('/passkey/authenticate', verifyPasskeyAuthenticationHandler);
 
 // GET /api/v1/auth/passkey/has-configured - 检查是否配置了 Passkey (公开)
 router.get('/passkey/has-configured', checkHasPasskeys);

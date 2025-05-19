@@ -34,11 +34,11 @@ router.get('/layout', settingsController.getLayoutTree);
 router.put('/layout', settingsController.setLayoutTree);
 
 // --- IP 黑名单管理路由 ---
-// GET /api/v1/settings/ip-blacklist - 获取 IP 黑名单列表 (需要认证)
-router.get('/ip-blacklist', settingsController.getIpBlacklist);
-
-// DELETE /api/v1/settings/ip-blacklist/:ip - 从黑名单中删除指定 IP (需要认证)
-router.delete('/ip-blacklist/:ip', settingsController.deleteIpFromBlacklist);
+// // GET /api/v1/settings/ip-blacklist - 获取 IP 黑名单列表 (需要认证)
+// router.get('/ip-blacklist', settingsController.getIpBlacklist);
+//
+// // DELETE /api/v1/settings/ip-blacklist/:ip - 从黑名单中删除指定 IP (需要认证)
+// router.delete('/ip-blacklist/:ip', settingsController.deleteIpFromBlacklist);
 
 
 // +++ 终端选中自动复制路由 +++
