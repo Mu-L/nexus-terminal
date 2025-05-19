@@ -116,7 +116,7 @@
         "passkeyAuthOptionsFailed": "Failed to get passkey authentication options from the server.",
         "passkeyAuthFailed": "Passkey authentication failed. Please try again or use your password."
     },
-    "recaptchaV3Notice": "This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply."
+    "createAccount": "Create Account"
   },
   "connections": {
     "addConnection": "Add New Connection",

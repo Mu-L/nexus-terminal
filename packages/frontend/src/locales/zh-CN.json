@@ -115,7 +115,7 @@
         "passkeyAuthOptionsFailed": "从服务器获取 Passkey 认证选项失败。",
         "passkeyAuthFailed": "Passkey 认证失败。请重试或使用密码登录。"
     },
-    "recaptchaV3Notice": "此网站受 reCAPTCHA 保护，并适用 Google 隐私政策和服务条款。"
+    "createAccount": "创建账户"
   },
   "connections": {
     "addConnection": "添加新连接",

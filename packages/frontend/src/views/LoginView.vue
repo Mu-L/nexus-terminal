@@ -144,6 +144,10 @@ const handlePasskeyLogin = async () => {
   }
 };
 
+// 刷新页面的方法
+const refreshPage = () => {
+  window.location.reload();
+};
 </script>
 <template>
   <!-- Page Container -->
@@ -251,6 +255,14 @@ const handlePasskeyLogin = async () => {
            </button>
          </div>
         </form>
+
+        <!-- Create Account Option -->
+        <div class="mt-6 text-center"> <!-- 为间距调整了 margin -->
+          <a href="#" @click.prevent="refreshPage"
+             class="font-medium text-primary hover:text-primary-dark hover:underline">
+            {{ t('login.createAccount', '创建账户') }}
+          </a>
+        </div>
       </div>
     </div>
   </div>
