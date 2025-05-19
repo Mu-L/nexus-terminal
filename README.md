@@ -60,7 +60,9 @@
 
 
 ## 桌面端
+
 > 移除了web端的特有功能，如各种登录验证，会话挂起等功能
+
 | 平台   | 下载链接                                                                 |
 |--------|--------------------------------------------------------------------------|
 | Linux  | [Nexus_Terminal_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus.Terminal-1.0.0.AppImage)         |
