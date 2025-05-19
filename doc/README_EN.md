@@ -195,16 +195,15 @@ Since Apache Guacamole does not provide an ARMv7-compatible image for `guacd`, t
 5. For data backup, please back up the **data** folder in the directory yourself. This project does not provide any backup functionality.
 
 
+## 💐 Acknowledgements
+
+* The preset theme schemes are based on the excellent [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) project.
+
 ## ☕ Donate
 
 If you find this project helpful, feel free to buy me a coffee through the following ways:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/0heavrnl)
-
-
-## 💐 Acknowledgements
-
-* The preset theme schemes are based on the excellent [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) project.
 
 
 ## 📄 License
