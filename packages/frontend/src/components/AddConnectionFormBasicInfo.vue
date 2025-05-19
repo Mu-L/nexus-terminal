@@ -6,10 +6,12 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps<{
   formData: {
     name: string;
-    type: 'SSH' | 'RDP' | 'VNC';
+    type: 'SSH' | 'RDP';
     host: string;
     port: number;
   };
+  typeOptions: Array<{ label: string; value: 'SSH' | 'RDP' }>;
+  showTypeSelector: boolean;
 }>();
 
 const { t } = useI18n();
@@ -76,28 +78,24 @@ const handleHostIconMouseLeave = () => {
              class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
     </div>
     <!-- Connection Type -->
-    <div>
+    <div v-if="props.showTypeSelector">
       <label class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.connectionType', '连接类型') }}</label>
       <div class="flex rounded-md shadow-sm">
-        <button type="button"
-                @click="props.formData.type = 'SSH'"
-                :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none',
-                         props.formData.type === 'SSH' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
-                         'rounded-l-md']">
-          {{ t('connections.form.typeSsh', 'SSH') }}
-        </button>
-        <button type="button"
-                @click="props.formData.type = 'RDP'"
-                :class="['flex-1 px-3 py-2 border-t border-b border-r border-border text-sm font-medium focus:outline-none -ml-px',
-                         props.formData.type === 'RDP' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border']">
-          {{ t('connections.form.typeRdp', 'RDP') }}
-        </button>
-        <button type="button"
-                @click="props.formData.type = 'VNC'"
-                :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none -ml-px',
-                         props.formData.type === 'VNC' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
-                         'rounded-r-md']">
-          {{ t('connections.form.typeVnc', 'VNC') }}
+        <button
+          v-for="(option, index) in props.typeOptions"
+          :key="option.value"
+          type="button"
+          @click="props.formData.type = option.value"
+          :class="[
+            'flex-1 px-3 py-2 border text-sm font-medium focus:outline-none',
+            props.formData.type === option.value ? 'bg-primary text-white border-primary' : 'bg-background text-foreground border-border hover:bg-border',
+            props.typeOptions.length === 1 ? 'rounded-md' : '',
+            props.typeOptions.length > 1 && index === 0 ? 'rounded-l-md border-r-0' : '',
+            props.typeOptions.length > 1 && index === props.typeOptions.length - 1 ? 'rounded-r-md' : '',
+            props.typeOptions.length > 1 && index > 0 && index < props.typeOptions.length - 1 ? 'border-r-0' : ''
+          ]"
+        >
+          {{ option.label }}
         </button>
       </div>
     </div>
