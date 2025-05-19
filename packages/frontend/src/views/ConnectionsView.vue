@@ -8,18 +8,21 @@ import { useTagsStore } from '../stores/tags.store';
 import type { TagInfo } from '../stores/tags.store';
 import type { SortField, SortOrder } from '../stores/settings.store';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+// import { useRouter } from 'vue-router'; // useRouter 不再直接使用
 import type { ConnectionInfo } from '../stores/connections.store';
 import { storeToRefs } from 'pinia';
 import { formatDistanceToNow } from 'date-fns';
+import { fetchRdpConnectionDetails } from '../utils/apiClient'; // +++ 新增导入 +++
+import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // +++ 新增导入 +++
 import { zhCN, enUS, ja } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 
 const { t, locale } = useI18n();
-const router = useRouter();
+// const router = useRouter(); // useRouter 不再直接使用
 const connectionsStore = useConnectionsStore();
 const sessionStore = useSessionStore();
 const tagsStore = useTagsStore();
+const uiNotificationsStore = useUiNotificationsStore(); // +++ 实例化 Store +++
 
 const { connections, isLoading: isLoadingConnections } = storeToRefs(connectionsStore);
 const { tags, isLoading: isLoadingTags } = storeToRefs(tagsStore);
@@ -127,7 +130,48 @@ onMounted(async () => {
 });
 
 const connectTo = (connection: ConnectionInfo) => {
-  sessionStore.handleConnectRequest(connection);
+  if (connection.type === 'RDP') {
+    // @ts-ignore (electronAPI is injected globally by preload script)
+    if (window.electronAPI && typeof window.electronAPI.openRdp === 'function') {
+      console.log(`[ConnectionsView] RDP connection type detected for ID: ${connection.id}. Fetching details...`);
+      fetchRdpConnectionDetails(connection.id)
+        .then(response => {
+          const rdpDetails = response.data; // Backend returns { host, port, username, password }
+          if (rdpDetails && rdpDetails.host) {
+            console.log(`[ConnectionsView] RDP details fetched for ${rdpDetails.host}. Attempting to open native client.`);
+            // @ts-ignore
+            window.electronAPI.openRdp({
+              host: rdpDetails.host,
+              port: rdpDetails.port,
+              username: rdpDetails.username,
+              password: rdpDetails.password, // Password might be null if not applicable or not password auth
+            });
+          } else {
+            console.error('[ConnectionsView] Fetched RDP details are invalid or missing host.');
+            uiNotificationsStore.addNotification({
+              message: t('workspaceConnectionList.rdpClientError', { error: 'Invalid RDP details received.' }),
+              type: 'error',
+            });
+          }
+        })
+        .catch(error => {
+          console.error(`[ConnectionsView] Failed to fetch RDP connection details for ID ${connection.id}:`, error.response?.data?.message || error.message);
+          uiNotificationsStore.addNotification({
+            message: t('workspaceConnectionList.rdpClientError', { error: error.response?.data?.message || 'Failed to fetch RDP credentials.' }),
+            type: 'error',
+          });
+        });
+    } else {
+      console.error('[ConnectionsView] window.electronAPI.openRdp is not available. Cannot open native RDP client.');
+      uiNotificationsStore.addNotification({
+        message: t('workspaceConnectionList.rdpClientError', { error: 'Electron API unavailable.' }),
+        type: 'error',
+      });
+    }
+  } else {
+    // 对于非 RDP 连接，使用现有的 sessionStore 处理
+    sessionStore.handleConnectRequest(connection);
+  }
 };
 
 const toggleSortOrder = () => {
