@@ -12,10 +12,10 @@ import {
     exportConnections,
     importConnections,
     getRdpSessionToken, 
-    getVncSessionToken, 
-    cloneConnection, 
-    
-    addTagToConnections 
+    getVncSessionToken,
+    cloneConnection,
+    getRdpConnectionDetails, // +++ 新增导入 +++
+    addTagToConnections
 } from './connections.controller';
 
 const router = Router();
@@ -89,6 +89,9 @@ router.post('/:id/vnc-session', getVncSessionToken);
 
 // +++ POST /api/v1/connections/:id/clone - 克隆连接 +++
 router.post('/:id/clone', cloneConnection);
+
+// +++ GET /api/v1/connections/:id/rdp-details - 获取 RDP 连接的详细凭据 +++
+router.get('/:id/rdp-details', getRdpConnectionDetails);
 
 // +++ POST /api/v1/connections/add-tag - 为多个连接添加一个标签 +++
 router.post('/add-tag', addTagToConnections);

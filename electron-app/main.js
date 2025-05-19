@@ -230,51 +230,98 @@ ipcMain.on('toggle-maximize-window', () => {
 });
 
 // IPC handler for opening RDP connection
-ipcMain.on('open-rdp-connection', (event, { host, username, password }) => {
+ipcMain.on('open-rdp-connection', async (event, { host, port, username, password }) => {
   if (!host) {
-    console.error('[Main Process] Received open-rdp-connection request without host.');
-    // Optionally, send an error receipt back to the renderer process
+    console.error('[Main Process] RDP: Received request without host.');
     // event.reply('open-rdp-connection-error', 'Host is required');
     return;
   }
 
-  const args = [`/v:${host}`];
-  // Note: Passing username and password directly on the command line is a security risk.
-  // mstsc.exe has limited and potentially unreliable support for /u and /p parameters,
-  // especially across different Windows versions and security policies.
-  // A more secure approach is to let the user enter credentials in the mstsc prompt
-  // or use .rdp files. For now, we will only pass the host and let the user
-  // enter credentials manually in the mstsc window.
-  // if (username) {
-  //   args.push(`/u:${username}`); // This is typically for domain\username
-  // }
-  // if (password) {
-  //   args.push(`/p:${password}`); // This is highly insecure
-  // }
+  const serverAddressForMstsc = port ? `${host}:${port}` : host; // 用于 mstsc.exe /v:
+  const cmdkeyTarget = `TERMSRV/${host}`; // cmdkey 的目标通常不包含端口
 
-  console.log(`[Main Process] Attempting to open RDP connection to ${host} with mstsc.exe. Args: ${args.join(' ')}`);
+  const executeCommand = (command, args, operationDesc) => {
+    return new Promise((resolve, reject) => {
+      console.log(`[Main Process] RDP: Executing ${operationDesc}: cmd.exe /C ${command} ${args.join(' ')}`);
+      // 使用 cmd.exe /C 来执行，这更接近 BAT 脚本的行为，并有助于处理路径和环境变量
+      const process = spawn('cmd.exe', ['/C', command, ...args], { stdio: 'pipe' });
+
+      let stdout = '';
+      let stderr = '';
+      process.stdout.on('data', (data) => stdout += data.toString());
+      process.stderr.on('data', (data) => stderr += data.toString());
+
+      process.on('close', (code) => {
+        if (code === 0) {
+          console.log(`[Main Process] RDP: ${operationDesc} successful.`);
+          resolve(stdout);
+        } else {
+          console.error(`[Main Process] RDP: ${operationDesc} failed with code ${code}. Stderr: [${stderr.trim()}]. Stdout: [${stdout.trim()}]`);
+          reject(new Error(`${operationDesc} failed. Code: ${code}. Stderr: ${stderr.trim()}. Stdout: ${stdout.trim()}`));
+        }
+      });
+      process.on('error', (err) => {
+        console.error(`[Main Process] RDP: Failed to start ${operationDesc}:`, err);
+        reject(err);
+      });
+    });
+  };
 
   try {
-    const rdpProcess = spawn('mstsc.exe', args, {
-      detached: true, // Allows mstsc to run independently of the Electron app
-      stdio: 'ignore', // Ignore stdio of the child process
+    // 步骤 1: 如果提供了用户名和密码，则存储凭据
+    if (username && password) {
+      // 重要: 确保参数被正确引用，特别是密码中可能包含特殊字符
+      const cmdkeyAddArgs = ['/generic:' + cmdkeyTarget, '/user:' + username, '/pass:' + password];
+      console.log('[Main Process] RDP: Preparing to add credentials with cmdkey. Target:', cmdkeyTarget, 'User:', username);
+      await executeCommand('cmdkey.exe', cmdkeyAddArgs, 'add credentials');
+    } else {
+      console.log('[Main Process] RDP: Username or password not provided, skipping credential storage.');
+    }
+
+    // 步骤 2: 启动 mstsc.exe
+    const mstscArgs = [`/v:${serverAddressForMstsc}`]; // 使用包含端口的地址给 mstsc
+    console.log(`[Main Process] RDP: Launching mstsc.exe with args: mstsc.exe ${mstscArgs.join(' ')}`);
+    const mstscProcess = spawn('mstsc.exe', mstscArgs, {
+      detached: true,
+      stdio: 'ignore',
     });
 
-    rdpProcess.on('error', (err) => {
-      console.error('[Main Process] Failed to start mstsc.exe:', err);
-      // Optionally, send an error receipt back to the renderer process
+    mstscProcess.on('error', (err) => {
+      console.error('[Main Process] RDP: Failed to start mstsc.exe:', err);
       // event.reply('open-rdp-connection-error', `Failed to start mstsc.exe: ${err.message}`);
+      // 即使 mstsc 启动失败，也尝试清理凭据（如果已设置）
+      if (username && password) { // 只有在尝试添加凭据后才尝试删除
+        console.log('[Main Process] RDP: Attempting to delete credentials after mstsc error. Target:', cmdkeyTarget);
+        executeCommand('cmdkey.exe', ['/delete:' + cmdkeyTarget], 'delete credentials (after mstsc error)')
+          .catch(cleanupErr => console.error('[Main Process] RDP: Error during post-mstsc-error credential cleanup:', cleanupErr.message));
+      }
     });
+    mstscProcess.unref(); // 允许主进程独立于 mstsc 退出
 
-    rdpProcess.unref(); // Allows the parent process to exit without waiting for the child
+    // 步骤 3: 在 mstsc 启动后（不需要等待其关闭），如果之前存储了凭据，则删除它们
+    // 稍作延迟以确保 mstsc 有时间读取凭据，但这是一个猜测性的延迟。
+    if (username && password) {
+      setTimeout(async () => {
+        try {
+          console.log('[Main Process] RDP: Attempting to delete credentials after mstsc launch. Target:', cmdkeyTarget);
+          await executeCommand('cmdkey.exe', ['/delete:' + cmdkeyTarget], 'delete credentials (after mstsc launch)');
+        } catch (cleanupErr) {
+          console.error('[Main Process] RDP: Error during post-mstsc-launch credential cleanup:', cleanupErr.message);
+        }
+      }, 3000); // 增加到3秒延迟，可以根据需要调整
+    }
 
-    // Optionally, send a success receipt back to the renderer process
-    // event.reply('open-rdp-connection-success', `RDP process for ${host} initiated.`);
+    // event.reply('open-rdp-connection-success', `RDP process for ${serverAddress} initiated.`);
 
   } catch (error) {
-    console.error('[Main Process] Error spawning mstsc.exe:', error);
-    // Optionally, send an error receipt back to the renderer process
-    // event.reply('open-rdp-connection-error', `Error spawning mstsc.exe: ${error.message}`);
+    console.error('[Main Process] RDP: Overall error in open-rdp-connection handler:', error);
+    // event.reply('open-rdp-connection-error', `Error processing RDP connection: ${error.message}`);
+    // 确保在主处理流程出错时也尝试清理凭据
+    if (username && password) {
+        console.log('[Main Process] RDP: Attempting credential cleanup due to main handler error. Target:', cmdkeyTarget);
+        executeCommand('cmdkey.exe', ['/delete:' + cmdkeyTarget], 'delete credentials (after main error)')
+            .catch(cleanupErr => console.error('[Main Process] RDP: Error during post-main-error credential cleanup:', cleanupErr.message));
+    }
   }
 });
 

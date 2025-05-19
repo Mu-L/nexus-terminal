@@ -455,6 +455,69 @@ export const getVncSessionToken = async (req: Request, res: Response): Promise<v
         res.status(statusCode).json({ message: responseMessage });
     }
 };
+
+/**
+ * 获取 RDP 连接的详细凭据 (GET /api/v1/connections/:id/rdp-details)
+ * 用于 Electron 客户端直接调用 mstsc.exe
+ */
+export const getRdpConnectionDetails = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const connectionId = parseInt(req.params.id, 10);
+        if (isNaN(connectionId)) {
+            res.status(400).json({ message: '无效的连接 ID。' });
+            return;
+        }
+
+        const connectionData = await ConnectionService.getConnectionWithDecryptedCredentials(connectionId);
+
+        if (!connectionData) {
+            res.status(404).json({ message: '连接未找到。' });
+            return;
+        }
+
+        const { connection, decryptedPassword } = connectionData;
+
+        if (connection.type !== 'RDP') {
+            res.status(400).json({ message: '此连接类型不是 RDP。' });
+            return;
+        }
+
+        // RDP 连接通常使用密码认证
+        if (connection.auth_method !== 'password') {
+            // 如果不是密码认证，我们可能不应该返回密码，或者根据具体需求调整
+            // 但 mstsc 主要依赖用户名/密码，这里暂时不返回密码，只返回主机和端口
+            // 或者，如果前端明确知道如何处理其他认证方式（例如，如果mstsc支持通过某些参数传递证书信息），
+            // 那么这里可以返回更多信息。当前，我们只针对密码认证返回密码。
+             console.warn(`[Controller:getRdpConnectionDetails] RDP connection ${connectionId} does not use password auth. Password will not be returned.`);
+        }
+        
+        // 确保端口存在且有效，如果连接对象中没有显式端口，mstsc 默认使用 3389
+        // 但最好是从连接数据中获取，如果没有则可能需要提示或使用默认值。
+        // ConnectionService 应该已经处理了 port 的存在性和类型。
+        const port = connection.port || 3389; // 如果服务层没有保证 port，这里可以设置默认值
+
+        res.status(200).json({
+            host: connection.host,
+            port: port, // 使用从连接对象获取或默认的端口
+            username: connection.username,
+            password: connection.auth_method === 'password' ? decryptedPassword : null, // 仅当密码认证时返回密码
+            // 可以根据需要添加其他 RDP 特定参数
+            // e.g., domain: connection.extras?.domain
+        });
+
+    } catch (error: any) {
+        console.error(`Controller: 获取 RDP 连接详情时发生错误 (ID: ${req.params.id}):`, error.message);
+        let statusCode = 500;
+        let responseMessage = '获取 RDP 连接详情时发生内部服务器错误。';
+
+        if (error.message.includes('解密失败')) {
+            responseMessage = '获取 RDP 连接详情时发生内部错误（凭证处理失败）。';
+        }
+        // 可以根据需要添加更多特定的错误处理
+        res.status(statusCode).json({ message: responseMessage });
+    }
+};
+
 /**
  * 克隆连接 (POST /api/v1/connections/:id/clone)
  */

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, defineExpose, watch, nextTic
 import { storeToRefs } from 'pinia';
 
 import { useI18n } from 'vue-i18n';
+import { fetchRdpConnectionDetails } from '../utils/apiClient'; // Corrected import path
 
 import { useConnectionsStore, ConnectionInfo } from '../stores/connections.store';
 import { useTagsStore, TagInfo } from '../stores/tags.store'; // 确保 TagInfo 已导入
@@ -315,16 +316,38 @@ const handleConnect = (connectionId: number, event?: MouseEvent | KeyboardEvent)
   if (connection.type === 'RDP') {
     // @ts-ignore (electronAPI is injected globally by preload script)
     if (window.electronAPI && typeof window.electronAPI.openRdp === 'function') {
-      console.log(`[WkspConnList] Attempting to open RDP connection for ${connection.host} via native client.`);
-      // @ts-ignore
-      window.electronAPI.openRdp({ host: connection.host });
-      // 注意：我们目前只传递 host，用户名和密码让用户在 mstsc 窗口中输入，以提高安全性。
-      // 如果将来需要传递用户名/密码，需要确保主进程能够安全地处理它们。
+      console.log(`[WkspConnList] RDP connection type detected for ID: ${connectionId}. Fetching details...`);
+      fetchRdpConnectionDetails(connectionId)
+        .then(response => {
+          const rdpDetails = response.data; // Backend returns { host, port, username, password }
+          if (rdpDetails && rdpDetails.host) {
+            console.log(`[WkspConnList] RDP details fetched for ${rdpDetails.host}. Attempting to open native client.`);
+            // @ts-ignore
+            window.electronAPI.openRdp({
+              host: rdpDetails.host,
+              port: rdpDetails.port,
+              username: rdpDetails.username,
+              password: rdpDetails.password, // Password might be null if not applicable or not password auth
+            });
+          } else {
+            console.error('[WkspConnList] Fetched RDP details are invalid or missing host.');
+            uiNotificationsStore.addNotification({
+              message: t('workspaceConnectionList.rdpClientError', { error: 'Invalid RDP details received.' }), // Updated error message
+              type: 'error',
+            });
+          }
+        })
+        .catch(error => {
+          console.error(`[WkspConnList] Failed to fetch RDP connection details for ID ${connectionId}:`, error.response?.data?.message || error.message);
+          uiNotificationsStore.addNotification({
+            message: t('workspaceConnectionList.rdpClientError', { error: error.response?.data?.message || 'Failed to fetch RDP credentials.' }), // Updated error message
+            type: 'error',
+          });
+        });
     } else {
       console.error('[WkspConnList] window.electronAPI.openRdp is not available. Cannot open native RDP client.');
       uiNotificationsStore.addNotification({
-        // 你可能需要添加一个新的翻译键 'workspaceConnectionList.rdpClientUnavailable'
-        message: t('workspaceConnectionList.rdpClientError', { error: 'electronAPI not available' }),
+        message: t('workspaceConnectionList.rdpClientError', { error: 'Electron API unavailable.' }), // Updated error message
         type: 'error',
       });
     }

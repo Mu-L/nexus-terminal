@@ -105,4 +105,15 @@ export const fetchPasskeys = () => {
 export const deletePasskey = (credentialID: string) => {
   return apiClient.delete(`/auth/user/passkeys/${credentialID}`);
 };
+
+// Connections
+/**
+ * Fetches detailed RDP connection information, including credentials.
+ * @param connectionId The ID of the connection.
+ * @returns Promise with RDP connection details (host, port, username, password).
+ */
+export const fetchRdpConnectionDetails = (connectionId: number) => {
+  return apiClient.get(`/connections/${connectionId}/rdp-details`);
+};
+
 export default apiClient;
