@@ -7,7 +7,7 @@ import type { TagInfo } from '../stores/tags.store';     // Corrected Tag to Tag
 // Define Props.
 const props = defineProps<{
   formData: {
-    type: 'SSH' | 'RDP'; // VNC removed
+    type: 'SSH' | 'RDP' | 'VNC'; // Needed to conditionally show proxy selector
     proxy_id: number | null;
     tag_ids: number[];
     notes: string;

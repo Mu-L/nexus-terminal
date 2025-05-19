@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, Teleport, nextTick, computed, onMounted, watch } from 'vue';
+import { ref, Teleport, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ConnectionInfo } from '../stores/connections.store'; // Keep ConnectionInfo type
 import { useAddConnectionForm } from '../composables/useAddConnectionForm';
@@ -47,93 +47,6 @@ const {
   testButtonText,
 } = useAddConnectionForm(props, emit);
 
-const currentOS = ref<string>('');
-
-
-
-const baseConnectionTypesForSelector: Array<{ label: string; value: 'SSH' | 'RDP' }> = [
-  { label: 'SSH', value: 'SSH' },
-  { label: 'RDP', value: 'RDP' },
-];
-
-// 函数定义移到 watch 之前，并移除 .value
-const adjustFormForOS = () => {
-  if (currentOS.value === 'win32') {
-    // Windows: 确保类型是 SSH 或 RDP。如果当前类型无效，则默认为 SSH。
-    if (formData.type !== 'SSH' && formData.type !== 'RDP') {
-      formData.type = 'SSH';
-    }
-  } else {
-    // 非 Windows (macOS, Linux): 默认为 SSH。
-    formData.type = 'SSH';
-  }
-};
-
-onMounted(() => {
-  try {
-    currentOS.value = window.process?.platform || 'unknown';
-  } catch (e) {
-    console.warn("window.process is not available. OS detection might not work as expected.", e);
-    currentOS.value = navigator.platform.toLowerCase().includes('win') ? 'win32' :
-                     navigator.platform.toLowerCase().includes('mac') ? 'darwin' :
-                     navigator.platform.toLowerCase().includes('linux') ? 'linux' : 'unknown';
-  }
-  adjustFormForOS(); // 初始调用
-});
-
-// watch 源直接访问 formData.type
-watch([currentOS, () => formData.type], adjustFormForOS, { immediate: false });
-
-const shouldShowConnectionTypeSelector = computed(() => {
-  return currentOS.value === 'win32';
-});
-
-const filteredConnectionTypes = computed(() => {
-  if (currentOS.value === 'win32') {
-    return baseConnectionTypesForSelector.filter(
-      (type): type is { label: string; value: 'SSH' | 'RDP' } => 
-        type.value === 'SSH' || type.value === 'RDP'
-    );
-  } else {
-    return baseConnectionTypesForSelector.filter(
-      (type): type is { label: string; value: 'SSH' } => type.value === 'SSH'
-    );
-  }
-});
-
-
-const basicInfoFormData = computed(() => {
-  const currentType = formData.type;
-  return {
-    name: formData.name,
-    type: (currentType === 'SSH' || currentType === 'RDP') ? currentType : 'SSH', // 默认 SSH
-    host: formData.host,
-    port: formData.port,
-  };
-});
-
-
-const authFormData = computed(() => {
-  const currentType = formData.type;
-  return {
-    type: (currentType === 'SSH' || currentType === 'RDP') ? currentType : 'SSH', // 默认 SSH
-    username: formData.username,
-    auth_method: formData.auth_method,
-    password: formData.password, 
-    selected_ssh_key_id: formData.selected_ssh_key_id,
-  };
-});
-
-const advancedFormData = computed(() => {
-  const currentType = formData.type;
-  return {
-    type: (currentType === 'SSH' || currentType === 'RDP') ? currentType : 'SSH', // 默认 SSH
-    proxy_id: formData.proxy_id,
-    tag_ids: formData.tag_ids,
-    notes: formData.notes,
-  };
-});
-
 // Tooltip state and refs - Kept in component as it's purely view-related
 const showHostTooltip = ref(false);
 const hostTooltipStyle = ref({});
@@ -175,6 +88,9 @@ const handleHostIconMouseLeave = () => {
 </script>
 
 <template>
+  <!-- Host Tooltip is managed by AddConnectionFormBasicInfo for its specific host input,
+       but if there was a general tooltip at this level, Teleport would be here.
+       The original Teleport for host tooltip is removed as it's now encapsulated. -->
   <div class="fixed inset-0 bg-overlay flex justify-center items-center z-50 p-4"> <!-- Overlay -->
     <div class="bg-background text-foreground p-6 rounded-lg shadow-xl border border-border w-full max-w-2xl max-h-[90vh] flex flex-col"> <!-- Form Panel -->
       <h3 class="text-xl font-semibold text-center mb-6 flex-shrink-0">{{ formTitle }}</h3> <!-- Title -->
@@ -182,14 +98,10 @@ const handleHostIconMouseLeave = () => {
 
         <!-- Regular Form Sections (conditionally rendered) -->
         <template v-if="!isScriptModeActive">
-          <AddConnectionFormBasicInfo
-            :form-data="basicInfoFormData"
-            :type-options="filteredConnectionTypes"
-            :show-type-selector="shouldShowConnectionTypeSelector"
-          />
-          <AddConnectionFormAuth :form-data="authFormData" :is-edit-mode="isEditMode" />
+          <AddConnectionFormBasicInfo :form-data="formData" />
+          <AddConnectionFormAuth :form-data="formData" :is-edit-mode="isEditMode" />
           <AddConnectionFormAdvanced
-            :form-data="advancedFormData"
+            :form-data="formData"
             :proxies="proxies"
             :tags="tags"
             :is-proxy-loading="isProxyLoading"

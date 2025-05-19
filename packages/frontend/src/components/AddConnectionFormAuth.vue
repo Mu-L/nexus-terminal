@@ -5,11 +5,12 @@ import SshKeySelector from './SshKeySelector.vue'; // Assuming SshKeySelector is
 // Define Props. formData is expected to be a reactive object from the parent composable.
 const props = defineProps<{
   formData: {
-    type: 'SSH' | 'RDP';
+    type: 'SSH' | 'RDP' | 'VNC';
     username: string;
     auth_method: 'password' | 'key'; // SSH specific
     password?: string; // Optional because it might not be set or sent
     selected_ssh_key_id: number | null; // SSH specific
+    vncPassword?: string; // VNC specific, optional for the same reasons as password
   };
   isEditMode: boolean; // To determine if fields are required
 }>();
@@ -72,6 +73,13 @@ const { t } = useI18n();
        </div>
      </template>
 
-    <!-- VNC Specific Auth section removed -->
+    <!-- VNC Specific Auth -->
+    <template v-if="props.formData.type === 'VNC'">
+      <div>
+        <label for="conn-password-vnc" class="block text-sm font-medium text-text-secondary mb-1">{{ t('connections.form.vncPassword', 'VNC 密码') }}</label>
+        <input type="password" id="conn-password-vnc" v-model="props.formData.vncPassword" :required="!isEditMode" autocomplete="new-password"
+               class="w-full px-3 py-2 border border-border rounded-md shadow-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
+      </div>
+    </template>
   </div>
 </template>
