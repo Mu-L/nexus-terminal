@@ -725,7 +725,7 @@ const closeFileManagerModal = () => {
 
     <!-- --- 桌面端布局 --- -->
     <template v-if="!isMobile">
-      <div class="main-content-area">
+      <div :class="['main-content-area', { 'main-content-area-full': !isHeaderVisible }]">
         <LayoutRenderer
           v-if="layoutTree"
           :is-root-renderer="true"
@@ -850,6 +850,12 @@ const closeFileManagerModal = () => {
     border-radius: 0 0 5px 5px; /* Top-left, Top-right, Bottom-right, Bottom-left */
     margin: var(--base-margin, 0.5rem); /* Add some margin around the content area */
     margin-top: 0; /* Remove top margin if tab bar is directly above */
+}
+
+.main-content-area.main-content-area-full {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
 }
 
 .layout-renderer-wrapper {
