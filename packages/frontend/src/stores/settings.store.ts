@@ -63,6 +63,7 @@ interface SettingsState {
   fileManagerShowDeleteConfirmation?: string; //  'true' or 'false' - 文件管理器删除确认提示
   terminalEnableRightClickPaste?: string; //  'true' or 'false' - 终端右键粘贴
   showStatusMonitorIpAddress?: string; // 'true' or 'false' - 状态监视器显示IP地址
+  quickCommandRowSizeMultiplier?: string; // +++ 快捷命令列表行大小乘数 (e.g., '1.0') +++
   [key: string]: string | undefined;
 }
 
@@ -309,6 +310,11 @@ export const useSettingsStore = defineStore('settings', () => {
         settings.value.showStatusMonitorIpAddress = 'false'; // 默认禁用状态监视器显示IP
         console.log(`[SettingsStore] showStatusMonitorIpAddress not found, set to default: ${settings.value.showStatusMonitorIpAddress}`);
       }
+      // +++ 快捷命令列表行大小乘数默认值 +++
+      if (settings.value.quickCommandRowSizeMultiplier === undefined) {
+        settings.value.quickCommandRowSizeMultiplier = '1.0';
+        console.log(`[SettingsStore] quickCommandRowSizeMultiplier not found, set to default: ${settings.value.quickCommandRowSizeMultiplier}`);
+      }
         
         
       // --- 语言设置 ---
@@ -402,7 +408,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'terminalScrollbackLimit',
         'fileManagerShowDeleteConfirmation',
         'terminalEnableRightClickPaste',
-        'showStatusMonitorIpAddress'
+        'showStatusMonitorIpAddress',
+        'quickCommandRowSizeMultiplier'
       ];
       if (!allowedKeys.includes(key)) {
           console.error(`[SettingsStore] 尝试更新不允许的设置键: ${key}`);
@@ -498,7 +505,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'terminalScrollbackLimit',
         'fileManagerShowDeleteConfirmation',
         'terminalEnableRightClickPaste',
-        'showStatusMonitorIpAddress'
+        'showStatusMonitorIpAddress',
+        'quickCommandRowSizeMultiplier'
       ];
       const filteredUpdates: Partial<SettingsState> = {};
       let languageUpdate: string | undefined = undefined;
@@ -583,6 +591,22 @@ export const useSettingsStore = defineStore('settings', () => {
       });
     } catch (error) {
       console.error('[SettingsStore] Failed to save file manager layout settings:', error);
+      // Optionally revert local state or show error to user
+    }
+  }
+
+  /**
+   * Updates the Quick Command row size multiplier.
+   * @param multiplier The new row size multiplier (number).
+   */
+  async function updateQuickCommandRowSizeMultiplier(multiplier: number) {
+    const multiplierString = multiplier.toFixed(2);
+    try {
+      await updateSetting('quickCommandRowSizeMultiplier', multiplierString);
+      // 本地状态 settings.value 会在 updateSetting 成功后更新
+      console.log(`[SettingsStore] Quick Command row size multiplier updated to: ${multiplierString}`);
+    } catch (error) {
+      console.error('[SettingsStore] Failed to save Quick Command row size multiplier:', error);
       // Optionally revert local state or show error to user
     }
   }
@@ -804,7 +828,17 @@ export const useSettingsStore = defineStore('settings', () => {
   const statusMonitorShowIpBoolean = computed(() => {
     return settings.value.showStatusMonitorIpAddress === 'true';
   });
- 
+
+  // +++ Getter for Quick Command row size multiplier, returning number +++
+  const quickCommandRowSizeMultiplierNumber = computed(() => {
+    const valStr = settings.value.quickCommandRowSizeMultiplier;
+    if (valStr === null || valStr === undefined || valStr.trim() === '') {
+      return 1.0; // Default value
+    }
+    const val = parseFloat(valStr);
+    return isNaN(val) || val <= 0 ? 1.0 : val; // Fallback to 1.0 if invalid
+  });
+  
  return {
     settings, // 只包含通用设置
     isLoading,
@@ -836,8 +870,10 @@ export const useSettingsStore = defineStore('settings', () => {
     updateMultipleSettings,
     updateSidebarPaneWidth, // +++ 暴露更新特定面板宽度的 action +++
     updateFileManagerLayoutSettings, // +++ 暴露更新文件管理器布局的 action +++
+    updateQuickCommandRowSizeMultiplier, // +++ 暴露快捷命令大小更新 action +++
     commandInputSyncTarget, // +++ 暴露命令输入同步目标 getter +++
     timezone,
+    quickCommandRowSizeMultiplierNumber, // +++ 暴露快捷命令大小 getter +++
     dashboardSortBy,
     dashboardSortOrder,
     saveDashboardSortPreference,

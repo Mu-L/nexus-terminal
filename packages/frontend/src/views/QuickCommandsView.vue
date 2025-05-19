@@ -46,18 +46,28 @@
         </div>
 
        <!-- Command List (Grouped or Flat) -->
-       <div v-else class="list-none p-0 m-0" ref="commandListContainerRef"> <!-- Changed ref name -->
+       <div
+        v-else
+        class="list-none p-0 m-0 outline-none"
+        ref="commandListContainerRef"
+        tabindex="0"
+        @wheel.ctrl.prevent="handleWheel"
+        :style="{ '--qc-row-size-multiplier': quickCommandRowSizeMultiplier }"
+        @keydown="handleSearchInputKeydown"
+       >
             <!-- Grouped View -->
             <div v-if="showQuickCommandTagsBoolean">
                 <div v-for="groupData in filteredAndGroupedCommands" :key="groupData.groupName" class="mb-1 last:mb-0">
                     <!-- Group Header - Modified for inline editing -->
                     <div
-                        class="group px-3 py-2 font-semibold flex items-center text-foreground rounded-md hover:bg-header/80 transition-colors duration-150"
+                        class="group font-semibold flex items-center text-foreground rounded-md hover:bg-header/80 transition-colors duration-150"
+                        :style="{ padding: `calc(0.5rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                         :class="{ 'cursor-pointer': editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) }"
                         @click="editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) ? toggleGroup(groupData.groupName) : null"
                     >
                         <i
                             :class="['fas', expandedGroups[groupData.groupName] ? 'fa-chevron-down' : 'fa-chevron-right', 'mr-2 w-4 text-center text-text-secondary group-hover:text-foreground transition-transform duration-200 ease-in-out', {'transform rotate-0': !expandedGroups[groupData.groupName]}]"
+                            :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"
                             @click.stop="toggleGroup(groupData.groupName)"
                             class="cursor-pointer flex-shrink-0"
                         ></i>
@@ -68,7 +78,8 @@
                             :ref="(el) => setTagInputRef(el, groupData.tagId === null ? 'untagged' : groupData.tagId)"
                             type="text"
                             v-model="editedTagName"
-                            class="text-sm bg-input border border-primary rounded px-1 py-0 w-full"
+                            class="bg-input border border-primary rounded px-1 py-0 w-full"
+                            :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"
                             @blur="finishEditingTag"
                             @keydown.enter.prevent="finishEditingTag"
                             @keydown.esc.prevent="cancelEditingTag"
@@ -77,7 +88,8 @@
                         <!-- Display State -->
                         <span
                             v-else
-                            class="text-sm inline-block overflow-hidden text-ellipsis whitespace-nowrap"
+                            class="inline-block overflow-hidden text-ellipsis whitespace-nowrap"
+                            :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"
                             :class="{ 'cursor-pointer hover:underline': true }"
                             :title="t('quickCommands.tags.clickToEditTag', '点击编辑标签')"
                             @click.stop="startEditingTag(groupData.tagId, groupData.groupName)"
@@ -93,26 +105,27 @@
                             v-for="(cmd) in groupData.commands"
                             :key="cmd.id"
                             :data-command-id="cmd.id"
-                            class="group flex justify-between items-center px-3 py-2.5 mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
+                            class="group flex justify-between items-center mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
+                            :style="{ padding: `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                             :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                             @click="executeCommand(cmd)"
                             @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                         >
-                            <!-- Command Info (Structure remains the same) -->
+                            <!-- Command Info -->
                             <div class="flex flex-col overflow-hidden mr-2 flex-grow">
-                                <span v-if="cmd.name" class="font-medium text-sm truncate mb-0.5 text-foreground">{{ cmd.name }}</span>
-                                <span class="text-xs truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }">{{ cmd.command }}</span>
+                                <span v-if="cmd.name" class="font-medium truncate mb-0.5 text-foreground" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
+                                <span class="truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }" :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
                             </div>
-                            <!-- Actions (Structure remains the same) -->
+                            <!-- Actions -->
                             <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
                                 <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
-                                    <i class="fas fa-copy text-sm"></i>
+                                    <i class="fas fa-copy" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
                                 <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
-                                    <i class="fas fa-edit text-sm"></i>
+                                    <i class="fas fa-edit" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
                                 <button @click.stop="confirmDelete(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
-                                    <i class="fas fa-times text-sm"></i>
+                                    <i class="fas fa-times" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
                             </div>
                         </li>
@@ -125,26 +138,27 @@
                     v-for="(cmd) in flatFilteredCommands"
                     :key="cmd.id"
                     :data-command-id="cmd.id"
-                    class="group flex justify-between items-center px-3 py-2.5 mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
+                    class="group flex justify-between items-center mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
+                    :style="{ padding: `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                     :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                     @click="executeCommand(cmd)"
                     @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                 >
                     <!-- Command Info -->
                     <div class="flex flex-col overflow-hidden mr-2 flex-grow">
-                        <span v-if="cmd.name" class="font-medium text-sm truncate mb-0.5 text-foreground">{{ cmd.name }}</span>
-                        <span class="text-xs truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }">{{ cmd.command }}</span>
+                        <span v-if="cmd.name" class="font-medium truncate mb-0.5 text-foreground" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
+                        <span class="truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }" :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
                     </div>
                     <!-- Actions -->
                     <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
                         <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
-                            <i class="fas fa-copy text-sm"></i>
+                            <i class="fas fa-copy" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
                         <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
-                            <i class="fas fa-edit text-sm"></i>
+                            <i class="fas fa-edit" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
                         <button @click.stop="confirmDelete(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
-                            <i class="fas fa-times text-sm"></i>
+                            <i class="fas fa-times" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
                     </div>
                 </li>
@@ -181,8 +195,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch } from 'vue';
-import { storeToRefs } from 'pinia'; 
+import { ref, onMounted, onBeforeUnmount, computed, nextTick, defineExpose, watch, watchEffect } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useQuickCommandsStore, type QuickCommandFE, type QuickCommandSortByType, type GroupedQuickCommands } from '../stores/quickCommands.store';
 import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
@@ -231,7 +245,39 @@ const isLoading = computed(() => quickCommandsStore.isLoading);
 
 
 const { selectedIndex: storeSelectedIndex, flatVisibleCommands, expandedGroups } = storeToRefs(quickCommandsStore);
-const { showQuickCommandTagsBoolean } = storeToRefs(settingsStore); 
+const { showQuickCommandTagsBoolean, quickCommandRowSizeMultiplierNumber: qcRowSizeMultiplierFromStore } = storeToRefs(settingsStore);
+
+const quickCommandRowSizeMultiplier = ref(1.0);
+
+watchEffect(() => {
+  const storeVal = qcRowSizeMultiplierFromStore.value;
+  if (storeVal && typeof storeVal === 'number' && storeVal > 0) {
+    if (quickCommandRowSizeMultiplier.value !== storeVal) {
+      quickCommandRowSizeMultiplier.value = storeVal;
+      // console.log(`[QuickCmdView] Row size multiplier loaded from store: ${storeVal}`);
+    }
+  } else {
+    // console.log(`[QuickCmdView] No valid row size multiplier in store for QuickCommands, using default: ${quickCommandRowSizeMultiplier.value}`);
+  }
+});
+
+const handleWheel = (event: WheelEvent) => {
+    // event.ctrlKey 和 event.preventDefault() 将由模板中的 .ctrl.prevent 修饰符处理
+    const delta = event.deltaY > 0 ? -0.05 : 0.05;
+    const newMultiplier = Math.max(0.5, Math.min(2.5, quickCommandRowSizeMultiplier.value + delta));
+    const oldMultiplier = quickCommandRowSizeMultiplier.value;
+    quickCommandRowSizeMultiplier.value = parseFloat(newMultiplier.toFixed(2));
+
+    if (quickCommandRowSizeMultiplier.value !== oldMultiplier) {
+      // console.log(`[QuickCmdView] Row size multiplier changed: ${quickCommandRowSizeMultiplier.value}. Saving to store...`);
+      // 假设 settingsStore 有一个名为 updateQuickCommandRowSizeMultiplier 的 action
+      if (settingsStore.updateQuickCommandRowSizeMultiplier) {
+        settingsStore.updateQuickCommandRowSizeMultiplier(quickCommandRowSizeMultiplier.value);
+      } else {
+        console.warn('[QuickCmdView] settingsStore.updateQuickCommandRowSizeMultiplier action not found.');
+      }
+    }
+};
 
 // 计算属性，仅过滤和排序，不分组
 const flatFilteredCommands = computed(() => {
