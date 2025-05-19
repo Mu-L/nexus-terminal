@@ -526,6 +526,7 @@ onMounted(() => {
     <div
         :class="['fixed inset-0 bg-transparent pointer-events-none z-[100] transition-opacity duration-300 ease-in-out',
                  {'opacity-100 visible': activeLeftSidebarPane || activeRightSidebarPane, 'opacity-0 invisible': !(activeLeftSidebarPane || activeRightSidebarPane)}]"
+        style="-webkit-app-region: no-drag;"
     ></div>
 
     <!-- Left Sidebar Panel -->
