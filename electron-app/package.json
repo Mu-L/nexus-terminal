@@ -26,7 +26,7 @@
   "build": {
     "appId": "com.nexus.terminal",
     "productName": "Nexus Terminal",
-    "asar": false,
+    "asar": true,
     "directories": {
       "output": "dist_electron",
       "buildResources": "build"
