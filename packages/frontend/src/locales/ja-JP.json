@@ -1129,7 +1129,7 @@
     },
     "exportConnections": {
         "title": "接続データのエクスポート",
-        "decryptKeyInfo": "解凍パスワードは、data/.env ファイル内の ENCRYPTION_KEY です。このファイルを安全に保管してください。",
+        "decryptKeyInfo": "解凍パスワードは、[インストールディレクトリ]/resources/packages/backend/data/.env ファイル内の ENCRYPTION_KEY です。このファイルを安全に保管してください。",
         "buttonText": "エクスポートを開始"
     },
     "tabs": {

@@ -312,8 +312,26 @@ const handleConnect = (connectionId: number, event?: MouseEvent | KeyboardEvent)
 
   closeContextMenu(); // 关闭右键菜单
 
-  // 统一发出 connect-request 事件，让 sessionStore.handleConnectRequest 处理模态框和会话
-  emitWorkspaceEvent('connection:connect', { connectionId });
+  if (connection.type === 'RDP') {
+    // @ts-ignore (electronAPI is injected globally by preload script)
+    if (window.electronAPI && typeof window.electronAPI.openRdp === 'function') {
+      console.log(`[WkspConnList] Attempting to open RDP connection for ${connection.host} via native client.`);
+      // @ts-ignore
+      window.electronAPI.openRdp({ host: connection.host });
+      // 注意：我们目前只传递 host，用户名和密码让用户在 mstsc 窗口中输入，以提高安全性。
+      // 如果将来需要传递用户名/密码，需要确保主进程能够安全地处理它们。
+    } else {
+      console.error('[WkspConnList] window.electronAPI.openRdp is not available. Cannot open native RDP client.');
+      uiNotificationsStore.addNotification({
+        // 你可能需要添加一个新的翻译键 'workspaceConnectionList.rdpClientUnavailable'
+        message: t('workspaceConnectionList.rdpClientError', { error: 'electronAPI not available' }),
+        type: 'error',
+      });
+    }
+  } else {
+    // 对于非 RDP 连接，统一发出 connect-request 事件
+    emitWorkspaceEvent('connection:connect', { connectionId });
+  }
 };
 
 // --- 移除 closeRdpModal 方法 ---

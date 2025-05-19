@@ -229,5 +229,54 @@ ipcMain.on('toggle-maximize-window', () => {
   }
 });
 
+// IPC handler for opening RDP connection
+ipcMain.on('open-rdp-connection', (event, { host, username, password }) => {
+  if (!host) {
+    console.error('[Main Process] Received open-rdp-connection request without host.');
+    // Optionally, send an error receipt back to the renderer process
+    // event.reply('open-rdp-connection-error', 'Host is required');
+    return;
+  }
+
+  const args = [`/v:${host}`];
+  // Note: Passing username and password directly on the command line is a security risk.
+  // mstsc.exe has limited and potentially unreliable support for /u and /p parameters,
+  // especially across different Windows versions and security policies.
+  // A more secure approach is to let the user enter credentials in the mstsc prompt
+  // or use .rdp files. For now, we will only pass the host and let the user
+  // enter credentials manually in the mstsc window.
+  // if (username) {
+  //   args.push(`/u:${username}`); // This is typically for domain\username
+  // }
+  // if (password) {
+  //   args.push(`/p:${password}`); // This is highly insecure
+  // }
+
+  console.log(`[Main Process] Attempting to open RDP connection to ${host} with mstsc.exe. Args: ${args.join(' ')}`);
+
+  try {
+    const rdpProcess = spawn('mstsc.exe', args, {
+      detached: true, // Allows mstsc to run independently of the Electron app
+      stdio: 'ignore', // Ignore stdio of the child process
+    });
+
+    rdpProcess.on('error', (err) => {
+      console.error('[Main Process] Failed to start mstsc.exe:', err);
+      // Optionally, send an error receipt back to the renderer process
+      // event.reply('open-rdp-connection-error', `Failed to start mstsc.exe: ${err.message}`);
+    });
+
+    rdpProcess.unref(); // Allows the parent process to exit without waiting for the child
+
+    // Optionally, send a success receipt back to the renderer process
+    // event.reply('open-rdp-connection-success', `RDP process for ${host} initiated.`);
+
+  } catch (error) {
+    console.error('[Main Process] Error spawning mstsc.exe:', error);
+    // Optionally, send an error receipt back to the renderer process
+    // event.reply('open-rdp-connection-error', `Error spawning mstsc.exe: ${error.message}`);
+  }
+});
+
 // 为了允许 localhost 加载，如果前端和后端都通过 localhost 提供服务
-app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors'); 
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');

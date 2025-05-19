@@ -37,6 +37,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   toggleMaximizeWindow: () => {
     ipcRenderer.send('toggle-maximize-window');
+  },
+  // Function to trigger RDP connection
+  openRdp: (connectionDetails) => { // e.g., { host, username, password }
+    // Validate connectionDetails if necessary before sending
+    if (connectionDetails && connectionDetails.host) {
+      ipcRenderer.send('open-rdp-connection', connectionDetails);
+    } else {
+      console.warn('[Preload] openRdp called without necessary connection details (host).');
+    }
   }
 });
 

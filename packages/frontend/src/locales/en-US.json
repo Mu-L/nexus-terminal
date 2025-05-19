@@ -553,7 +553,7 @@
     },
       "exportConnections": {
         "title": "Export Connection Data",
-        "decryptKeyInfo": "The decryption password is the ENCRYPTION_KEY in your data/.env file. Please keep this file secure.",
+        "decryptKeyInfo": "The decryption password is the ENCRYPTION_KEY in your [Installation Directory]/resources/packages/backend/data/.env file. Please keep this file secure.",
         "buttonText": "Start Export"
       },
     

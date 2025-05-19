@@ -932,7 +932,7 @@
     },
     "exportConnections": {
         "title": "导出连接数据",
-        "decryptKeyInfo": "解压密码是您 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
+        "decryptKeyInfo": "解压密码是您 [安装目录]/resources/packages/backend/data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。",
         "buttonText": "开始导出"
     },
     "tabs": {
