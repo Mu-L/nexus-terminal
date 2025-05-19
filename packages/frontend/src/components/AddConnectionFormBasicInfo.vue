@@ -88,16 +88,9 @@ const handleHostIconMouseLeave = () => {
         </button>
         <button type="button"
                 @click="props.formData.type = 'RDP'"
-                :class="['flex-1 px-3 py-2 border-t border-b border-r border-border text-sm font-medium focus:outline-none -ml-px',
+                :class="['flex-1 px-3 py-2 border-t border-b border-r border-border text-sm font-medium focus:outline-none -ml-px rounded-r-md',
                          props.formData.type === 'RDP' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border']">
           {{ t('connections.form.typeRdp', 'RDP') }}
-        </button>
-        <button type="button"
-                @click="props.formData.type = 'VNC'"
-                :class="['flex-1 px-3 py-2 border border-border text-sm font-medium focus:outline-none -ml-px',
-                         props.formData.type === 'VNC' ? 'bg-primary text-white' : 'bg-background text-foreground hover:bg-border',
-                         'rounded-r-md']">
-          {{ t('connections.form.typeVnc', 'VNC') }}
         </button>
       </div>
     </div>

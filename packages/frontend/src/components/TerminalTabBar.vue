@@ -23,6 +23,7 @@ const layoutStore = useLayoutStore(); // 初始化布局 store
 const connectionsStore = useConnectionsStore();
 const { isHeaderVisible } = storeToRefs(layoutStore); // 从 layout store 获取主导航栏可见状态
 const route = useRoute(); // 获取路由实例
+const isElectron = !!(window as any).electronAPI; // 检查是否在 Electron 环境
 
 // 定义 Props
 const props = defineProps({
@@ -407,6 +408,17 @@ onBeforeUnmount(() => {
   }
 });
 
+// 计算动态样式以支持拖拽
+const tabBarStyles = computed(() => {
+  const styles: Record<string, string> = {};
+  if (isElectron && !isHeaderVisible.value) {
+    styles['-webkit-app-region'] = 'drag';
+  } else {
+    styles['-webkit-app-region'] = 'no-drag';
+  }
+  return styles;
+});
+
 </script>
 
 <template>
@@ -414,8 +426,9 @@ onBeforeUnmount(() => {
   <div :class="['flex bg-header border border-border overflow-hidden',
                { 'rounded-t-md mx-2 mt-2': !props.isMobile && isHeaderVisible }, // Desktop margins/rounding - Use props.isMobile and isHeaderVisible
                props.isMobile ? 'h-8' : 'h-10' // Mobile height h-8, Desktop h-10 - Use props.isMobile
-              ]">
-    <div class="flex items-center overflow-x-auto flex-shrink min-w-0 h-full"> <!-- Ensure inner div has h-full -->
+              ]"
+              :style="tabBarStyles">
+    <div class="flex items-center overflow-x-auto flex-shrink min-w-0 h-full" style="-webkit-app-region: no-drag;"> <!-- Ensure inner div has h-full and is not draggable -->
       <draggable
         v-model="draggableSessions"
         item-key="sessionId"
@@ -463,7 +476,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
     <!-- Action Buttons -->
-    <div class="flex items-center ml-auto h-full flex-shrink-0">
+    <div class="flex items-center ml-auto h-full flex-shrink-0" style="-webkit-app-region: no-drag;"> <!-- Ensure action buttons container is not draggable -->
         <button
           v-if="isWorkspaceRoute"
           class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
