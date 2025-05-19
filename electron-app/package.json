@@ -64,13 +64,13 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "../packages/frontend/public/icons/icon-192x192.png"
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
     },
     "mac": {
-      "icon": "../packages/frontend/public/icons/icon-192x192.png"
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
     },
     "linux": {
-      "icon": "../packages/frontend/public/icons/icon-192x192.png"
+      "icon": "../packages/frontend/public/icons/icon-512x512.png"
     },
     "nsis": {
       "oneClick": false,
