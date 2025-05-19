@@ -831,7 +831,7 @@ const closeFileManagerModal = () => {
   background-color: transparent;
   flex-direction: column;
   height: 100dvh; /* 使用动态视口高度 */
-  overflow: hidden;
+  /* overflow: hidden; */ /* Temporarily commented out to test sidebar interaction */
   transition: height 0.3s ease; /* 可选：添加过渡效果 */
 }
 
@@ -862,7 +862,7 @@ const closeFileManagerModal = () => {
   flex-grow: 1;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* overflow: hidden; */ /* Temporarily commented out to test sidebar interaction */
 }
 
 /* 面板占位符样式 (用于加载或错误状态) */

@@ -21,7 +21,7 @@ const getContainerClass = (type: string) => {
 </script>
 
 <template>
-  <div class="fixed top-4 right-4 z-[1100] flex flex-col items-end">
+  <div class="fixed top-4 right-4 z-[1100] flex flex-col items-end pointer-events-none">
     <transition-group
       tag="div"
       enter-active-class="transition duration-500 ease-out"
@@ -35,7 +35,7 @@ const getContainerClass = (type: string) => {
         v-for="notification in notifications"
         :key="notification.id"
         :class="[
-          'flex items-center p-3 mb-2 rounded shadow-md min-w-[250px] max-w-[400px] opacity-95 text-white', 
+          'flex items-center p-3 mb-2 rounded shadow-md min-w-[250px] max-w-[400px] opacity-95 text-white pointer-events-auto',
           {
             'bg-green-600': notification.type === 'success',
             'bg-red-600': notification.type === 'error',

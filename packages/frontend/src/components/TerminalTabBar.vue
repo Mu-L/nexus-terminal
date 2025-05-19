@@ -414,6 +414,7 @@ const tabBarStyles = computed(() => {
             @touchend="handleTouchEnd($event)"
             @dragstart="handleDragStart"
             :title="session.connectionName"
+            style="-webkit-app-region: no-drag;"
         >
           <!-- Status dot -->
           <span :class="['w-2 h-2 rounded-full mr-2 flex-shrink-0',
@@ -424,7 +425,7 @@ const tabBarStyles = computed(() => {
           <span class="truncate text-sm" style="transform: translateY(-1px);">{{ session.connectionName }}</span>
           <button class="ml-2 p-0.5 rounded-full text-text-secondary hover:bg-border hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                   :class="{'text-foreground hover:bg-header': session.sessionId === activeSessionId}"
-                  @click="closeSession($event, session.sessionId)" :title="$t('tabs.closeTabTooltip')">
+                  @click="closeSession($event, session.sessionId)" :title="$t('tabs.closeTabTooltip')" style="-webkit-app-region: no-drag;">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -434,7 +435,7 @@ const tabBarStyles = computed(() => {
       </draggable>
       <!-- Add Tab Button -->
       <button class="flex items-center justify-center px-3 h-full border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150 flex-shrink-0"
-              @click="togglePopup" :title="$t('tabs.newTabTooltip')">
+              @click="togglePopup" :title="$t('tabs.newTabTooltip')" style="-webkit-app-region: no-drag;">
         <i class="fas fa-plus text-sm"></i>
       </button>
     </div>
@@ -445,6 +446,7 @@ const tabBarStyles = computed(() => {
           class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
           @click="toggleHeader"
           :title="toggleButtonTitle"
+          style="-webkit-app-region: no-drag;"
         >
           <i :class="[eyeIconClass, 'text-sm']"></i>
         </button>
@@ -452,12 +454,12 @@ const tabBarStyles = computed(() => {
         <button
                 class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
                 @click="showTransferProgressModal = true"
-                :title="t('terminalTabBar.showTransferProgressTooltip', '查看传输进度')">
+                :title="t('terminalTabBar.showTransferProgressTooltip', '查看传输进度')" style="-webkit-app-region: no-drag;">
           <i class="fas fa-tasks text-sm"></i>
         </button>
         <!-- +++ 使用 v-if 隐藏移动端的布局按钮 +++ -->
         <button v-if="!isMobile" class="flex items-center justify-center px-3 h-full border-l border-border text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150"
-                @click="openLayoutConfigurator" :title="t('layout.configure', '配置布局')">
+                @click="openLayoutConfigurator" :title="t('layout.configure', '配置布局')" style="-webkit-app-region: no-drag;">
           <i class="fas fa-th-large text-sm"></i>
         </button>
     </div>
