@@ -57,10 +57,17 @@
       "icon": "../packages/frontend/public/icons/icon-512x512.png"
     },
     "mac": {
-      "icon": "../packages/frontend/public/icons/icon-512x512.png"
+      "icon": "../packages/frontend/public/icons/icon-512x512.png",
+      "target": [
+        "dmg"
+      ]
     },
     "linux": {
-      "icon": "../packages/frontend/public/icons/icon-512x512.png"
+      "icon": "../packages/frontend/public/icons/icon-512x512.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     },
     "nsis": {
       "oneClick": false,
