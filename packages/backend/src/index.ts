@@ -2,6 +2,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs'; // fs is needed for early env loading if data/.env is checked
 
+import { initializeAppDataPath, ensureAndGetPathInAppData, getAppDataPath } from './config/app-config';
+
+
+
+initializeAppDataPath();
+
+
 // --- 开始环境变量的早期加载 ---
 // 1. 加载根目录的 .env 文件 (定义部署模式等)
 // 注意: __dirname 在 dist/src 中，所以需要回退三级到项目根目录
@@ -18,7 +25,8 @@ if (rootConfigResult.error && (rootConfigResult.error as NodeJS.ErrnoException).
 
 // 2. 加载 data/.env 文件 (定义密钥等)
 // 注意: 这个路径是相对于编译后的 dist/src/index.js
-const dataEnvPathGlobal = path.resolve(__dirname, '../data/.env'); // Renamed to avoid conflict if 'dataEnvPath' is used later
+// 现在 .env 文件应该位于通过 app-config 管理的应用数据路径中
+const dataEnvPathGlobal = path.join(getAppDataPath(), '.env'); // 使用 getAppDataPath()
 const dataConfigResultGlobal = dotenv.config({ path: dataEnvPathGlobal }); // Renamed
 
 if (dataConfigResultGlobal.error && (dataConfigResultGlobal.error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -185,10 +193,9 @@ app.use(cors(corsOptions)); // 在所有路由之前使用 CORS 中间件
 
 
 // --- 静态文件服务 ---
-const uploadsPath = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsPath)) { // 确保 uploads 目录存在
-    fs.mkdirSync(uploadsPath, { recursive: true });
-}
+// 上传文件也应存储在通过 app-config 管理的应用数据路径中
+const uploadsPath = ensureAndGetPathInAppData('uploads'); // 使用 ensureAndGetPathInAppData
+// ensureAndGetPathInAppData 内部会确保目录存在
 // app.use('/uploads', express.static(uploadsPath)); // 不再需要，文件通过 API 提供
 
 
@@ -205,6 +212,7 @@ const port = process.env.PORT || 3000;
 // 初始化数据库
 const initializeDatabase = async () => {
   try {
+    // getDbInstance 现在从 app-config 获取路径，不再需要参数
     const db = await getDbInstance();
     console.log('[Index] 正在检查用户数量...');
     const userCount = await new Promise<number>((resolve, reject) => {
@@ -227,11 +235,9 @@ const initializeDatabase = async () => {
 const startServer = () => {
     // --- 会话中间件配置 ---
     const FileStore = sessionFileStore(session);
-    // 修改路径以匹配 Docker volume 挂载点 /app/data
-    const sessionsPath = path.join('/app/data', 'sessions');
-    if (!fs.existsSync(sessionsPath)) {
-        fs.mkdirSync(sessionsPath, { recursive: true });
-    }
+    // Session 文件也应存储在通过 app-config 管理的应用数据路径中
+    const sessionsPath = ensureAndGetPathInAppData('sessions'); // 使用 ensureAndGetPathInAppData
+    // ensureAndGetPathInAppData 内部会确保目录存在
     const sessionMiddleware = session({
         store: new FileStore({
             path: sessionsPath,

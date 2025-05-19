@@ -2,25 +2,15 @@
 import sqlite3, { OPEN_READWRITE, OPEN_CREATE } from 'sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { getAppDataPath } from '../config/app-config'; // +++ Import getAppDataPath +++
 import { tableDefinitions } from './schema.registry';
 import { runMigrations } from './migrations'; // +++ Import runMigrations +++
 
-const dbDir = path.join(__dirname, '..', '..', 'data');
+// dbDir 和 dbPath 将在 getDbInstance 中根据传入的 appDataPath 动态确定
 const dbFilename = 'nexus-terminal.db';
-const dbPath = path.join(dbDir, dbFilename);
-
-if (!fs.existsSync(dbDir)) {
-    try {
-        fs.mkdirSync(dbDir, { recursive: true });
-    } catch (mkdirErr: any) {
-        console.error(`[数据库文件系统] 创建目录 ${dbDir} 失败:`, mkdirErr.message);
-        throw new Error(`创建数据库目录失败: ${mkdirErr.message}`);
-    }
-} else {
-}
-
 const verboseSqlite3 = sqlite3.verbose();
 let dbInstancePromise: Promise<sqlite3.Database> | null = null;
+// initializedDbPath 将在 getDbInstance 内部基于 getAppDataPath() 确定
 
 interface RunResult {
     lastID: number;
@@ -88,12 +78,27 @@ const runDatabaseInitializations = async (db: sqlite3.Database): Promise<void> =
 
 export const getDbInstance = (): Promise<sqlite3.Database> => {
     if (!dbInstancePromise) {
-        dbInstancePromise = new Promise((resolve, reject) => {
-        
-            const db = new verboseSqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, async (err) => { // Mark callback as async
+        const appDataRootPath = getAppDataPath(); // 从 app-config 获取根数据路径
+        // 确保数据库文件所在的目录 (即 appDataRootPath) 存在。
+        // getAppDataPath() 内部的 initializeAppDataPath() 应该已经确保了这一点。
+        // 但作为双重检查，可以再次确认，或者依赖 initializeAppDataPath 的健壮性。
+        // if (!fs.existsSync(appDataRootPath)) {
+        //     try {
+        //         fs.mkdirSync(appDataRootPath, { recursive: true });
+        //         console.log(`[DB Connection] Database root directory ensured: ${appDataRootPath}`);
+        //     } catch (mkdirErr: any) {
+        //         console.error(`[DB Connection] CRITICAL: Failed to ensure database root directory ${appDataRootPath}:`, mkdirErr.message);
+        //         return Promise.reject(new Error(`CRITICAL: Failed to ensure database root directory: ${mkdirErr.message}`));
+        //     }
+        // }
 
+        const currentDbPath = path.join(appDataRootPath, dbFilename);
+        console.log(`[DB Connection] Database path set to: ${currentDbPath}`);
+
+        dbInstancePromise = new Promise((resolve, reject) => {
+            const db = new verboseSqlite3.Database(currentDbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, async (err) => { // Mark callback as async
                 if (err) {
-                    console.error(`[数据库连接] 打开数据库文件 ${dbPath} 时出错:`, err.message);
+                    console.error(`[DB Connection] Error opening database file ${currentDbPath}:`, err.message);
                     dbInstancePromise = null;
                     reject(err);
                     return;
@@ -125,12 +130,12 @@ export const getDbInstance = (): Promise<sqlite3.Database> => {
 };
 
 
-process.on('SIGINT', async () => { 
+process.on('SIGINT', async () => {
+    // SIGINT 处理逻辑保持不变，它依赖于 dbInstancePromise 是否被赋值
     if (dbInstancePromise) {
         console.log('[DB] 收到 SIGINT，尝试关闭数据库连接...');
         try {
-
-            const db = await dbInstancePromise;
+            const db = await dbInstancePromise; // dbInstancePromise 本身在成功时会 resolve(db)
             db.close((err) => {
                 if (err) {
                     console.error('[DB] 关闭数据库时出错:', err.message);

@@ -8,7 +8,7 @@
       <div class="settings-section-content">
          <h3 class="text-base font-semibold text-foreground mb-3">{{ t('settings.exportConnections.title', '导出连接数据') }}</h3>
          <p class="text-sm text-text-secondary mb-4">
-           <span class="font-semibold text-warning">{{ t('settings.exportConnections.decryptKeyInfo', '解压密码为您的 data/.env 文件中的 ENCRYPTION_KEY。请妥善保管此文件。') }}</span>
+           
          </p>
          <form @submit.prevent="handleExportConnections" class="space-y-4">
            <div class="flex items-center justify-between">

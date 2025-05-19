@@ -4,6 +4,7 @@ const url = require('url');
 const express = require('express'); 
 const http = require('http'); 
 const { spawn } = require('child_process');
+const fs = require('fs');
 
 let mainWindow;
 let expressApp;
@@ -54,11 +55,43 @@ async function createWindow() {
     console.log(`[Dev Mode] Loading frontend from: ${frontendUrl}`);
   } else {
     // 生产模式：启动 express 服务器托管前端静态文件并启动后端服务
+    const userDataPath = app.getPath('userData');
+    // 使用 app.getName() (通常由 electron-builder 的 productName 设置) 来创建应用特定的子目录名
+    // 进行小写和字符清理，以确保路径的健壮性
+    const appNameForPath = (app.getName() || 'nexus-terminal')
+      .toLowerCase()
+      .replace(/\s+/g, '-') // 将空格替换为连字符
+      .replace(/[^a-z0-9-]/gi, ''); // 移除除字母、数字、连字符外的所有字符
+    const appDataRootPath = path.join(userDataPath, appNameForPath); // 例如: C:\Users\<user>\AppData\Roaming\nexus-terminal
+    const backendDataPath = path.join(appDataRootPath, 'backend-data'); // 后端数据的特定子目录
+
+    // 确保后端数据目录存在
+    if (!fs.existsSync(backendDataPath)) {
+      try {
+        fs.mkdirSync(backendDataPath, { recursive: true });
+        console.log(`[Main Process] Backend data directory created/ensured: ${backendDataPath}`);
+      } catch (err) {
+        console.error(`[Main Process] Critical error: Failed to create backend data directory at ${backendDataPath}. Error: ${err}. The application might not function correctly without this directory.`);
+        // 根据应用的重要性，这里可能需要更强硬的错误处理，例如通知用户并退出应用。
+        // app.quit();
+        // return; // 停止执行 createWindow
+      }
+    } else {
+      console.log(`[Main Process] Backend data directory already exists: ${backendDataPath}`);
+    }
+
+    // 提醒：后续步骤中，您需要在后端代码 (packages/backend) 中适配，
+    // 读取并使用 APP_BACKEND_DATA_PATH 环境变量。
+    // 此外，考虑实现一次性的数据迁移逻辑，将旧安装目录下的数据（如果存在）迁移到新的 backendDataPath。
     const backendResourcesPath = path.join(process.resourcesPath, 'packages/backend'); 
     console.log(`[Prod Mode] Starting backend service from ${backendResourcesPath}...`);
     backendProcess = spawn('node', ['dist/index.js'], {
-      cwd: backendResourcesPath, 
-      stdio: ['pipe', 'pipe', 'pipe'], 
+      cwd: backendResourcesPath,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env, // 继承当前进程的环境变量
+        APP_BACKEND_DATA_PATH: backendDataPath // 将定义好的后端数据路径传递给子进程
+      },
     });
 
     backendProcess.stdout.on('data', (data) => {

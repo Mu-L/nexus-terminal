@@ -204,9 +204,9 @@ const getPlaintextConnectionsData = async (): Promise<PlaintextExportConnectionD
 };
 
 /**
- * 导出所有连接配置为一个加密的 ZIP 文件。
+ * 导出所有连接配置为一个 ZIP 文件。
  * @param includeSshKeys 是否包含 SSH 密钥
- * @returns Buffer 包含加密的 ZIP 文件内容 (IV + Ciphertext + AuthTag)。
+ * @returns Buffer 包含 ZIP 文件内容。
  */
 
 // 辅助函数：安全地转义 CLI 参数，如果参数包含空格或引号，则用双引号括起来
@@ -224,7 +224,7 @@ function escapeCliArgument(value: string | number | null | undefined): string {
 }
 
 
-export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
+export const exportConnectionsAsZip = async (includeSshKeys: boolean = false): Promise<Buffer> => {
     try {
         const connectionsData = await getPlaintextConnectionsData(); // This now returns PlaintextExportConnectionData[]
         const allTags = await TagService.getAllTags();
@@ -299,17 +299,9 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
 
         const connectionsScriptContent = scriptLines.join('\n');
 
-        const zipPassword = process.env.ENCRYPTION_KEY;
-        if (!zipPassword || zipPassword.trim() === '') {
-            console.error('错误：ENCRYPTION_KEY 环境变量未设置或为空！无法为ZIP文件设置密码。');
-            throw new Error('ENCRYPTION_KEY is not set or is empty, cannot password-protect the ZIP file.');
-        }
-        
         return new Promise<Buffer>((resolve, reject) => {
-            const archive = archiver.create('zip-encrypted', {
-                zlib: { level: 9 },
-                encryptionMethod: 'aes256',
-                password: zipPassword
+            const archive = archiver.create('zip', {
+                zlib: { level: 9 }
             });
 
             const buffers: Buffer[] = [];
