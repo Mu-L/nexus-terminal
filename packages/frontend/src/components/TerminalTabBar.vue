@@ -175,22 +175,6 @@ const handleContextMenuAction = (payload: { action: string; targetId: string | n
       // 注意：关闭左侧通常不包括当前标签本身
       emitWorkspaceEvent('session:closeToLeft', { targetSessionId: targetId });
       break;
-    case 'mark-for-suspend': // +++ 修改 action 名称 +++
-      if (typeof targetId === 'string') {
-        console.log(`[TabBar] Context menu action 'mark-for-suspend' requested for session ID: ${targetId}`);
-        sessionStore.requestStartSshSuspend(targetId); // 这个 action 现在是标记
-      } else {
-        console.warn(`[TabBar] 'mark-for-suspend' action called with invalid targetId:`, targetId);
-      }
-      break;
-    case 'unmark-for-suspend': 
-      if (typeof targetId === 'string') {
-        console.log(`[TabBar] Context menu action 'unmark-for-suspend' requested for session ID: ${targetId}`);
-        sessionStore.requestUnmarkSshSuspend(targetId);
-      } else {
-        console.warn(`[TabBar] 'unmark-for-suspend' action called with invalid targetId:`, targetId);
-      }
-      break;
     default:
       console.warn(`[TabBar] Unknown context menu action: ${action}`);
   }
@@ -212,19 +196,6 @@ const contextMenuItems = computed(() => {
   const currentIndex = props.sessions.findIndex(s => s.sessionId === targetSessionIdValue);
   const totalTabs = props.sessions.length;
 
-  // 添加标记/取消标记挂起会话菜单项（如果适用）
-  if (connectionInfo && connectionInfo.type === 'SSH') {
-    const isActiveSession = targetSessionState.wsManager.isConnected.value;
-    if (isActiveSession) { // 只对活动的SSH会话显示相关操作
-      if (targetSessionState.isMarkedForSuspend) {
-        items.push({ label: 'tabs.contextMenu.unmarkForSuspend', action: 'unmark-for-suspend' });
-      } else {
-        // 当未标记时，显示原来的“挂起”文本，但 action 触发新的标记流程
-        items.push({ label: 'tabs.contextMenu.suspendSession', action: 'mark-for-suspend' });
-      }
-      items.push({ label: '', action: '', isSeparator: true }); // 分隔符
-    }
-  }
 
   items.push({ label: 'tabs.contextMenu.close', action: 'close' });
 
@@ -239,15 +210,7 @@ const contextMenuItems = computed(() => {
   if (currentIndex > 0 && totalTabs > 1) { // 仅当有左侧标签时显示
     items.push({ label: 'tabs.contextMenu.closeLeft', action: 'close-left' });
   }
-  
-  // 移除末尾可能存在的分隔符（如果它是最后一项）
-  // 确保在 pop 之前检查 items[items.length - 1] 是否真的存在并且是分隔符
-  if (items.length > 0) {
-    const lastItem = items[items.length - 1];
-    if (lastItem && lastItem.isSeparator) {
-        items.pop();
-    }
-  }
+
 
   return items;
 });
