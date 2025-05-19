@@ -10,8 +10,8 @@ let mainWindow;
 let expressApp;
 let httpServer;
 let backendProcess;
-const PROD_FRONTEND_PORT = 3001; 
-const PROD_BACKEND_PORT = 3000; 
+const PROD_FRONTEND_PORT = 22457;
+const PROD_BACKEND_PORT = 22458;
 
 async function createWindow() {
   const Store = (await import('electron-store')).default;
@@ -51,7 +51,7 @@ async function createWindow() {
   let frontendUrl;
 
   if (isDev) {
-    frontendUrl = 'http://localhost:5173'; 
+    frontendUrl = 'http://localhost:22457';
     console.log(`[Dev Mode] Loading frontend from: ${frontendUrl}`);
   } else {
     // 生产模式：启动 express 服务器托管前端静态文件并启动后端服务

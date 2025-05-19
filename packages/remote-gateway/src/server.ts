@@ -3,15 +3,15 @@ import GuacamoleLite from 'guacamole-lite';
 import express, { Request, Response } from 'express';
 import http from 'http';
 import crypto from 'crypto';
-import cors from 'cors';
+
 
 // --- 配置 ---
 const REMOTE_GATEWAY_WS_PORT = process.env.REMOTE_GATEWAY_WS_PORT || 8080; // 统一端口，或按需分开
 const REMOTE_GATEWAY_API_PORT = process.env.REMOTE_GATEWAY_API_PORT || 9090;
 const GUACD_HOST = process.env.GUACD_HOST || 'localhost';
 const GUACD_PORT = parseInt(process.env.GUACD_PORT || '4822', 10);
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:22457';
+const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:22458';
 
 // --- 启动时生成内存加密密钥 ---
 console.log("[Remote Gateway] 正在为此会话生成新的内存加密密钥...");
@@ -29,7 +29,7 @@ const allowedOrigins = [
     MAIN_BACKEND_URL
 ];
 console.log(`[Remote Gateway] CORS 允许的来源: ${allowedOrigins.join(', ')}`);
-app.use(cors({ origin: allowedOrigins }));
+// app.use(cors({ origin: allowedOrigins }));
 
 
 const guacdOptions = {

@@ -186,7 +186,7 @@ app.use(express.json());
 
 // --- CORS 配置 ---
 const corsOptions = {
-  origin: 'http://localhost:3001', // 允许来自前端的请求
+  origin: 'http://localhost:22457', // 允许来自前端的请求
   credentials: true, // 允许携带凭据 (例如 cookies, authorization headers)
 };
 app.use(cors(corsOptions)); // 在所有路由之前使用 CORS 中间件
@@ -207,7 +207,7 @@ declare module 'express-session' {
     }
 }
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 22458;
 
 // 初始化数据库
 const initializeDatabase = async () => {

@@ -404,7 +404,7 @@ onMounted(() => {
     </div>
 
     <!-- Main Layout Area -->
-    <div class="relative flex-grow h-full overflow-hidden" @click="handleMainAreaClick">
+    <div class="relative flex-grow h-full overflow-hidden z-0" @click="handleMainAreaClick">
         <div class="flex flex-col h-full w-full overflow-hidden" :data-node-id="layoutNode.id">
             <!-- Container Node -->
             <template v-if="layoutNode.type === 'container' && layoutNode.children && layoutNode.children.length > 0">
@@ -530,11 +530,11 @@ onMounted(() => {
 
     <!-- Left Sidebar Panel -->
     <div ref="leftSidebarPanelRef"
-         :class="['fixed bottom-0 left-0 max-w-[80vw] bg-background z-[1000] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-r border-border pointer-events-auto', // Added pointer-events-auto
+         :class="['fixed bottom-0 left-0 max-w-[80vw] bg-background z-[110] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-r border-border', // Removed top-0 from class
                   {'translate-x-0': !!activeLeftSidebarPane, '-translate-x-full': !activeLeftSidebarPane}]"
          :style="{ width: getSidebarPaneWidth(activeLeftSidebarPane), top: '0px' }">
         <div ref="leftResizeHandleRef" class="absolute top-0 bottom-0 w-2 cursor-col-resize z-[120] bg-transparent transition-colors duration-200 ease-in-out hover:bg-primary-light right-[-4px]"></div>
-        <button class="absolute top-1 right-2 p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-[1000] pointer-events-auto" @click="closeSidebars" title="Close Sidebar">&times;</button>
+        <button class="absolute top-1 right-2 p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-10" @click="closeSidebars" title="Close Sidebar">&times;</button>
         <KeepAlive>
             <div :key="`left-sidebar-content-${activeLeftSidebarPane ?? 'none'}`" class="relative flex flex-col flex-grow overflow-hidden pt-10"> <!-- Added pt-10 -->
                 <component
@@ -562,11 +562,11 @@ onMounted(() => {
 
     <!-- Right Sidebar Panel -->
      <div ref="rightSidebarPanelRef"
-          :class="['fixed bottom-0 right-0 max-w-[80vw] bg-background z-[1000] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-l border-border pointer-events-auto', // Added pointer-events-auto
+          :class="['fixed bottom-0 right-0 max-w-[80vw] bg-background z-[110] transition-transform duration-300 ease-in-out flex flex-col overflow-hidden border-l border-border', // Removed top-0 from class
                    {'translate-x-0': !!activeRightSidebarPane, 'translate-x-full': !activeRightSidebarPane}]"
           :style="{ width: getSidebarPaneWidth(activeRightSidebarPane), top: '0px' }">
         <div ref="rightResizeHandleRef" class="absolute top-0 bottom-0 w-2 cursor-col-resize z-[120] bg-transparent transition-colors duration-200 ease-in-out hover:bg-primary-light left-[-4px]"></div>
-        <button class="absolute top-1 right-2 p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-[1000] pointer-events-auto" @click="closeSidebars" title="Close Sidebar">&times;</button>
+        <button class="absolute top-1 right-2 p-1 text-text-secondary hover:text-foreground cursor-pointer text-2xl leading-none z-10" @click="closeSidebars" title="Close Sidebar">&times;</button>
         <KeepAlive>
             <div :key="`right-sidebar-content-${activeRightSidebarPane ?? 'none'}`" class="relative flex flex-col flex-grow overflow-hidden pt-10"> <!-- Added pt-10 -->
                 <component

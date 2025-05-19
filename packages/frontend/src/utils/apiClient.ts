@@ -13,7 +13,7 @@ if (isElectron && isProd) {
   // - 前端由 Electron 内嵌的 Express 服务器提供 (例如 http://localhost:3001)
   // - 后端由 Electron 主进程启动，并在特定端口监听 (例如 http://localhost:3000)
   // API 请求需要直接指向后端的地址和端口。
-  const backendPort = 3000; // 与 main.js 中 PROD_BACKEND_PORT 对应
+  const backendPort = 22458; // 与 main.js 中 PROD_BACKEND_PORT 对应
   effectiveBaseURL = `http://localhost:${backendPort}/api/v1`;
   console.log(`[Electron Prod Mode] apiClient baseURL set to: ${effectiveBaseURL}`);
 } else {
