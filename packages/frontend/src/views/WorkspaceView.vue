@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, computed, ref, shallowRef, type PropType } from 'vue';
+import { onMounted, onBeforeUnmount, computed, ref, shallowRef, type PropType, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useLayoutStore } from '../stores/layout.store';
@@ -98,6 +98,7 @@ const fileManagerPropsMap = shallowRef<Map<string, {
 const currentFileManagerSessionId = ref<string | null>(null);
 const fileManagerActionModalPayloadRef = ref<FileManagerActionPayload | null>(null); // +++ Ref for action modal payload +++
 const fileManagerContextMenuPayloadRef = ref<FileManagerContextMenuPayload | null>(null); // +++ Ref for context menu payload +++
+const contextMenuComponentRef = ref<InstanceType<typeof FileManagerContextMenu> | null>(null); // +++ Ref for context menu component instance +++
 
 // --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -240,6 +241,8 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('fileManager:requestActionModalOpen', handleRequestFileManagerActionModalOpen);
   // +++ Unsubscribe from FileManagerContextMenu events +++
   unsubscribeFromWorkspaceEvents('fileManager:requestContextMenuOpen', handleRequestContextMenuOpen);
+  // Clean up click outside listener for context menu
+  document.removeEventListener('mousedown', handleClickOutsideContextMenu, true);
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -852,6 +855,31 @@ const handleContextMenuClose = () => {
   fileManagerContextMenuPayloadRef.value = null;
 };
 
+// --- 点击外部关闭上下文菜单的逻辑 ---
+const handleClickOutsideContextMenu = (event: MouseEvent) => {
+  if (contextMenuComponentRef.value && contextMenuComponentRef.value.$el &&
+      !contextMenuComponentRef.value.$el.contains(event.target as Node)) {
+    if (fileManagerContextMenuPayloadRef.value) { // 只有在菜单当前可见时才关闭
+      console.log('[WorkspaceView] Clicked outside FileManagerContextMenu, closing it.');
+      handleContextMenuClose();
+    }
+  }
+};
+
+watch(fileManagerContextMenuPayloadRef, (newValue) => {
+  if (newValue) {
+    // Menu is now visible, add listener
+    nextTick(() => { // Ensure menu DOM is rendered
+      document.addEventListener('mousedown', handleClickOutsideContextMenu, true); // Use capture phase
+      console.log('[WorkspaceView] FileManagerContextMenu is visible, added click-outside listener.');
+    });
+  } else {
+    // Menu is now hidden, remove listener
+    document.removeEventListener('mousedown', handleClickOutsideContextMenu, true);
+    console.log('[WorkspaceView] FileManagerContextMenu is hidden, removed click-outside listener.');
+  }
+});
+
 </script>
 
 <template>
@@ -987,6 +1015,7 @@ const handleContextMenuClose = () => {
 
     <!-- Global File Manager Context Menu -->
     <FileManagerContextMenu
+      ref="contextMenuComponentRef"
       :payload="fileManagerContextMenuPayloadRef"
       @close="handleContextMenuClose"
     />
