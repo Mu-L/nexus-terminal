@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, nextTick, computed } from 'vue'; // Added computed
 import { Terminal, ITerminalAddon, IDisposable } from 'xterm';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useAppearanceStore } from '../stores/appearance.store';
@@ -59,6 +59,19 @@ const {
   terminalScrollbackLimitNumber, //  Import scrollback limit getter
   terminalEnableRightClickPasteBoolean, //  Import right-click paste setting getter
 } = storeToRefs(settingsStore); // +++ 获取设置状态 +++
+
+// --- 图片 URL 处理 (与 StyleCustomizer.vue 保持一致) ---
+const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+const isProd = import.meta.env.PROD;
+
+const backendUrlPrefixForImages = computed(() => {
+  if (isElectron && isProd) {
+    const backendPort = 22458; // 后端服务端口
+    return `http://localhost:${backendPort}`; // 直接指向后端服务的 URL
+  }
+  return import.meta.env.VITE_API_BASE_URL || ''; // 保留对 VITE_API_BASE_URL 的回退，以兼容可能的开发配置
+});
+
 
 // 防抖函数
 const debounce = (func: Function, delay: number) => {
@@ -665,13 +678,29 @@ const applyTerminalBackground = () => {
             return;
         }
  
-        if (terminalBackgroundImage.value) {
-            const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
+        if (terminalBackgroundImage.value && typeof terminalBackgroundImage.value === 'string') {
+            // 使用新的计算属性 backendUrlPrefixForImages 来构建完整 URL
+            // terminalBackgroundImage.value 本身已经是 /api/v1/... 格式
             const imagePath = terminalBackgroundImage.value;
-            const fullImageUrl = `${backendUrl}${imagePath}`;
+            let fullImageUrl = '';
+
+            if (isElectron && isProd) {
+                // Electron 生产环境，直接拼接后端端口和 API 路径
+                fullImageUrl = `${backendUrlPrefixForImages.value}${imagePath}`;
+            } else {
+                // 开发环境或非 Electron Web 打包
+                // 如果 VITE_API_BASE_URL (通过 backendUrlPrefixForImages.value 获取) 已包含协议和主机，
+                // 并且 imagePath 是 /api/v1/... 这种绝对路径，则直接拼接。
+                // 如果 VITE_API_BASE_URL 是相对路径 (不太可能用于API)，或为空，则 imagePath (如 /api/v1/...) 会相对于当前页面源。
+                // 假设 imagePath 总是以 / 开头的 API 路径
+                fullImageUrl = `${backendUrlPrefixForImages.value}${imagePath}`;
+            }
+            
+            console.log(`[Terminal ${props.sessionId}] Computed fullImageUrl: ${fullImageUrl}`);
+
             nextTick(() => {
                 if (terminalOuterWrapperRef.value) {
-                    terminalOuterWrapperRef.value.style.backgroundImage = `url(${fullImageUrl})`;
+                    terminalOuterWrapperRef.value.style.backgroundImage = `url('${fullImageUrl}')`; // 给url值加上引号，以防路径中有特殊字符
                     terminalOuterWrapperRef.value.style.backgroundSize = 'cover';
                     terminalOuterWrapperRef.value.style.backgroundPosition = 'center';
                     terminalOuterWrapperRef.value.style.backgroundRepeat = 'no-repeat';

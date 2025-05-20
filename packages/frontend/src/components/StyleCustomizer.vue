@@ -25,6 +25,27 @@ const {
   isTerminalBackgroundEnabled,
   currentTerminalBackgroundOverlayOpacity, // 从 store 解构
 } = storeToRefs(appearanceStore);
+
+// --- 图片 URL 处理 ---
+const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+const isProd = import.meta.env.PROD;
+
+const backendUrlPrefixForImages = computed(() => {
+  if (isElectron && isProd) {
+    const backendPort = 22458; // 后端服务端口
+    return `http://localhost:${backendPort}`; // 注意：这里不包含 /api/v1
+  }
+  return ''; // 开发环境或其他非 Electron 打包环境，相对路径即可
+});
+
+const fullTerminalBackgroundImageUrl = computed(() => {
+  if (terminalBackgroundImage.value && typeof terminalBackgroundImage.value === 'string') {
+    // terminalBackgroundImage.value 的格式是 /api/v1/appearance/background/file/image.png
+    return backendUrlPrefixForImages.value + terminalBackgroundImage.value;
+  }
+  return null; // 或者一个默认的透明图片、或者 'none'
+});
+
  
 
 const editableUiTheme = ref<Record<string, string>>({});
@@ -1219,18 +1240,18 @@ const handleFocusAndSelect = (event: FocusEvent) => {
 
                  
                  <div v-if="localTerminalBackgroundEnabled">
-                   <div class="w-full h-[100px] md:h-[150px] border border-dashed border-border mb-2 flex justify-center items-center text-text-secondary bg-cover bg-center bg-no-repeat rounded bg-header relative overflow-hidden" :style="{ backgroundImage: terminalBackgroundImage ? `url(${terminalBackgroundImage})` : 'none' }">
+                   <div class="w-full h-[100px] md:h-[150px] border border-dashed border-border mb-2 flex justify-center items-center text-text-secondary bg-cover bg-center bg-no-repeat rounded bg-header relative overflow-hidden" :style="{ backgroundImage: fullTerminalBackgroundImageUrl ? `url(${fullTerminalBackgroundImageUrl})` : 'none' }">
                        <!-- 实时预览蒙版 -->
                        <div
-                         v-if="terminalBackgroundImage"
+                         v-if="fullTerminalBackgroundImageUrl"
                          class="absolute inset-0"
                          :style="{ backgroundColor: `rgba(0, 0, 0, ${editableTerminalBackgroundOverlayOpacity})` }"
                        ></div>
-                       <span v-if="!terminalBackgroundImage" class="bg-white/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm relative z-10">{{ t('styleCustomizer.noBackground') }}</span>
-                   </div>
-                 <div class="flex gap-2 mb-4 flex-wrap items-center">
-                    <button @click="handleTriggerTerminalBgUpload" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.uploadTerminalBg') }}</button>
-                    <button @click="handleRemoveTerminalBg" :disabled="!terminalBackgroundImage" class="px-3 py-1.5 text-sm border rounded transition duration-200 ease-in-out whitespace-nowrap bg-error/10 text-error border-error/30 hover:bg-error/20 disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.removeTerminalBg') }}</button>
+                     <span v-if="!fullTerminalBackgroundImageUrl" class="bg-white/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm relative z-10">{{ t('styleCustomizer.noBackground') }}</span>
+                 </div>
+               <div class="flex gap-2 mb-4 flex-wrap items-center">
+                  <button @click="handleTriggerTerminalBgUpload" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.uploadTerminalBg') }}</button>
+                  <button @click="handleRemoveTerminalBg" :disabled="!fullTerminalBackgroundImageUrl" class="px-3 py-1.5 text-sm border rounded transition duration-200 ease-in-out whitespace-nowrap bg-error/10 text-error border-error/30 hover:bg-error/20 disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.removeTerminalBg') }}</button>
                     <input type="file" ref="terminalBgFileInput" @change="handleTerminalBgUpload" accept="image/*" class="hidden" />
                  </div>
 
