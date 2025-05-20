@@ -910,12 +910,69 @@ const handleFocusAndSelect = (event: FocusEvent) => {
   }
 };
 
+const modalRootRef = ref<HTMLDivElement | null>(null);
+
+// Store original styles to revert back
+let originalModalRootBackgroundColor: string | null = null;
+let originalModalContentOpacity: string | null = null;
+let originalModalRootTransition: string | null = null;
+let originalModalContentTransition: string | null = null;
+
+const handlePreviewButtonMouseDown = () => {
+  if (modalRootRef.value) {
+    const modalContentElement = modalRootRef.value.firstElementChild as HTMLElement;
+
+    // Save original styles if not already saved (for this mousedown session)
+    // These are saved once per mousedown-mouseup cycle
+    if (originalModalRootBackgroundColor === null) { // Check one to assume all are not set
+      originalModalRootBackgroundColor = window.getComputedStyle(modalRootRef.value).backgroundColor;
+      originalModalRootTransition = modalRootRef.value.style.transition; // Save inline or computed transition
+      if (modalContentElement) {
+        originalModalContentOpacity = window.getComputedStyle(modalContentElement).opacity;
+        originalModalContentTransition = modalContentElement.style.transition; // Save inline or computed transition
+      }
+    }
+
+    // Apply transparency effects
+    // Make the background overlay (modalRootRef) transparent
+    modalRootRef.value.style.transition = 'background-color 0.05s ease-out';
+    modalRootRef.value.style.backgroundColor = 'transparent';
+
+    if (modalContentElement) {
+      // Make the modal content (the box including the button) completely transparent
+      modalContentElement.style.transition = 'opacity 0.05s ease-out';
+      modalContentElement.style.opacity = '0'; // Changed from 0.05 to 0
+    }
+
+    const restoreModalAppearance = () => {
+      if (modalRootRef.value) {
+        modalRootRef.value.style.backgroundColor = originalModalRootBackgroundColor || ''; // Revert to original or default
+        modalRootRef.value.style.transition = originalModalRootTransition || ''; // Revert to original or default
+      }
+      if (modalContentElement) {
+        modalContentElement.style.opacity = originalModalContentOpacity || '1'; // Revert to original or default
+        modalContentElement.style.transition = originalModalContentTransition || ''; // Revert to original or default
+      }
+
+      // Reset stored original styles for the next interaction cycle
+      originalModalRootBackgroundColor = null;
+      originalModalContentOpacity = null;
+      originalModalRootTransition = null;
+      originalModalContentTransition = null;
+
+      document.removeEventListener('mouseup', restoreModalAppearance);
+    };
+    // Listen for mouseup anywhere on the document to restore
+    document.addEventListener('mouseup', restoreModalAppearance, { once: true });
+  }
+};
+
 </script>
 
 
 <template>
   <!-- 添加 md: 前缀以应用到中等及以上屏幕，小屏幕默认全屏 -->
-  <div class="fixed inset-0 bg-black/60 flex justify-center items-center z-[1000] p-2 md:p-4" @click.self="closeCustomizer">
+  <div ref="modalRootRef" class="fixed inset-0 bg-black/60 flex justify-center items-center z-[1000] p-2 md:p-4" @click.self="closeCustomizer">
     <!-- 小屏幕默认 w-full h-full，md 及以上恢复原状 -->
     <div class="bg-background text-foreground rounded-lg shadow-lg w-full h-full md:w-[90%] md:max-w-[800px] md:h-[85vh] md:max-h-[700px] flex flex-col overflow-hidden">
       <header class="flex justify-between items-center px-4 py-3 border-b border-border bg-header flex-shrink-0">
@@ -1099,19 +1156,29 @@ const handleFocusAndSelect = (event: FocusEvent) => {
                               ]"
                           >
                               {{ t('styleCustomizer.applyButton', 'Apply') }}
-                          </button>
-                         <button @click="handleEditTheme(theme)" :title="theme.isPreset ? t('styleCustomizer.editAsCopy', 'Edit as Copy') : t('common.edit')"
-                            :class="[
-                              'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed', /* 调整字体大小 */
-                              theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
-                            ]"
-                         >{{ t('common.edit') }}</button>
-                         <button @click="handleDeleteTheme(theme)" :disabled="theme.isPreset" :title="theme.isPreset ? t('styleCustomizer.cannotDeletePreset', 'Cannot delete preset theme') : t('common.delete')"
-                            :class="[
-                              'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed', /* 调整字体大小 */
-                              theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'bg-error/10 text-error border-error/30 hover:bg-error/20'
-                            ]"
-                         >{{ t('common.delete') }}</button>
+                         </button>
+                         <button
+                             @mousedown="handlePreviewButtonMouseDown"
+                             :title="t('styleCustomizer.previewThemeTooltip', 'Hold to preview transparency')"
+                             :class="[
+                               'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap',
+                               theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
+                             ]"
+                         >
+                              {{ t('styleCustomizer.previewButton', 'Preview') }}
+                         </button>
+                        <button @click="handleEditTheme(theme)" :title="theme.isPreset ? t('styleCustomizer.editAsCopy', 'Edit as Copy') : t('common.edit')"
+                           :class="[
+                             'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed', /* 调整字体大小 */
+                             theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
+                           ]"
+                        >{{ t('common.edit') }}</button>
+                        <button @click="handleDeleteTheme(theme)" :disabled="theme.isPreset" :title="theme.isPreset ? t('styleCustomizer.cannotDeletePreset', 'Cannot delete preset theme') : t('common.delete')"
+                           :class="[
+                             'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed', /* 调整字体大小 */
+                             theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'bg-error/10 text-error border-error/30 hover:bg-error/20'
+                           ]"
+                        >{{ t('common.delete') }}</button>
                      </div>
                  </li>
              </ul>

@@ -84,6 +84,7 @@
     "terminalThemeColorEditorTitle": "Terminal Theme Color Editor",
     "errorFixJsonBeforeSave": "Please fix the JSON format errors before saving.",
     "applyButton": "Apply",
+    "previewButton":"Preview",
     "searchThemePlaceholder": "Search theme name...",
     "exportActiveThemeTooltip": "Export the currently active theme as a JSON file",
     "exportActiveTheme": "Export Active Theme",

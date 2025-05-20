@@ -1195,6 +1195,7 @@
         "activeTheme": "現在のテーマ",
         "addNewTheme": "新しいテーマを作成",
         "applyButton": "適用",
+        "previewButton":"プレビュー",
         "applyThemeTooltip": "このテーマを適用",
         "backgroundSettings": "背景設定",
         "cannotDeletePreset": "プリセットテーマは削除できません",
