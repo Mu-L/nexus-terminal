@@ -59,10 +59,7 @@
 
 > Removed web-specific features such as various login verifications and session suspension.
 
-| Platform | Download Link                                                                                                                             |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Linux    | [Nexus\_Terminal\_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_1.0.0.AppImage)   |
-| Windows  | [Nexus\_Terminal\_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_Setup.1.0.0.exe) |
+https://github.com/Heavrnl/nexus-terminal/releases/latest
 
 ## 🚀 Quick Start
 
