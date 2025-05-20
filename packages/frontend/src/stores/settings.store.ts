@@ -64,6 +64,7 @@ interface SettingsState {
   terminalEnableRightClickPaste?: string; //  'true' or 'false' - 终端右键粘贴
   showStatusMonitorIpAddress?: string; // 'true' or 'false' - 状态监视器显示IP地址
   quickCommandRowSizeMultiplier?: string; // +++ 快捷命令列表行大小乘数 (e.g., '1.0') +++
+  quickCommandsCompactMode?: string; // +++ 快捷指令视图紧凑模式 (e.g., 'false') +++
   [key: string]: string | undefined;
 }
 
@@ -315,7 +316,31 @@ export const useSettingsStore = defineStore('settings', () => {
         settings.value.quickCommandRowSizeMultiplier = '1.0';
         console.log(`[SettingsStore] quickCommandRowSizeMultiplier not found, set to default: ${settings.value.quickCommandRowSizeMultiplier}`);
       }
+      // +++ 快捷指令视图紧凑模式默认值 +++
+      if (settings.value.quickCommandsCompactMode === undefined) {
+        settings.value.quickCommandsCompactMode = 'false';
+        console.log(`[SettingsStore] quickCommandsCompactMode not found, set to default: ${settings.value.quickCommandsCompactMode}`);
+      }
         
+      // --- 从 localStorage 加载 QuickCommands 特有设置 ---
+      const localQcRowSizeMultiplier = localStorage.getItem('nexus_quickCommandRowSizeMultiplier');
+      if (localQcRowSizeMultiplier) {
+        const parsedLocalMultiplier = parseFloat(localQcRowSizeMultiplier);
+        if (!isNaN(parsedLocalMultiplier) && parsedLocalMultiplier > 0) {
+          settings.value.quickCommandRowSizeMultiplier = localQcRowSizeMultiplier;
+          console.log(`[SettingsStore] Loaded quickCommandRowSizeMultiplier from localStorage: ${localQcRowSizeMultiplier}`);
+        } else {
+          console.warn(`[SettingsStore] Invalid quickCommandRowSizeMultiplier in localStorage: ${localQcRowSizeMultiplier}. Using server/default.`);
+        }
+      }
+
+      const localQcCompactMode = localStorage.getItem('nexus_quickCommandsCompactMode');
+      if (localQcCompactMode === 'true' || localQcCompactMode === 'false') {
+        settings.value.quickCommandsCompactMode = localQcCompactMode;
+        console.log(`[SettingsStore] Loaded quickCommandsCompactMode from localStorage: ${localQcCompactMode}`);
+      } else if (localQcCompactMode !== null) {
+        console.warn(`[SettingsStore] Invalid quickCommandsCompactMode in localStorage: ${localQcCompactMode}. Using server/default.`);
+      }
         
       // --- 语言设置 ---
       const langFromSettings = settings.value.language;
@@ -409,7 +434,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'fileManagerShowDeleteConfirmation',
         'terminalEnableRightClickPaste',
         'showStatusMonitorIpAddress',
-        'quickCommandRowSizeMultiplier'
+        'quickCommandRowSizeMultiplier',
+        'quickCommandsCompactMode'
       ];
       if (!allowedKeys.includes(key)) {
           console.error(`[SettingsStore] 尝试更新不允许的设置键: ${key}`);
@@ -450,6 +476,17 @@ export const useSettingsStore = defineStore('settings', () => {
 
         // Update store state *after* successful API call
         settings.value = { ...settings.value, [key]: String(value) }; // Store as string internally
+
+        // --- 保存到 localStorage  ---
+        if (key === 'quickCommandsCompactMode' && (String(value) === 'true' || String(value) === 'false')) {
+          try {
+            localStorage.setItem('nexus_quickCommandsCompactMode', String(value));
+            console.log(`[SettingsStore] Saved quickCommandsCompactMode to localStorage: ${String(value)}`);
+          } catch (e) {
+            console.error('[SettingsStore] Failed to save quickCommandsCompactMode to localStorage:', e);
+          }
+        }
+        // quickCommandRowSizeMultiplier 由其专用 action 处理 localStorage 保存
 
       // If updating language, check if it's valid and update i18n
       if (key === 'language' && typeof value === 'string' && availableLocales.includes(value)) {
@@ -506,7 +543,8 @@ export const useSettingsStore = defineStore('settings', () => {
         'fileManagerShowDeleteConfirmation',
         'terminalEnableRightClickPaste',
         'showStatusMonitorIpAddress',
-        'quickCommandRowSizeMultiplier'
+        'quickCommandRowSizeMultiplier',
+        'quickCommandsCompactMode'
       ];
       const filteredUpdates: Partial<SettingsState> = {};
       let languageUpdate: string | undefined = undefined;
@@ -604,6 +642,13 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       await updateSetting('quickCommandRowSizeMultiplier', multiplierString);
       // 本地状态 settings.value 会在 updateSetting 成功后更新
+      // --- 保存到 localStorage ---
+      try {
+        localStorage.setItem('nexus_quickCommandRowSizeMultiplier', multiplierString);
+        console.log(`[SettingsStore] Saved quickCommandRowSizeMultiplier to localStorage: ${multiplierString}`);
+      } catch (e) {
+        console.error('[SettingsStore] Failed to save quickCommandRowSizeMultiplier to localStorage:', e);
+      }
       console.log(`[SettingsStore] Quick Command row size multiplier updated to: ${multiplierString}`);
     } catch (error) {
       console.error('[SettingsStore] Failed to save Quick Command row size multiplier:', error);
@@ -838,6 +883,11 @@ export const useSettingsStore = defineStore('settings', () => {
     const val = parseFloat(valStr);
     return isNaN(val) || val <= 0 ? 1.0 : val; // Fallback to 1.0 if invalid
   });
+
+  // +++ Getter for Quick Command compact mode, returning boolean +++
+  const quickCommandsCompactModeBoolean = computed(() => {
+    return settings.value.quickCommandsCompactMode === 'true';
+  });
   
  return {
     settings, // 只包含通用设置
@@ -874,6 +924,7 @@ export const useSettingsStore = defineStore('settings', () => {
     commandInputSyncTarget, // +++ 暴露命令输入同步目标 getter +++
     timezone,
     quickCommandRowSizeMultiplierNumber, // +++ 暴露快捷命令大小 getter +++
+    quickCommandsCompactModeBoolean, // +++ 暴露快捷指令紧凑模式 getter +++
     dashboardSortBy,
     dashboardSortOrder,
     saveDashboardSortPreference,

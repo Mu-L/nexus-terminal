@@ -16,11 +16,17 @@
           class="flex-grow min-w-0 px-4 py-1.5 border border-border/50 rounded-lg bg-input text-foreground text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out"
         />
         <!-- Sort Button -->
-        <button @click="toggleSortBy" class="w-8 h-8 border border-border/50 rounded-lg text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150 flex-shrink-0 flex items-center justify-center" :title="sortButtonTitle"> <!-- Use w-8 h-8 -->
+        <button @click="toggleSortBy" class="w-8 h-8 border border-border/50 rounded-lg text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150 flex-shrink-0 flex items-center justify-center" :title="sortButtonTitle">
           <i :class="[sortButtonIcon, 'text-base']"></i>
         </button>
+        <!-- Compact Mode Toggle Button -->
+        <button @click="toggleCompactMode"
+                class="w-8 h-8 border border-border/50 rounded-lg text-text-secondary hover:bg-border hover:text-foreground transition-colors duration-150 flex-shrink-0 flex items-center justify-center"
+                :class="{ 'bg-primary/20 text-primary': isCompactMode }">
+          <i :class="['fas', isCompactMode ? 'fa-compress-alt' : 'fa-expand-alt', 'text-base']"></i>
+        </button>
         <!-- Add Button -->
-        <button @click="openAddForm" class="w-8 h-8 bg-primary text-white border-none rounded-lg text-sm font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-shrink-0 flex items-center justify-center" :title="$t('quickCommands.add', '添加快捷指令')"> <!-- Use w-8 h-8 -->
+        <button @click="openAddForm" class="w-8 h-8 bg-primary text-white border-none rounded-lg text-sm font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-shrink-0 flex items-center justify-center" :title="$t('quickCommands.add', '添加快捷指令')">
           <i class="fas fa-plus text-base"></i>
         </button>
       </div>
@@ -61,7 +67,7 @@
                     <!-- Group Header - Modified for inline editing -->
                     <div
                         class="group font-semibold flex items-center text-foreground rounded-md hover:bg-header/80 transition-colors duration-150"
-                        :style="{ padding: `calc(0.5rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
+                        :style="{ padding: isCompactMode ? `calc(0.25rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` : `calc(0.5rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                         :class="{ 'cursor-pointer': editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) }"
                         @click="editingTagId !== (groupData.tagId === null ? 'untagged' : groupData.tagId) ? toggleGroup(groupData.groupName) : null"
                     >
@@ -106,26 +112,39 @@
                             :key="cmd.id"
                             :data-command-id="cmd.id"
                             class="group flex justify-between items-center mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
-                            :style="{ padding: `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
+                            :style="{ padding: isCompactMode ? `calc(0.1rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` : `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                             :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                             @click="executeCommand(cmd)"
                             @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                         >
                             <!-- Command Info -->
                             <div class="flex flex-col overflow-hidden mr-2 flex-grow">
-                                <span v-if="cmd.name" class="font-medium truncate mb-0.5 text-foreground" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
-                                <span class="truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }" :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
+                                <span v-if="cmd.name"
+                                      class="font-medium truncate text-foreground"
+                                      :class="{'mb-0.5': !isCompactMode, 'leading-tight': isCompactMode}"
+                                      :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
+                                <span v-if="!isCompactMode && cmd.command"
+                                      class="truncate font-mono"
+                                      :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }"
+                                      :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
+                                <span v-else-if="isCompactMode && !cmd.name && cmd.command"
+                                      class="truncate font-mono text-xs text-text-secondary/70 leading-tight"
+                                      :style="{ fontSize: `calc(0.65em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` }">{{ cmd.command }}</span>
                             </div>
                             <!-- Actions -->
-                            <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
-                                <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
-                                    <i class="fas fa-copy" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                            <div class="flex items-center flex-shrink-0 transition-opacity duration-150"
+                                 :class="{
+                                    'opacity-0 group-hover:opacity-100 focus-within:opacity-100': isCompactMode,
+                                    'opacity-100': !isCompactMode
+                                 }">
+                                <button @click.stop="copyCommand(cmd.command)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
+                                    <i class="fas fa-copy" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
-                                <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
-                                    <i class="fas fa-edit" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                                <button @click.stop="openEditForm(cmd)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
+                                    <i class="fas fa-edit" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
-                                <button @click.stop="confirmDelete(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
-                                    <i class="fas fa-times" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                                <button @click.stop="confirmDelete(cmd)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
+                                    <i class="fas fa-times" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                                 </button>
                             </div>
                         </li>
@@ -139,26 +158,39 @@
                     :key="cmd.id"
                     :data-command-id="cmd.id"
                     class="group flex justify-between items-center mb-1 cursor-pointer rounded-md hover:bg-primary/10 transition-colors duration-150"
-                    :style="{ padding: `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
+                    :style="{ padding: isCompactMode ? `calc(0.1rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` : `calc(0.625rem * var(--qc-row-size-multiplier)) calc(0.75rem * var(--qc-row-size-multiplier))` }"
                     :class="{ 'bg-primary/20 font-medium': isCommandSelected(cmd.id) }"
                     @click="executeCommand(cmd)"
                     @contextmenu.prevent="showQuickCommandContextMenu($event, cmd)"
                 >
                     <!-- Command Info -->
                     <div class="flex flex-col overflow-hidden mr-2 flex-grow">
-                        <span v-if="cmd.name" class="font-medium truncate mb-0.5 text-foreground" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
-                        <span class="truncate font-mono" :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }" :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
+                        <span v-if="cmd.name"
+                              class="font-medium truncate text-foreground"
+                              :class="{'mb-0.5': !isCompactMode, 'leading-tight': isCompactMode}"
+                              :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.name }}</span>
+                        <span v-if="!isCompactMode && cmd.command"
+                              class="truncate font-mono"
+                              :class="{ 'text-sm': !cmd.name, 'text-text-secondary': true }"
+                              :style="{ fontSize: `calc(0.75em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }">{{ cmd.command }}</span>
+                        <span v-else-if="isCompactMode && !cmd.name && cmd.command"
+                              class="truncate font-mono text-xs text-text-secondary/70 leading-tight"
+                              :style="{ fontSize: `calc(0.65em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` }">{{ cmd.command }}</span>
                     </div>
                     <!-- Actions -->
-                    <div class="flex items-center flex-shrink-0 focus-within:opacity-100 transition-opacity duration-150">
-                        <button @click.stop="copyCommand(cmd.command)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
-                            <i class="fas fa-copy" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                    <div class="flex items-center flex-shrink-0 transition-opacity duration-150"
+                         :class="{
+                            'opacity-0 group-hover:opacity-100 focus-within:opacity-100': isCompactMode,
+                            'opacity-100': !isCompactMode
+                         }">
+                        <button @click.stop="copyCommand(cmd.command)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('commandHistory.copy', '复制')">
+                            <i class="fas fa-copy" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
-                        <button @click.stop="openEditForm(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
-                            <i class="fas fa-edit" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                        <button @click.stop="openEditForm(cmd)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-primary" :title="$t('common.edit', '编辑')">
+                            <i class="fas fa-edit" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
-                        <button @click.stop="confirmDelete(cmd)" class="p-1.5 rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
-                            <i class="fas fa-times" :style="{ fontSize: `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
+                        <button @click.stop="confirmDelete(cmd)" :class="isCompactMode ? 'p-1' : 'p-1.5'" class="rounded hover:bg-black/10 transition-colors duration-150 text-text-secondary hover:text-error" :title="$t('common.delete', '删除')">
+                            <i class="fas fa-times" :style="{ fontSize: isCompactMode ? `calc(0.8em * max(0.8, var(--qc-row-size-multiplier) * 0.5 + 0.5))` : `calc(0.875em * max(0.85, var(--qc-row-size-multiplier) * 0.6 + 0.4))` }"></i>
                         </button>
                     </div>
                 </li>
@@ -245,7 +277,11 @@ const isLoading = computed(() => quickCommandsStore.isLoading);
 
 
 const { selectedIndex: storeSelectedIndex, flatVisibleCommands, expandedGroups } = storeToRefs(quickCommandsStore);
-const { showQuickCommandTagsBoolean, quickCommandRowSizeMultiplierNumber: qcRowSizeMultiplierFromStore } = storeToRefs(settingsStore);
+const {
+  showQuickCommandTagsBoolean,
+  quickCommandRowSizeMultiplierNumber: qcRowSizeMultiplierFromStore,
+  quickCommandsCompactModeBoolean, // +++ 引入紧凑模式状态 +++
+} = storeToRefs(settingsStore);
 
 const quickCommandRowSizeMultiplier = ref(1.0);
 
@@ -284,6 +320,14 @@ const flatFilteredCommands = computed(() => {
     // 直接使用 store 中的 flatVisibleCommands，因为它已经处理了过滤和排序
     return quickCommandsStore.flatVisibleCommands;
 });
+
+// --- Compact Mode ---
+const isCompactMode = computed(() => quickCommandsCompactModeBoolean.value);
+
+const toggleCompactMode = () => {
+  const currentMode = quickCommandsCompactModeBoolean.value;
+  settingsStore.updateSetting('quickCommandsCompactMode', String(!currentMode));
+};
 
 // --- Helper function for selection check ---
 const isCommandSelected = (commandId: number): boolean => {
