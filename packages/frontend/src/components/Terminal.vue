@@ -44,7 +44,7 @@ let currentFontSizeOnPinchStart = 0;
 // --- Appearance Store ---
 const appearanceStore = useAppearanceStore();
 const {
-  currentTerminalTheme,
+  effectiveTerminalTheme,
   currentTerminalFontFamily,
   terminalBackgroundImage,
   currentTerminalFontSize,
@@ -223,9 +223,9 @@ onMounted(() => {
   if (terminalRef.value) {
     terminal = new Terminal({
       cursorBlink: true,
-      fontSize: currentTerminalFontSize.value, // <-- 使用 store 中的字体大小
+      fontSize: currentTerminalFontSize.value, 
       fontFamily: currentTerminalFontFamily.value, // 使用 store 中的字体设置
-      theme: currentTerminalTheme.value, // 使用 store 中的当前 xterm 主题
+      theme: effectiveTerminalTheme.value, // 使用 store 中的当前 xterm 主题 (now effectiveTerminalTheme)
       rows: 24, // 初始行数
       cols: 80, // 初始列数
       allowTransparency: true,
@@ -406,9 +406,9 @@ onMounted(() => {
     });
 
     // --- 监听外观变化 ---
-    watch(currentTerminalTheme, (newTheme) => {
+    watch(effectiveTerminalTheme, (newTheme) => { // Changed from currentTerminalTheme
       if (terminal) {
-        console.log(`[Terminal ${props.sessionId}] 应用新终端主题。`);
+        console.log(`[Terminal ${props.sessionId}] 应用新终端主题 (effective)。`);
         // 直接修改 options 对象
         terminal.options.theme = newTheme;
         // 修改选项后需要刷新终端才能生效

@@ -918,52 +918,91 @@ let originalModalContentOpacity: string | null = null;
 let originalModalRootTransition: string | null = null;
 let originalModalContentTransition: string | null = null;
 
-const handlePreviewButtonMouseDown = () => {
-  if (modalRootRef.value) {
+const handlePreviewButtonMouseDown = async (event: MouseEvent, themeToPreview: TerminalTheme) => {
+  // 阻止可能的文本选择等默认行为
+  event.preventDefault();
+
+  if (modalRootRef.value && themeToPreview._id) {
     const modalContentElement = modalRootRef.value.firstElementChild as HTMLElement;
+    try {
+      // 1. 加载要预览的主题数据
+      const themeData = await appearanceStore.loadTerminalThemeData(themeToPreview._id);
+      if (!themeData) {
+        console.error('Preview failed: Could not load theme data for', themeToPreview.name);
+        return;
+      }
 
-    // Save original styles if not already saved (for this mousedown session)
-    // These are saved once per mousedown-mouseup cycle
-    if (originalModalRootBackgroundColor === null) { // Check one to assume all are not set
-      originalModalRootBackgroundColor = window.getComputedStyle(modalRootRef.value).backgroundColor;
-      originalModalRootTransition = modalRootRef.value.style.transition; // Save inline or computed transition
-      if (modalContentElement) {
+      // 2. 通知 store 开始预览 (假设 store 有此 action)
+      // 这个 action 内部会保存当前主题ID/数据，并设置一个临时预览主题
+      appearanceStore.startTerminalThemePreview(themeData); // 期望参数类型为 ITheme
+
+      // 3. 使模态框和背景透明
+      if (originalModalRootBackgroundColor === null && modalContentElement) { // 保存原始样式
+        originalModalRootBackgroundColor = window.getComputedStyle(modalRootRef.value).backgroundColor;
+        originalModalRootTransition = modalRootRef.value.style.transition;
         originalModalContentOpacity = window.getComputedStyle(modalContentElement).opacity;
-        originalModalContentTransition = modalContentElement.style.transition; // Save inline or computed transition
+        originalModalContentTransition = modalContentElement.style.transition;
       }
-    }
 
-    // Apply transparency effects
-    // Make the background overlay (modalRootRef) transparent
-    modalRootRef.value.style.transition = 'background-color 0.05s ease-out';
-    modalRootRef.value.style.backgroundColor = 'transparent';
+      modalRootRef.value.style.transition = 'background-color 0.05s ease-out, opacity 0.05s ease-out';
+      modalRootRef.value.style.backgroundColor = 'transparent';
+      // modalRootRef.value.style.opacity = '0'; // 如果背景遮罩就是 modalRootRef
 
-    if (modalContentElement) {
-      // Make the modal content (the box including the button) completely transparent
-      modalContentElement.style.transition = 'opacity 0.05s ease-out';
-      modalContentElement.style.opacity = '0'; // Changed from 0.05 to 0
-    }
-
-    const restoreModalAppearance = () => {
-      if (modalRootRef.value) {
-        modalRootRef.value.style.backgroundColor = originalModalRootBackgroundColor || ''; // Revert to original or default
-        modalRootRef.value.style.transition = originalModalRootTransition || ''; // Revert to original or default
-      }
       if (modalContentElement) {
-        modalContentElement.style.opacity = originalModalContentOpacity || '1'; // Revert to original or default
-        modalContentElement.style.transition = originalModalContentTransition || ''; // Revert to original or default
+        modalContentElement.style.transition = 'opacity 0.05s ease-out';
+        modalContentElement.style.opacity = '0';
       }
 
-      // Reset stored original styles for the next interaction cycle
-      originalModalRootBackgroundColor = null;
-      originalModalContentOpacity = null;
-      originalModalRootTransition = null;
-      originalModalContentTransition = null;
+      // 4. 设置 mouseup 监听器以恢复
+      const restoreOnMouseUp = () => {
+        // 4a. 通知 store 停止预览
+        appearanceStore.stopTerminalThemePreview(); // 这个 action 会恢复原始主题
 
-      document.removeEventListener('mouseup', restoreModalAppearance);
-    };
-    // Listen for mouseup anywhere on the document to restore
-    document.addEventListener('mouseup', restoreModalAppearance, { once: true });
+        // 4b. 恢复模态框可见性
+        if (modalRootRef.value) {
+          modalRootRef.value.style.backgroundColor = originalModalRootBackgroundColor || '';
+          // modalRootRef.value.style.opacity = '1'; // Or original opacity if it wasn't 1
+          modalRootRef.value.style.transition = originalModalRootTransition || '';
+        }
+        if (modalContentElement) {
+          modalContentElement.style.opacity = originalModalContentOpacity || '1';
+          modalContentElement.style.transition = originalModalContentTransition || '';
+        }
+
+        // 重置保存的原始样式
+        originalModalRootBackgroundColor = null;
+        originalModalContentOpacity = null;
+        originalModalRootTransition = null;
+        originalModalContentTransition = null;
+
+        document.removeEventListener('mouseup', restoreOnMouseUp);
+        const currentTargetButton = event.currentTarget as HTMLElement | null;
+        if (currentTargetButton) {
+            currentTargetButton.removeEventListener('mouseleave', restoreOnMouseUp);
+        }
+      };
+
+      document.addEventListener('mouseup', restoreOnMouseUp, { once: true });
+      const currentTargetButton = event.currentTarget as HTMLElement | null;
+      if (currentTargetButton) {
+          currentTargetButton.addEventListener('mouseleave', restoreOnMouseUp, { once: true });
+      }
+
+    } catch (error) {
+      console.error('Error during theme preview:', error);
+      appearanceStore.stopTerminalThemePreview(); // 尝试停止预览
+      // 可选：恢复模态框样式，如果需要更复杂的错误处理
+        if (modalRootRef.value && modalContentElement) {
+            modalRootRef.value.style.backgroundColor = originalModalRootBackgroundColor || '';
+            modalRootRef.value.style.transition = originalModalRootTransition || '';
+            modalContentElement.style.opacity = originalModalContentOpacity || '1';
+            modalContentElement.style.transition = originalModalContentTransition || '';
+            originalModalRootBackgroundColor = null;
+            originalModalContentOpacity = null;
+            originalModalRootTransition = null;
+            originalModalContentTransition = null;
+        }
+    }
   }
 };
 
@@ -1158,8 +1197,8 @@ const handlePreviewButtonMouseDown = () => {
                               {{ t('styleCustomizer.applyButton', 'Apply') }}
                          </button>
                          <button
-                             @mousedown="handlePreviewButtonMouseDown"
-                             :title="t('styleCustomizer.previewThemeTooltip', 'Hold to preview transparency')"
+                             @mousedown="(event) => handlePreviewButtonMouseDown(event, theme)"
+                              :title="t('styleCustomizer.previewThemeTooltip', 'Hold to preview theme and hide modal')"
                              :class="[
                                'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap',
                                theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'

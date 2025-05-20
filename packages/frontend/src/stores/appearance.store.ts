@@ -30,6 +30,10 @@ export const useAppearanceStore = defineStore('appearance', () => {
     const appearanceSettings = ref<Partial<AppearanceSettings>>({}); // 从 API 获取的原始设置
     const allTerminalThemes = ref<TerminalTheme[]>([]); // 重命名: 存储从后端获取的所有主题
 
+    // State for theme preview
+    const isPreviewingTerminalTheme = ref(false);
+    const previewTerminalThemeData = ref<ITheme | null>(null);
+
     // --- Computed Properties (Getters) ---
 
     // 移除 availableTerminalThemes 计算属性，直接使用 allTerminalThemes
@@ -53,6 +57,21 @@ export const useAppearanceStore = defineStore('appearance', () => {
         // 根据数字 ID 查找 (需要将 theme._id 转回数字比较)
         const activeTheme = allTerminalThemes.value.find(t => parseInt(t._id ?? '-1', 10) === activeId);
         return activeTheme ? activeTheme.themeData : defaultXtermTheme; // 找不到也回退到 xterm 默认
+    });
+
+    // Effective terminal theme, considering preview
+    const effectiveTerminalTheme = computed<ITheme>(() => {
+        if (isPreviewingTerminalTheme.value && previewTerminalThemeData.value) {
+            return previewTerminalThemeData.value;
+        }
+        // Fallback to the currently set theme if not previewing
+        const activeId = activeTerminalThemeId.value;
+        if (activeId === null || activeId === undefined || allTerminalThemes.value.length === 0) {
+            const defaultPresetTheme = allTerminalThemes.value.find(t => t.name === '默认'); // Adjust if default theme identified differently
+            return defaultPresetTheme ? defaultPresetTheme.themeData : defaultXtermTheme;
+        }
+        const activeSetTheme = allTerminalThemes.value.find(t => parseInt(t._id ?? '-1', 10) === activeId);
+        return activeSetTheme ? activeSetTheme.themeData : defaultXtermTheme;
     });
 
     // 当前终端字体设置
@@ -506,6 +525,18 @@ export const useAppearanceStore = defineStore('appearance', () => {
         }
     }
 
+    // --- Terminal Theme Preview Actions ---
+    function startTerminalThemePreview(themeData: ITheme) {
+        previewTerminalThemeData.value = themeData;
+        isPreviewingTerminalTheme.value = true;
+        console.log('[AppearanceStore] Started terminal theme preview.');
+    }
+
+    function stopTerminalThemePreview() {
+        previewTerminalThemeData.value = null;
+        isPreviewingTerminalTheme.value = false;
+        console.log('[AppearanceStore] Stopped terminal theme preview.');
+    }
 
     // --- Helper Functions ---
     /**
@@ -597,20 +628,20 @@ export const useAppearanceStore = defineStore('appearance', () => {
         // State refs (原始数据)
         appearanceSettings,
         allTerminalThemes, // 导出重命名后的 ref
-        // Computed Getters
+        isPreviewingTerminalTheme, 
+        previewTerminalThemeData, 
         currentUiTheme,
         activeTerminalThemeId,
-        currentTerminalTheme,
+        currentTerminalTheme,     
+        effectiveTerminalTheme,   
         currentTerminalFontFamily,
         currentTerminalFontSize, // 这个 getter 会自动根据设备类型返回正确的字体大小
         terminalFontSizeDesktop, // + 用于在设置中分别显示/设置桌面端字号
         terminalFontSizeMobile,  // + 用于在设置中分别显示/设置移动端字号
-        currentEditorFontSize, // <-- 新增
+        currentEditorFontSize,
         pageBackgroundImage,
-        // pageBackgroundOpacity, // Removed
         terminalBackgroundImage,
-        // terminalBackgroundOpacity, // Removed
-        currentTerminalBackgroundOverlayOpacity, // <-- 新增导出
+        currentTerminalBackgroundOverlayOpacity,
         // Actions
         loadInitialAppearanceData,
         updateAppearanceSettings,
@@ -620,22 +651,22 @@ export const useAppearanceStore = defineStore('appearance', () => {
         setTerminalFontFamily,
         setTerminalFontSize, // 设置桌面端字体大小
         setTerminalFontSizeMobile, // + 设置移动端字体大小
-        setEditorFontSize, // <-- 新增
-        setTerminalBackgroundEnabled, // <-- 新增
-        createTerminalTheme, // 保留
-        updateTerminalTheme, // 保留
-        deleteTerminalTheme, // 保留
-        importTerminalTheme, // 保留
+        setEditorFontSize, 
+        setTerminalBackgroundEnabled,
+        createTerminalTheme,
+        updateTerminalTheme, 
+        deleteTerminalTheme, 
+        importTerminalTheme, 
         exportTerminalTheme,
         uploadPageBackground,
         uploadTerminalBackground,
-        // setPageBackgroundOpacity, // Removed
-        // setTerminalBackgroundOpacity, // Removed
-        setTerminalBackgroundOverlayOpacity, // <-- 新增导出
+        setTerminalBackgroundOverlayOpacity, 
         removePageBackground,
         removeTerminalBackground,
-        loadTerminalThemeData, // <-- 新增导出
-        isTerminalBackgroundEnabled, // <-- 新增导出
+        loadTerminalThemeData, 
+        isTerminalBackgroundEnabled,
+        startTerminalThemePreview,
+        stopTerminalThemePreview, 
         // Visibility control
         isStyleCustomizerVisible,
         toggleStyleCustomizer,
