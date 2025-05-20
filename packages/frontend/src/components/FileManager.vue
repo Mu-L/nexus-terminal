@@ -12,9 +12,9 @@ import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useFileManagerContextMenu, type ClipboardState, type CompressFormat } from '../composables/file-manager/useFileManagerContextMenu';
 import { useFileManagerSelection } from '../composables/file-manager/useFileManagerSelection';
 import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileManagerDragAndDrop';
-import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation'; 
+import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation';
 import FileUploadPopup from './FileUploadPopup.vue';
-import FileManagerContextMenu from './FileManagerContextMenu.vue';
+// FileManagerContextMenu is now globally managed via event bus
 // FileManagerActionModal is now globally managed
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
@@ -625,25 +625,24 @@ const handleDecompress = (item: FileListItem) => {
 
 // --- 上下文菜单逻辑 (使用 Composable, 需要 Selection 和 Action Handlers) ---
 const {
-  contextMenuVisible,
-  contextMenuPosition,
-  contextMenuItems,
-  contextMenuRef, // 获取 ref 以传递给子组件
-  contextTargetItem, // Get the target item from the composable
+  // contextMenuVisible, // Removed
+  // contextMenuPosition, // Removed
+  // contextMenuItems, // Removed
+  // contextMenuRef, // Removed
+  // contextTargetItem, // Removed
   showContextMenu, // 使用 Composable 提供的函数
-  hideContextMenu, // <-- 获取 hideContextMenu 函数
+  // hideContextMenu, // Removed
 } = useFileManagerContextMenu({
   selectedItems,
   lastClickedIndex,
-  // 传递 manager 的 fileList 和 currentPath ref (保持 computed)
   fileList: computed(() => currentSftpManager.value?.fileList.value ?? []),
   currentPath: computed(() => currentSftpManager.value?.currentPath.value ?? '/'),
   isConnected: props.wsDeps.isConnected,
   isSftpReady: props.wsDeps.isSftpReady,
-  clipboardState: readonly(clipboardState), // +++ 传递剪贴板状态 (只读) +++
+  clipboardState: readonly(clipboardState),
   t,
+  getActiveConnectionId: () => props.dbConnectionId, // +++ Added: Pass function to get connection ID
   // --- 传递回调函数 ---
-  // 确保在调用前检查 currentSftpManager.value
   onRefresh: () => {
       if (currentSftpManager.value) {
           currentSftpManager.value.loadDirectory(currentSftpManager.value.currentPath.value, true);
@@ -656,11 +655,10 @@ const {
   onChangePermissions: handleChangePermissionsContextMenuClick,
   onNewFolder: handleNewFolderContextMenuClick,
   onNewFile: handleNewFileContextMenuClick,
-  onCopy: handleCopy, // +++ 传递复制回调 +++
-  onCut: handleCut, // +++ 传递剪切回调 +++
-  onPaste: handlePaste, // +++ 传递粘贴回调 +++
-  onDownloadDirectory: triggerDownloadDirectory, // +++ 传递文件夹下载回调 +++
-  // +++ 传递压缩/解压回调 +++
+  onCopy: handleCopy,
+  onCut: handleCut,
+  onPaste: handlePaste,
+  onDownloadDirectory: triggerDownloadDirectory,
   onCompressRequest: handleCompress,
   onDecompressRequest: handleDecompress,
 });
@@ -1565,16 +1563,7 @@ const handleOpenEditorClick = () => {
      <!-- 使用 FileUploadPopup 组件 -->
      <FileUploadPopup :uploads="uploads" @cancel-upload="cancelUpload" />
 
-    <FileManagerContextMenu
-      ref="contextMenuRef"
-      :is-visible="contextMenuVisible"
-      :position="contextMenuPosition"
-      :items="contextMenuItems"
-      :active-context-item="contextTargetItem"
-      :selected-file-items="computedSelectedFullItems"
-      :current-directory-path="currentSftpManager?.currentPath?.value ?? '/'"
-     @close-request="hideContextMenu"
-   />
+    <!-- FileManagerContextMenu is removed from here, it will be placed in WorkspaceView.vue and managed via event bus -->
 
    <!-- Action Modal is removed from here, it will be placed in WorkspaceView.vue -->
 

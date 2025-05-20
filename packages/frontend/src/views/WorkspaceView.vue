@@ -12,9 +12,10 @@ import TerminalTabBar from '../components/TerminalTabBar.vue';
 import LayoutRenderer from '../components/LayoutRenderer.vue';
 import LayoutConfigurator from '../components/LayoutConfigurator.vue';
 import Terminal from '../components/Terminal.vue';
-import CommandInputBar from '../components/CommandInputBar.vue'; 
+import CommandInputBar from '../components/CommandInputBar.vue';
 import VirtualKeyboard from '../components/VirtualKeyboard.vue';
-import FileManager from '../components/FileManager.vue'; 
+import FileManager from '../components/FileManager.vue';
+import FileManagerContextMenu from '../components/FileManagerContextMenu.vue'; // +++ Import FileManagerContextMenu +++
 import { useSessionStore } from '../stores/session.store';
 import type { SessionTabInfoWithStatus, SshTerminalInstance } from '../stores/session/types';
 import { useSettingsStore } from '../stores/settings.store';
@@ -28,7 +29,8 @@ import {
   useWorkspaceEventOff,
   workspaceEmitter, // +++ Import workspaceEmitter +++
   type WorkspaceEventPayloads,
-  type FileManagerActionPayload
+  type FileManagerActionPayload,
+  type FileManagerContextMenuPayload // +++ Import FileManagerContextMenuPayload +++
 } from '../composables/workspaceEvents';
 import type { WebSocketDependencies } from '../composables/useSftpActions';
 import type { FileListItem } from '../types/sftp.types';
@@ -95,6 +97,7 @@ const fileManagerPropsMap = shallowRef<Map<string, {
 }>>(new Map());
 const currentFileManagerSessionId = ref<string | null>(null);
 const fileManagerActionModalPayloadRef = ref<FileManagerActionPayload | null>(null); // +++ Ref for action modal payload +++
+const fileManagerContextMenuPayloadRef = ref<FileManagerContextMenuPayload | null>(null); // +++ Ref for context menu payload +++
 
 // --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -183,6 +186,8 @@ onMounted(() => {
 
   // +++ Subscribe to FileManagerActionModal events +++
   subscribeToWorkspaceEvents('fileManager:requestActionModalOpen', handleRequestFileManagerActionModalOpen);
+  // +++ Subscribe to FileManagerContextMenu events +++
+  subscribeToWorkspaceEvents('fileManager:requestContextMenuOpen', handleRequestContextMenuOpen);
 });
 
 onBeforeUnmount(() => {
@@ -233,6 +238,8 @@ onBeforeUnmount(() => {
 
   // +++ Unsubscribe from FileManagerActionModal events +++
   unsubscribeFromWorkspaceEvents('fileManager:requestActionModalOpen', handleRequestFileManagerActionModalOpen);
+  // +++ Unsubscribe from FileManagerContextMenu events +++
+  unsubscribeFromWorkspaceEvents('fileManager:requestContextMenuOpen', handleRequestContextMenuOpen);
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -834,6 +841,17 @@ const handleFileManagerActionClose = (originalPayload: FileManagerActionPayload)
   fileManagerActionModalPayloadRef.value = null; // Close modal
 };
 
+// +++ FileManagerContextMenu Event Handlers +++
+const handleRequestContextMenuOpen = (payload: FileManagerContextMenuPayload) => {
+  console.log('[WorkspaceView] Received fileManager:requestContextMenuOpen event. Payload:', payload);
+  fileManagerContextMenuPayloadRef.value = payload;
+};
+
+const handleContextMenuClose = () => {
+  console.log('[WorkspaceView] FileManagerContextMenu close requested.');
+  fileManagerContextMenuPayloadRef.value = null;
+};
+
 </script>
 
 <template>
@@ -965,6 +983,12 @@ const handleFileManagerActionClose = (originalPayload: FileManagerActionPayload)
       :payload="fileManagerActionModalPayloadRef"
       @confirm="handleFileManagerActionConfirm"
       @close="handleFileManagerActionClose"
+    />
+
+    <!-- Global File Manager Context Menu -->
+    <FileManagerContextMenu
+      :payload="fileManagerContextMenuPayloadRef"
+      @close="handleContextMenuClose"
     />
 
   </div>

@@ -3,6 +3,7 @@ import mitt from 'mitt';
 import type { ConnectionInfo } from '../stores/connections.store';
 import type { Terminal as XtermTerminal } from 'xterm';
 import type { FileListItem } from '../types/sftp.types'; // +++ Import FileListItem +++
+import type { ContextMenuItem } from './file-manager/useFileManagerContextMenu'; // +++ Import ContextMenuItem +++
 
 // 定义事件载荷类型
 export type WorkspaceEventPayloads = {
@@ -60,6 +61,10 @@ export type WorkspaceEventPayloads = {
   'fileManager:requestActionModalOpen': FileManagerActionPayload;
   'fileManager:actionModalConfirm': { originalPayload: FileManagerActionPayload, confirmedValue?: string };
   'fileManager:actionModalClose': { originalPayload: FileManagerActionPayload };
+
+  // FileManager Context Menu Events
+  'fileManager:requestContextMenuOpen': FileManagerContextMenuPayload;
+  // No specific confirm/close needed from context menu itself as WorkspaceView will handle close
 };
 
 // +++ Define FileManagerActionPayload +++
@@ -69,6 +74,16 @@ export type FileManagerActionPayload = {
   items?: FileListItem[];
   initialValue?: string;
   sftpInstanceId: string; // To identify which FileManager instance initiated the request
+};
+
+// +++ Define FileManagerContextMenuPayload +++
+export type FileManagerContextMenuPayload = {
+  position: { x: number; y: number };
+  items: ContextMenuItem[];
+  activeContextItem?: FileListItem | null;
+  selectedFileItems?: FileListItem[];
+  currentDirectoryPath: string;
+  sftpInstanceId?: string; // To identify which FileManager instance initiated the request (now optional)
 };
 
 // 创建 mitt 事件发射器实例
