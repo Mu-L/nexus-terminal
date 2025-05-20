@@ -59,10 +59,7 @@
 
 > Removed web-specific features such as various login verifications and session suspension.
 
-| Platform | Download Link                                                                                                                             |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Linux    | [Nexus\_Terminal\_1.0.0.AppImage](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_1.0.0.AppImage)   |
-| Windows  | [Nexus\_Terminal\_Setup.1.0.0.exe](https://github.com/Heavrnl/nexus-terminal/releases/download/v1.0.0-App/Nexus_Terminal_Setup.1.0.0.exe) |
+https://github.com/Heavrnl/nexus-terminal/releases/latest
 
 ## 🚀 Quick Start
 
@@ -171,7 +168,7 @@ You can right-click in the SSH tab to select "Suspend Session" (long-press on mo
 
 ### General Operations
 
-1.  **Zoom**: In the terminal, file manager, and text editor components, you can use `Ctrl + Mouse Wheel` to zoom.
+1.  **Zoom**: In the terminal, file manager, text editor components, and quick command view, you can use `Ctrl + mouse wheel` to zoom.
 2. **Sidebar**: The expanded sidebar can have its width adjusted by dragging.
 3. **Tab Bar**: Right-clicking on the SSH tab bar or the file manager tab bar will open a context menu with the following options: Close, Close Tabs to the Left, Close Other Tabs, and Close Tabs to the Right.
 4. **Tab Group Fold Bar**: You can directly click on the tab name in the view to rename the tab.
