@@ -242,7 +242,7 @@ onBeforeUnmount(() => {
   // +++ Unsubscribe from FileManagerContextMenu events +++
   unsubscribeFromWorkspaceEvents('fileManager:requestContextMenuOpen', handleRequestContextMenuOpen);
   // Clean up click outside listener for context menu
-  document.removeEventListener('mousedown', handleClickOutsideContextMenu, true);
+  document.removeEventListener('mousedown', handleClickOutsideContextMenu, false); // Changed to false for bubbling phase
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -870,12 +870,12 @@ watch(fileManagerContextMenuPayloadRef, (newValue) => {
   if (newValue) {
     // Menu is now visible, add listener
     nextTick(() => { // Ensure menu DOM is rendered
-      document.addEventListener('mousedown', handleClickOutsideContextMenu, true); // Use capture phase
+      document.addEventListener('mousedown', handleClickOutsideContextMenu, false); // Changed to false for bubbling phase
       console.log('[WorkspaceView] FileManagerContextMenu is visible, added click-outside listener.');
     });
   } else {
     // Menu is now hidden, remove listener
-    document.removeEventListener('mousedown', handleClickOutsideContextMenu, true);
+    document.removeEventListener('mousedown', handleClickOutsideContextMenu, false); // Changed to false for bubbling phase
     console.log('[WorkspaceView] FileManagerContextMenu is hidden, removed click-outside listener.');
   }
 });

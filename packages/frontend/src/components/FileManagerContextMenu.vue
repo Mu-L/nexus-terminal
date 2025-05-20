@@ -161,6 +161,7 @@ onUnmounted(() => {
       class="fixed bg-background border border-border shadow-lg rounded-md z-[1002] min-w-[150px]"
       :style="{ top: `${computedRenderPosition.y}px`, left: `${computedRenderPosition.x}px` }"
       @click.stop
+      @mousedown.stop
     >
       <ul class="list-none p-1 m-0">
         <template v-for="(menuItem, index) in menuItems" :key="index"> <!-- Use computed menuItems -->
