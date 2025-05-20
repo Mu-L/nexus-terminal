@@ -2,6 +2,7 @@
 import mitt from 'mitt';
 import type { ConnectionInfo } from '../stores/connections.store';
 import type { Terminal as XtermTerminal } from 'xterm';
+import type { FileListItem } from '../types/sftp.types'; // +++ Import FileListItem +++
 
 // 定义事件载荷类型
 export type WorkspaceEventPayloads = {
@@ -54,6 +55,20 @@ export type WorkspaceEventPayloads = {
   // Quick Commands Form Events
   'quickCommands:requestAddForm': void;
   'quickCommands:requestEditForm': { command: any }; // Using 'any' for now, replace with QuickCommandFE if imported
+
+  // FileManager Action Modal Events
+  'fileManager:requestActionModalOpen': FileManagerActionPayload;
+  'fileManager:actionModalConfirm': { originalPayload: FileManagerActionPayload, confirmedValue?: string };
+  'fileManager:actionModalClose': { originalPayload: FileManagerActionPayload };
+};
+
+// +++ Define FileManagerActionPayload +++
+export type FileManagerActionPayload = {
+  actionType: 'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder' | null;
+  item?: FileListItem | null;
+  items?: FileListItem[];
+  initialValue?: string;
+  sftpInstanceId: string; // To identify which FileManager instance initiated the request
 };
 
 // 创建 mitt 事件发射器实例

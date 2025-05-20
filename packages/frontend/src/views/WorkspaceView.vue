@@ -6,7 +6,8 @@ import { useLayoutStore } from '../stores/layout.store';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import AddConnectionFormComponent from '../components/AddConnectionForm.vue';
-import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue'; // +++ Import AddEditQuickCommandForm +++
+import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue';
+import FileManagerActionModal from '../components/FileManagerActionModal.vue'; // +++ Import FileManagerActionModal +++
 import TerminalTabBar from '../components/TerminalTabBar.vue';
 import LayoutRenderer from '../components/LayoutRenderer.vue';
 import LayoutConfigurator from '../components/LayoutConfigurator.vue';
@@ -25,9 +26,13 @@ import type { QuickCommandFE } from '../stores/quickCommands.store'; // +++ Impo
 import {
   useWorkspaceEventSubscriber,
   useWorkspaceEventOff,
-  type WorkspaceEventPayloads
+  workspaceEmitter, // +++ Import workspaceEmitter +++
+  type WorkspaceEventPayloads,
+  type FileManagerActionPayload
 } from '../composables/workspaceEvents';
-import type { WebSocketDependencies } from '../composables/useSftpActions'; 
+import type { WebSocketDependencies } from '../composables/useSftpActions';
+import type { FileListItem } from '../types/sftp.types';
+
 
 // --- Setup ---
 const { t } = useI18n();
@@ -89,6 +94,7 @@ const fileManagerPropsMap = shallowRef<Map<string, {
   wsDeps: WebSocketDependencies;
 }>>(new Map());
 const currentFileManagerSessionId = ref<string | null>(null);
+const fileManagerActionModalPayloadRef = ref<FileManagerActionPayload | null>(null); // +++ Ref for action modal payload +++
 
 // --- 处理全局键盘事件 ---
 const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -174,6 +180,9 @@ onMounted(() => {
   // +++ Subscribe to Quick Command form events +++
   subscribeToWorkspaceEvents('quickCommands:requestAddForm', handleRequestAddQuickCommandForm);
   subscribeToWorkspaceEvents('quickCommands:requestEditForm', (payload) => handleRequestEditQuickCommandForm(payload.command));
+
+  // +++ Subscribe to FileManagerActionModal events +++
+  subscribeToWorkspaceEvents('fileManager:requestActionModalOpen', handleRequestFileManagerActionModalOpen);
 });
 
 onBeforeUnmount(() => {
@@ -221,6 +230,9 @@ onBeforeUnmount(() => {
   // +++ Unsubscribe from Quick Command form events +++
   unsubscribeFromWorkspaceEvents('quickCommands:requestAddForm', handleRequestAddQuickCommandForm);
   unsubscribeFromWorkspaceEvents('quickCommands:requestEditForm', (payload) => handleRequestEditQuickCommandForm(payload.command));
+
+  // +++ Unsubscribe from FileManagerActionModal events +++
+  unsubscribeFromWorkspaceEvents('fileManager:requestActionModalOpen', handleRequestFileManagerActionModalOpen);
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -734,6 +746,94 @@ const closeFileManagerModal = () => {
   console.log('[WorkspaceView] FileManager modal hidden (kept alive).');
 };
 
+// +++ FileManagerActionModal Event Handlers +++
+const handleRequestFileManagerActionModalOpen = (payload: FileManagerActionPayload) => {
+  console.log('[WorkspaceView] Received fileManager:requestActionModalOpen event. Payload:', payload);
+  fileManagerActionModalPayloadRef.value = payload;
+};
+
+const handleFileManagerActionConfirm = (originalPayload: FileManagerActionPayload, confirmedValue?: string) => {
+  console.log('[WorkspaceView] FileManagerActionModal confirmed. Payload:', originalPayload, 'Value:', confirmedValue);
+  // const sftpManagerInstance = sessionStore.getSftpManagerByInstanceId(originalPayload.sftpInstanceId); // Old way
+
+  // +++ New way to get sftpManagerInstance +++
+  const instanceIdParts = originalPayload.sftpInstanceId.split('-');
+  const sessionId = instanceIdParts.slice(0, -1).join('-'); // Handles session IDs that might contain hyphens
+  const sftpInstanceIdSuffix = instanceIdParts.pop(); // The actual instanceId suffix like 'modal' or a generated one
+
+  if (!sessionId || !sftpInstanceIdSuffix) {
+    console.error(`[WorkspaceView] Could not parse sessionId or instanceId_suffix from sftpInstanceId: ${originalPayload.sftpInstanceId}`);
+    fileManagerActionModalPayloadRef.value = null;
+    return;
+  }
+
+  const session = sessionStore.sessions.get(sessionId);
+  const sftpManagerInstance = session?.sftpManagers?.get(sftpInstanceIdSuffix);
+  // +++ End new way +++
+
+  if (!sftpManagerInstance) {
+    console.error(`[WorkspaceView] SFTP Manager instance not found for sftpInstanceId: ${originalPayload.sftpInstanceId} (parsed as session: ${sessionId}, instance: ${sftpInstanceIdSuffix})`);
+    fileManagerActionModalPayloadRef.value = null; // Close modal
+    // Optionally notify user
+    return;
+  }
+
+  const { actionType, item, items } = originalPayload;
+
+  switch (actionType) {
+    case 'delete':
+      if (items && items.length > 0) {
+        sftpManagerInstance.deleteItems(items);
+        // Potentially clear selection in the specific FileManager instance via an event if needed
+      }
+      break;
+    case 'rename':
+      if (item && confirmedValue && confirmedValue !== item.filename) {
+        sftpManagerInstance.renameItem(item, confirmedValue);
+      }
+      break;
+    case 'chmod':
+      if (item && confirmedValue && /^[0-7]{3,4}$/.test(confirmedValue)) {
+        const newMode = parseInt(confirmedValue, 8);
+        sftpManagerInstance.changePermissions(item, newMode);
+      } else if (confirmedValue) {
+        console.error(`[WorkspaceView] Invalid chmod value from modal: ${confirmedValue} for item ${item?.filename}`);
+        // Modal should ideally prevent this, but good to have a check
+      }
+      break;
+    case 'newFile':
+      if (confirmedValue) {
+        // Existence check might be better handled by sftpManager or before opening modal,
+        // but for now, proceed with the create request.
+        if (sftpManagerInstance.fileList.value.some((f: FileListItem) => f.filename === confirmedValue)) {
+          console.warn(`[WorkspaceView] File ${confirmedValue} already exists. SFTP Manager should handle this or show error.`);
+           // TODO: Notify user or rely on sftpManager's error handling
+        }
+        sftpManagerInstance.createFile(confirmedValue);
+      }
+      break;
+    case 'newFolder':
+      if (confirmedValue) {
+        if (sftpManagerInstance.fileList.value.some((f: FileListItem) => f.filename === confirmedValue)) {
+          console.warn(`[WorkspaceView] Folder ${confirmedValue} already exists. SFTP Manager should handle this or show error.`);
+           // TODO: Notify user or rely on sftpManager's error handling
+        }
+        sftpManagerInstance.createDirectory(confirmedValue);
+      }
+      break;
+  }
+
+  // Emit a workspace event indicating the action was confirmed for other listeners
+  workspaceEmitter.emit('fileManager:actionModalConfirm', { originalPayload, confirmedValue }); // +++ Use imported workspaceEmitter +++
+  fileManagerActionModalPayloadRef.value = null; // Close modal
+};
+
+const handleFileManagerActionClose = (originalPayload: FileManagerActionPayload) => {
+  console.log('[WorkspaceView] FileManagerActionModal closed. Payload:', originalPayload);
+  workspaceEmitter.emit('fileManager:actionModalClose', { originalPayload }); // +++ Use imported workspaceEmitter +++
+  fileManagerActionModalPayloadRef.value = null; // Close modal
+};
+
 </script>
 
 <template>
@@ -859,6 +959,13 @@ const closeFileManagerModal = () => {
         </div>
       </div>
     </div>
+
+    <!-- Global File Manager Action Modal -->
+    <FileManagerActionModal
+      :payload="fileManagerActionModalPayloadRef"
+      @confirm="handleFileManagerActionConfirm"
+      @close="handleFileManagerActionClose"
+    />
 
   </div>
 </template>

@@ -15,9 +15,10 @@ import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileMa
 import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation'; 
 import FileUploadPopup from './FileUploadPopup.vue';
 import FileManagerContextMenu from './FileManagerContextMenu.vue';
-import FileManagerActionModal from './FileManagerActionModal.vue'; 
+// FileManagerActionModal is now globally managed
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; // +++ Import event emitter
 
 
 type SftpManagerInstance = ReturnType<typeof createSftpActionsManager>;
@@ -127,12 +128,14 @@ const fileListContainerRef = ref<HTMLDivElement | null>(null); // 文件列表�
 const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 拖拽蒙版引用 +++
 // const scrollIntervalId = ref<number | null>(null); // 已移至 useFileManagerDragAndDrop
 
-// +++ 操作模态框状态 +++
-const isActionModalVisible = ref(false);
-const currentActionType = ref<'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder' | null>(null);
-const actionItem = ref<FileListItem | null>(null); // For single item operations
-const actionItems = ref<FileListItem[]>([]); // For multi-item operations (e.g., delete)
-const actionInitialValue = ref(''); // For pre-filling input in modal
+// --- 操作模态框状态 (这些状态将被移除，因为模态框现在是全局的) ---
+// const isActionModalVisible = ref(false);
+// const currentActionType = ref<'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder' | null>(null);
+// const actionItem = ref<FileListItem | null>(null);
+// const actionItems = ref<FileListItem[]>([]);
+// const actionInitialValue = ref('');
+
+const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ Get workspace event emitter
 
 // +++ 剪贴板状态 +++
 const clipboardState = ref<ClipboardState>({ hasContent: false });
@@ -325,86 +328,28 @@ const computedSelectedFullItems = computed((): FileListItem[] => {
 
 // --- 操作模态框辅助函数 ---
 const openActionModal = (
- type: 'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder',
- item?: FileListItem | null, // For single item operations like rename, chmod
- items?: FileListItem[], // For multi-item operations like delete
- initialValue?: string // For pre-filling input, e.g., old name for rename
+  type: 'delete' | 'rename' | 'chmod' | 'newFile' | 'newFolder',
+  item?: FileListItem | null,
+  itemsToProcess?: FileListItem[], // Renamed for clarity
+  initialValue?: string
 ) => {
- currentActionType.value = type;
- actionItem.value = item || null;
- actionItems.value = items || (item ? [item] : []); // Ensure actionItems has the item(s)
- actionInitialValue.value = initialValue || '';
- isActionModalVisible.value = true;
+  if (!currentSftpManager.value) {
+    console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot open action modal: SFTP Manager not available.`);
+    // Potentially show a UI notification here
+    return;
+  }
+  const payload = {
+    actionType: type,
+    item: item || null,
+    items: itemsToProcess || (item ? [item] : []),
+    initialValue: initialValue || '',
+    sftpInstanceId: `${props.sessionId}-${props.instanceId}`, // Pass the unique SFTP manager instance ID
+  };
+  console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Emitting fileManager:requestActionModalOpen with payload:`, payload);
+  emitWorkspaceEvent('fileManager:requestActionModalOpen', payload);
 };
 
-const handleModalClose = () => {
- isActionModalVisible.value = false;
- // Reset states if needed, though they'll be overwritten on next open
- currentActionType.value = null;
- actionItem.value = null;
- actionItems.value = [];
- actionInitialValue.value = '';
-};
-
-const handleModalConfirm = (value?: string) => {
- if (!currentSftpManager.value || !currentActionType.value) {
-   handleModalClose();
-   return;
- }
- const manager = currentSftpManager.value;
-
- switch (currentActionType.value) {
-   case 'delete':
-     if (actionItems.value.length > 0) {
-       manager.deleteItems(actionItems.value);
-       selectedItems.value.clear(); // Clear selection after delete
-     }
-     break;
-   case 'rename':
-     if (actionItem.value && value && value !== actionItem.value.filename) {
-       manager.renameItem(actionItem.value, value);
-     }
-     break;
-   case 'chmod':
-     if (actionItem.value && value && /^[0-7]{3,4}$/.test(value)) {
-       const newMode = parseInt(value, 8);
-       manager.changePermissions(actionItem.value, newMode);
-     } else if (value) { // value exists but is invalid
-       // Optionally, re-open modal with error or use a notification
-       // For now, just log and close
-       console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Invalid chmod value from modal: ${value}`);
-       // It might be better to show an error in the modal itself and not close it.
-       // The modal currently has its own validation, so this path might not be hit often.
-     }
-     break;
-   case 'newFile':
-     if (value) {
-       if (manager.fileList.value.some((item: FileListItem) => item.filename === value)) {
-         // alert(t('fileManager.errors.fileExists', { name: value })); // Consider using modal for this error too
-         console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] File ${value} already exists. Modal should prevent this.`);
-         // Re-open modal or show error in modal
-         // For now, we rely on modal's internal logic or a notification system
-         // To prevent closing, we can avoid calling handleModalClose here if an error occurs.
-         // However, the current modal design closes on confirm.
-         // A more robust solution would be for the modal to emit 'error' or handle validation internally.
-         return; // Prevent closing if error
-       }
-       manager.createFile(value);
-     }
-     break;
-   case 'newFolder':
-     if (value) {
-       if (manager.fileList.value.some((item: FileListItem) => item.filename === value)) {
-         // alert(t('fileManager.errors.folderExists', { name: value }));
-         console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] Folder ${value} already exists. Modal should prevent this.`);
-         return; // Prevent closing if error
-       }
-       manager.createDirectory(value);
-     }
-     break;
- }
- handleModalClose(); // Close modal after action
-};
+// handleModalClose and handleModalConfirm are removed as they are now handled by WorkspaceView
 
 
 // --- SFTP 操作处理函数 (定义在此处，供 Composable 使用) ---
@@ -1631,16 +1576,7 @@ const handleOpenEditorClick = () => {
      @close-request="hideContextMenu"
    />
 
-   <!-- Action Modal -->
-   <FileManagerActionModal
-     :is-visible="isActionModalVisible"
-     :action-type="currentActionType"
-     :item="actionItem"
-     :items="actionItems"
-     :initial-value="actionInitialValue"
-     @close="handleModalClose"
-     @confirm="handleModalConfirm"
-   />
+   <!-- Action Modal is removed from here, it will be placed in WorkspaceView.vue -->
 
 
  </div>
