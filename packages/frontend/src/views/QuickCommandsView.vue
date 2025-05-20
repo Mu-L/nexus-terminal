@@ -153,13 +153,6 @@
       </div>
     </div>
 
-    <!-- 添加/编辑表单模态框 -->
-    <AddEditQuickCommandForm
-      v-if="isFormVisible"
-      :command-to-edit="commandToEdit"
-      @close="closeForm"
-    />
-
     <!-- Context Menu for Quick Commands -->
     <div
       v-if="quickCommandContextMenuVisible"
@@ -187,8 +180,8 @@ import { useQuickCommandsStore, type QuickCommandFE, type QuickCommandSortByType
 import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useI18n } from 'vue-i18n';
-import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue';
-import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; 
+// import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue'; // Removed
+import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 import { useSessionStore } from '../stores/session.store';
@@ -206,8 +199,8 @@ const sessionStore = useSessionStore();
 const connectionsStore = useConnectionsStore(); 
 
 const hoveredItemId = ref<number | null>(null);
-const isFormVisible = ref(false);
-const commandToEdit = ref<QuickCommandFE | null>(null);
+// const isFormVisible = ref(false); // Removed
+// const commandToEdit = ref<QuickCommandFE | null>(null); // Removed
 const commandListContainerRef = ref<HTMLDivElement | null>(null); // Changed ref name to match template
 const searchInputRef = ref<HTMLInputElement | null>(null); // +++ Ref for the search input +++
 let unregisterFocus: (() => void) | null = null; // +++ 保存注销函数 +++
@@ -406,19 +399,21 @@ const sortButtonIcon = computed(() => {
 
 
 const openAddForm = () => {
-  commandToEdit.value = null;
-  isFormVisible.value = true;
+  // commandToEdit.value = null; // Removed
+  // isFormVisible.value = true; // Removed
+  emitWorkspaceEvent('quickCommands:requestAddForm');
 };
 
 const openEditForm = (command: QuickCommandFE) => {
-  commandToEdit.value = command;
-  isFormVisible.value = true;
+  // commandToEdit.value = command; // Removed
+  // isFormVisible.value = true; // Removed
+  emitWorkspaceEvent('quickCommands:requestEditForm', { command });
 };
 
-const closeForm = () => {
-  isFormVisible.value = false;
-  commandToEdit.value = null;
-};
+// const closeForm = () => { // Removed
+//   isFormVisible.value = false; // Removed
+//   commandToEdit.value = null; // Removed
+// };
 
 const confirmDelete = (command: QuickCommandFE) => {
   if (window.confirm(t('quickCommands.confirmDelete', { name: command.name || command.command }))) {

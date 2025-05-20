@@ -50,6 +50,10 @@ export type WorkspaceEventPayloads = {
 
   // Suspended SSH Session Events
   'suspendedSession:actionCompleted': void; // Emitted when a resume/remove action is completed
+
+  // Quick Commands Form Events
+  'quickCommands:requestAddForm': void;
+  'quickCommands:requestEditForm': { command: any }; // Using 'any' for now, replace with QuickCommandFE if imported
 };
 
 // 创建 mitt 事件发射器实例

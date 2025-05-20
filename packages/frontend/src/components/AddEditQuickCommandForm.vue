@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 bg-overlay flex justify-center items-center z-[1050]" @click.self="closeForm">
+  <div class="fixed inset-0 bg-overlay flex justify-center items-center z-50" @click.self="closeForm">
     <div class="bg-background text-foreground p-6 rounded-xl border border-border/50 shadow-2xl w-[90%] max-w-lg">
       <h2 class="m-0 mb-6 text-center text-xl font-semibold">{{ isEditing ? t('quickCommands.form.titleEdit', '编辑快捷指令') : t('quickCommands.form.titleAdd', '添加快捷指令') }}</h2>
       <form @submit.prevent="handleSubmit" class="space-y-5">

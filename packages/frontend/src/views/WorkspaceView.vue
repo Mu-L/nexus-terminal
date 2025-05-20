@@ -6,6 +6,7 @@ import { useLayoutStore } from '../stores/layout.store';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import AddConnectionFormComponent from '../components/AddConnectionForm.vue';
+import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue'; // +++ Import AddEditQuickCommandForm +++
 import TerminalTabBar from '../components/TerminalTabBar.vue';
 import LayoutRenderer from '../components/LayoutRenderer.vue';
 import LayoutConfigurator from '../components/LayoutConfigurator.vue';
@@ -20,6 +21,7 @@ import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useCommandHistoryStore } from '../stores/commandHistory.store';
 import type { Terminal as XtermTerminal } from 'xterm';
 import type { ISearchOptions } from '@xterm/addon-search';
+import type { QuickCommandFE } from '../stores/quickCommands.store'; // +++ Import QuickCommandFE type +++
 import {
   useWorkspaceEventSubscriber,
   useWorkspaceEventOff,
@@ -68,6 +70,10 @@ const showAddEditForm = ref(false);
 const connectionToEdit = ref<ConnectionInfo | null>(null);
 const showLayoutConfigurator = ref(false); // 控制布局配置器可见性
 // 本地 RDP 状态已被移除
+
+// +++ UI 状态 for QuickCommands Form +++
+const showAddEditQuickCommandForm = ref(false);
+const quickCommandToEdit = ref<QuickCommandFE | null>(null);
 
 // --- 搜索状态 ---
 const currentSearchTerm = ref(''); // 当前搜索的关键词
@@ -164,6 +170,10 @@ onMounted(() => {
   subscribeToWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   subscribeToWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
   subscribeToWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 订阅文件管理器打开请求 +++
+
+  // +++ Subscribe to Quick Command form events +++
+  subscribeToWorkspaceEvents('quickCommands:requestAddForm', handleRequestAddQuickCommandForm);
+  subscribeToWorkspaceEvents('quickCommands:requestEditForm', (payload) => handleRequestEditQuickCommandForm(payload.command));
 });
 
 onBeforeUnmount(() => {
@@ -207,6 +217,10 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   unsubscribeFromWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
   unsubscribeFromWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 取消订阅文件管理器打开请求 +++
+
+  // +++ Unsubscribe from Quick Command form events +++
+  unsubscribeFromWorkspaceEvents('quickCommands:requestAddForm', handleRequestAddQuickCommandForm);
+  unsubscribeFromWorkspaceEvents('quickCommands:requestEditForm', (payload) => handleRequestEditQuickCommandForm(payload.command));
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -246,6 +260,23 @@ const unsubscribeFromWorkspaceEvents = useWorkspaceEventOff();
  const handleCloseLayoutConfigurator = () => {
    showLayoutConfigurator.value = false;
  };
+
+ // +++ Event Handlers for Quick Command Form +++
+ const handleRequestAddQuickCommandForm = () => {
+   quickCommandToEdit.value = null;
+   showAddEditQuickCommandForm.value = true;
+ };
+
+ const handleRequestEditQuickCommandForm = (command: QuickCommandFE) => {
+   quickCommandToEdit.value = command;
+   showAddEditQuickCommandForm.value = true;
+ };
+
+ const handleQuickCommandFormClose = () => {
+   showAddEditQuickCommandForm.value = false;
+   quickCommandToEdit.value = null;
+ };
+ // Quick command added/updated events are handled by the store, no specific action needed here other than closing the form.
 
  // --- 事件处理 (传递给 LayoutRenderer 或直接使用) ---
 
@@ -786,6 +817,13 @@ const closeFileManagerModal = () => {
       @close="handleFormClose"
       @connection-added="handleConnectionAdded"
       @connection-updated="handleConnectionUpdated"
+    />
+
+    <!-- +++ AddEditQuickCommandForm Modal +++ -->
+    <AddEditQuickCommandForm
+      v-if="showAddEditQuickCommandForm"
+      :command-to-edit="quickCommandToEdit"
+      @close="handleQuickCommandFormClose"
     />
 
     <LayoutConfigurator
