@@ -31,6 +31,8 @@ export interface FileTab {
     saveStatus: SaveStatus;
     saveError: string | null;
     isModified: boolean;
+    scrollTop?: number; // 编辑器垂直滚动位置
+    scrollLeft?: number; // 编辑器水平滚动位置
 }
 
 // --- 辅助函数 (移到外部并导出) ---
@@ -183,6 +185,8 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
             saveStatus: 'idle',
             saveError: null,
             isModified: false,
+            scrollTop: 0, // 初始化滚动位置
+            scrollLeft: 0, // 初始化滚动位置
         };
         tabs.value.set(tabId, newTab);
         // setActiveTab(tabId); // 移除同步激活
@@ -552,6 +556,15 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
         // }
     };
 
+    // +++ 更新标签页滚动位置 +++
+    const updateTabScrollPosition = (tabId: string, scrollTop: number, scrollLeft: number) => {
+        const tab = tabs.value.get(tabId);
+        if (tab) {
+            tab.scrollTop = scrollTop;
+            tab.scrollLeft = scrollLeft;
+        }
+    };
+ 
     // 移除旧的 updateContent，因为它只更新活动标签页
     // const updateContent = (newContent: string) => { ... };
 
@@ -618,5 +631,6 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
         changeEncoding, // +++ 暴露更改编码的方法 +++
         triggerPopup, // 暴露新的触发方法
         // setEditorVisibility, // 移除
+        updateTabScrollPosition, // +++ 暴露更新滚动位置的方法 +++
     };
 });

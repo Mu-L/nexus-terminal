@@ -46,6 +46,7 @@ const {
    closeTabsToTheRight, // 修正：移除 Global 后缀
    closeTabsToTheLeft, // 修正：移除 Global 后缀
    changeEncoding: changeGlobalEncoding, // +++ 全局编码更改 action +++
+   updateTabScrollPosition, // 全局滚动位置更新 action
 } = fileEditorStore;
 
 // 会话 Store Actions (用于非共享模式)
@@ -59,6 +60,7 @@ const {
    closeTabsToTheRightInSession,
    closeTabsToTheLeftInSession,
    changeEncodingInSession, // +++ 会话编码更改 action +++
+   updateTabScrollPositionInSession, // 会话滚动位置更新 action
 } = sessionStore;
 
 // --- 移除本地文件状态 ---
@@ -390,6 +392,26 @@ const handleEncodingChange = (event: Event) => {
   }
 };
 
+// +++ 处理编辑器滚动事件 +++
+const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scrollLeft: number }) => {
+    const currentActiveTab = activeTab.value;
+    if (!currentActiveTab) return;
+
+    if (shareFileEditorTabsBoolean.value) {
+        // 全局 Store
+        updateTabScrollPosition(currentActiveTab.id, scrollTop, scrollLeft);
+    } else {
+        // 非共享模式需要 sessionId
+        const sessionId = popupFileInfo.value?.sessionId;
+        if (sessionId) {
+            // 会话 Store
+            updateTabScrollPositionInSession(sessionId, currentActiveTab.id, scrollTop, scrollLeft);
+        } else {
+            console.error("[FileEditorOverlay] 无法更新滚动位置：非共享模式下缺少 sessionId。");
+        }
+    }
+};
+ 
 // 关闭弹窗 (保持不变)
 const handleCloseContainer = () => {
     // 关闭前不再检查本地修改状态，因为没有本地状态了
@@ -551,6 +573,9 @@ onBeforeUnmount(() => {
           theme="vs-dark"
           class="editor-instance"
           @request-save="handleSaveRequest"
+         :initialScrollTop="activeTab?.scrollTop ?? 0"
+         :initialScrollLeft="activeTab?.scrollLeft ?? 0"
+         @update:scrollPosition="handleEditorScroll"
         />
          <!-- 如果容器可见但没有活动标签页 -->
         <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>

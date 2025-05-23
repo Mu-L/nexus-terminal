@@ -95,6 +95,8 @@ export const useSessionStore = defineStore('session', () => {
     editorActions.closeTabsToTheRightInSession(sessionId, targetTabId);
   const closeTabsToTheLeftInSession = (sessionId: string, targetTabId: string) =>
     editorActions.closeTabsToTheLeftInSession(sessionId, targetTabId);
+  const updateTabScrollPositionInSession = (sessionId: string, tabId: string, scrollTop: number, scrollLeft: number) =>
+    editorActions.updateTabScrollPositionInSession(sessionId, tabId, scrollTop, scrollLeft);
 
   // Command Input Actions
   const updateSessionCommandInput = (sessionId: string, content: string) =>
@@ -136,6 +138,7 @@ export const useSessionStore = defineStore('session', () => {
     closeOtherTabsInSession,
     closeTabsToTheRightInSession,
     closeTabsToTheLeftInSession,
+    updateTabScrollPositionInSession, // +++ 导出新的 action +++
     openRdpModal,
     closeRdpModal,
     openVncModal,

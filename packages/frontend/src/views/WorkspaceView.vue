@@ -144,7 +144,8 @@ onMounted(() => {
   subscribeToWorkspaceEvents('editor:closeOtherTabs', (payload) => handleCloseOtherEditorTabs(payload.tabId));
   subscribeToWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   subscribeToWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
-
+  subscribeToWorkspaceEvents('editor:updateScrollPosition', handleEditorScrollPositionUpdate); // +++ 订阅滚动位置更新事件 +++
+ 
   // 移除对 connection:connect 事件的监听，以避免重复创建会话
   // subscribeToWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   subscribeToWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
@@ -188,7 +189,8 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('editor:closeOtherTabs', (payload) => handleCloseOtherEditorTabs(payload.tabId));
   unsubscribeFromWorkspaceEvents('editor:closeTabsToRight', (payload) => handleCloseEditorTabsToRight(payload.tabId));
   unsubscribeFromWorkspaceEvents('editor:closeTabsToLeft', (payload) => handleCloseEditorTabsToLeft(payload.tabId));
-
+  unsubscribeFromWorkspaceEvents('editor:updateScrollPosition', handleEditorScrollPositionUpdate); // +++ 取消订阅滚动位置更新事件 +++
+ 
   // 移除对 connection:connect 事件的监听，以避免重复创建会话
   // unsubscribeFromWorkspaceEvents('connection:connect', (payload) => handleConnectRequest(payload.connectionId));
   unsubscribeFromWorkspaceEvents('connection:openNewSession', (payload) => handleOpenNewSession(payload.connectionId));
@@ -548,6 +550,22 @@ const handleCloseEditorTab = (tabId: string) => {
        sessionStore.changeEncodingInSession(currentActiveSessionId, payload.tabId, payload.encoding);
      } else {
        console.warn('[WorkspaceView] Cannot change editor encoding: No active session in independent mode.');
+     }
+   }
+ };
+ 
+ // +++ 处理编辑器滚动位置更新事件 (由 FileEditorContainer 发出) +++
+ const handleEditorScrollPositionUpdate = (payload: { tabId: string; scrollTop: number; scrollLeft: number }) => {
+   const { tabId, scrollTop, scrollLeft } = payload;
+   if (shareFileEditorTabsBoolean.value) {
+     fileEditorStore.updateTabScrollPosition(tabId, scrollTop, scrollLeft);
+   } else {
+     const currentActiveSession = activeSession.value;
+     if (currentActiveSession) {
+       // 假设 tabId 在当前活动会话的编辑器标签中是唯一的
+       sessionStore.updateTabScrollPositionInSession(currentActiveSession.sessionId, tabId, scrollTop, scrollLeft);
+     } else {
+       console.warn('[WorkspaceView] Cannot update editor scroll position: No active session in independent mode for tab:', tabId);
      }
    }
  };

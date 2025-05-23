@@ -200,6 +200,17 @@ const handleEncodingChange = (event: Event) => {
   }
 };
 
+// +++ 处理编辑器滚动事件 +++
+const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scrollLeft: number }) => {
+  if (activeTab.value) {
+    emitWorkspaceEvent('editor:updateScrollPosition', {
+      tabId: activeTab.value.id,
+      scrollTop,
+      scrollLeft,
+    });
+  }
+};
+
 
 // 注意：关闭/最小化按钮现在应该在 WorkspaceView 控制 Pane，而不是这里
 // const handleCloseContainer = () => { ... };
@@ -338,6 +349,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
           theme="vs-dark"
           class="editor-instance"
           @request-save="handleSaveRequest"
+         :initialScrollTop="activeTab?.scrollTop ?? 0"
+         :initialScrollLeft="activeTab?.scrollLeft ?? 0"
+         @update:scrollPosition="handleEditorScroll"
         />
         <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
       </div>

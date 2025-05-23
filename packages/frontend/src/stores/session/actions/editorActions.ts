@@ -297,6 +297,26 @@ export const closeTabsToTheRightInSession = (sessionId: string, targetTabId: str
     idsToClose.forEach(id => closeEditorTabInSession(sessionId, id));
 };
 
+export const updateTabScrollPositionInSession = (
+    sessionId: string,
+    tabId: string,
+    scrollTop: number,
+    scrollLeft: number
+) => {
+    const session = sessions.value.get(sessionId);
+    if (!session) {
+        console.error(`[EditorActions] 尝试在不存在的会话 ${sessionId} 中更新标签页 ${tabId} 的滚动位置`);
+        return;
+    }
+    const tab = session.editorTabs.value.find(t => t.id === tabId);
+    if (tab) {
+        tab.scrollTop = scrollTop;
+        tab.scrollLeft = scrollLeft;
+    } else {
+        console.warn(`[EditorActions] 尝试更新会话 ${sessionId} 中不存在的标签页 ${tabId} 的滚动位置`);
+    }
+};
+
 export const closeTabsToTheLeftInSession = (sessionId: string, targetTabId: string) => {
     const session = sessions.value.get(sessionId);
     if (!session) return;

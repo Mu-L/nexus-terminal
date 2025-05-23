@@ -9,25 +9,33 @@ import * as monaco from 'monaco-editor';
 const localFontSize = ref(14); // 本地字体大小状态，默认 14
 
 const props = defineProps({
-  modelValue: { 
+  modelValue: {
     type: String,
     default: '',
   },
   language: {
     type: String,
-    default: 'plaintext', 
+    default: 'plaintext',
   },
   theme: {
     type: String,
-    default: 'vs-dark', 
+    default: 'vs-dark',
   },
   readOnly: {
     type: Boolean,
     default: false,
-  }
+  },
+  initialScrollTop: { // 新增 prop
+    type: Number,
+    default: 0,
+  },
+  initialScrollLeft: { // 新增 prop
+    type: Number,
+    default: 0,
+  },
 });
 
-const emit = defineEmits(['update:modelValue', 'request-save']);
+const emit = defineEmits(['update:modelValue', 'request-save', 'update:scrollPosition']); // 新增 emit
 
 const editorContainer = ref<HTMLElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
@@ -74,7 +82,30 @@ onMounted(() => {
         emit('request-save');
       },
     });
+    
+    // 应用初始滚动位置
+    if (props.initialScrollTop > 0 || props.initialScrollLeft > 0) {
+      editorInstance.setScrollPosition({
+        scrollTop: props.initialScrollTop,
+        scrollLeft: props.initialScrollLeft,
+      });
+    }
 
+    // 监听滚动事件
+    editorInstance.onDidScrollChange((e) => {
+      if (editorInstance) {
+        // 只有当滚动是由用户操作或实际视口变化引起时才发出
+        // setScrollPosition 也会触发此事件，需要避免循环
+        // 一个简单的检查是，如果事件中的滚动值与 props 中的初始值不同，则认为是有效滚动
+        // 但更好的方式是父组件在设置初始值后才开始监听此事件，或此组件内部处理
+        // 为简单起见，我们直接 emit
+        emit('update:scrollPosition', {
+          scrollTop: editorInstance.getScrollTop(),
+          scrollLeft: editorInstance.getScrollLeft(),
+        });
+      }
+    });
+ 
    
     editorInstance.onDidChangeModelContent(() => {
       if (editorInstance) {
