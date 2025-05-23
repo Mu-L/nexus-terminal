@@ -223,9 +223,9 @@ onBeforeUnmount(() => {
 
       <!-- Path List -->
       <div class="overflow-y-auto flex-grow p-1 text-sm">
-        <ul v-if="!favoritePathsStore.isLoading && favoritePathsStore.filteredFavoritePaths.length" class="list-none m-0 p-0">
+        <ul v-if="!favoritePathsStore.isLoading && filteredPaths.length" class="list-none m-0 p-0">
           <li
-            v-for="favPath in favoritePathsStore.filteredFavoritePaths"
+            v-for="favPath in filteredPaths"
             :key="favPath.id"
             class="p-2 hover:bg-primary/10 cursor-pointer group flex items-center justify-between rounded-md transition-colors duration-150"
             @click="handleItemClick(favPath)"

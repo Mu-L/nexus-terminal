@@ -1634,9 +1634,7 @@ const handleOpenEditorClick = () => {
                      <!-- <button @click="searchQuery = ''; searchInputRef?.focus()" v-if="searchQuery" class="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-foreground">&times;</button> -->
                  </div>
              </div>
-            </div> <!-- End Path Actions -->
-            <!-- Wrapper for Favorite Paths Button and Modal -->
-            <div class="relative flex-shrink-0">
+             <div class="relative flex-shrink-0">
               <!-- Favorite Paths Button -->
               <button
                   ref="favoritePathsButtonRef"
@@ -1653,6 +1651,9 @@ const handleOpenEditorClick = () => {
                 @navigate-to-path="handleNavigateToPathFromFavorites"
               />
             </div>
+            </div> 
+
+            
 
             <!-- Path Bar with History Dropdown -->
             <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 min-w-[100px] flex-shrink">
