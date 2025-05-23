@@ -109,8 +109,9 @@ const closeStyleCustomizer = () => {
   appearanceStore.toggleStyleCustomizer(false);
 };
 
-// +++ 修改：处理 Alt 键按下的事件处理函数，并记录快捷键 +++
+// +++ 处理 Alt 键按下的事件处理函数，并记录快捷键 +++
 const handleAltKeyDown = async (event: KeyboardEvent) => { // +++ 改为 async +++
+  if (!isWorkspaceRoute.value) return; // 只在 workspace 路由下执行
   // 只在 Alt 键首次按下时设置状态
   if (event.key === 'Alt' && !event.repeat) {
     isAltPressed.value = true;
@@ -161,8 +162,9 @@ const handleAltKeyDown = async (event: KeyboardEvent) => { // +++ 改为 async +
   }
 };
 
-// +++ 修改：全局键盘事件处理函数，监听 keyup，优先处理快捷键 +++
+// +++ 全局键盘事件处理函数，监听 keyup，优先处理快捷键 +++
 const handleGlobalKeyUp = async (event: KeyboardEvent) => {
+  if (!isWorkspaceRoute.value) return; // 只在 workspace 路由下执行
   if (event.key === 'Alt') {
     const altWasPressed = isAltPressed.value;
     const triggeredShortcutKey = altShortcutKey.value; // 记录松开时是否有记录的快捷键

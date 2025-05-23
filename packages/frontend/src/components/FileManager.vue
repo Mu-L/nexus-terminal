@@ -1703,7 +1703,7 @@ const handleOpenEditorClick = () => {
   <div class="flex flex-col h-full overflow-hidden bg-background text-foreground text-sm font-sans">
     <div class="flex items-center justify-between flex-wrap gap-2 p-2 bg-header  flex-shrink-0">
         <!-- Wrapper for Path Actions and Path Bar -->
-        <div class="flex items-center gap-2 flex-shrink"> <!-- Added gap-2 -->
+        <div class="flex items-center gap-2 flex-grow min-w-0"> <!-- Added gap-2, flex-grow, min-w-0 -->
             <!-- Path Actions -->
             <div class="flex items-center flex-shrink-0"> <!-- Removed mr-auto -->
               <!-- CD 到终端按钮 -->
@@ -1784,8 +1784,9 @@ const handleOpenEditorClick = () => {
             
 
            
-            <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 w-fit flex-shrink">
-              <span v-show="!isEditingPath && !showPathHistoryDropdown" @click="startPathEdit" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2 cursor-text">
+            <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5"
+                 :class="{ 'flex-grow min-w-0': isEditingPath || showPathHistoryDropdown, 'w-fit max-w-full': !isEditingPath && !showPathHistoryDropdown }">
+              <span v-show="!isEditingPath && !showPathHistoryDropdown" @click="startPathEdit" class="text-text-secondary pr-2 cursor-text truncate">
                 <strong
                   :title="t('fileManager.editPathTooltip')"
                   class="font-medium text-link px-1 rounded transition-colors duration-200"
