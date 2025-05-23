@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useAppearanceStore } from '../stores/appearance.store'; 
+import { useAppearanceStore } from '../stores/appearance.store';
+import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { storeToRefs } from 'pinia';
 import type { ITheme } from 'xterm';
 import type { TerminalTheme } from '../types/terminal-theme.types'; 
@@ -9,6 +10,7 @@ import { defaultXtermTheme } from '../features/appearance/config/default-themes'
 
 const { t } = useI18n();
 const appearanceStore = useAppearanceStore();
+const notificationsStore = useUiNotificationsStore();
 const {
   appearanceSettings, 
   currentUiTheme,
@@ -17,7 +19,8 @@ const {
   allTerminalThemes, 
   currentTerminalFontFamily,
   currentTerminalFontSize,
-  currentEditorFontSize, 
+  currentEditorFontSize,
+  currentEditorFontFamily,
   pageBackgroundImage,
   
   terminalBackgroundImage,
@@ -30,10 +33,11 @@ const {
 const editableUiTheme = ref<Record<string, string>>({});
 const editableTerminalFontFamily = ref('');
 const editableTerminalFontSize = ref(14);
-const editableEditorFontSize = ref(14); 
+const editableEditorFontSize = ref(14);
+const editableEditorFontFamily = ref('');
 
 
-const editableUiThemeString = ref(''); 
+const editableUiThemeString = ref('');
 const themeParseError = ref<string | null>(null); 
 const localTerminalBackgroundEnabled = ref(true);
 const editableTerminalBackgroundOverlayOpacity = ref(0.5); // 本地编辑状态，默认 0.5
@@ -95,7 +99,8 @@ const initializeEditableState = () => {
   // --- 其他初始化保持不变 ---
   editableTerminalFontFamily.value = currentTerminalFontFamily.value;
   editableTerminalFontSize.value = currentTerminalFontSize.value;
-  editableEditorFontSize.value = currentEditorFontSize.value; // <-- 新增
+  editableEditorFontSize.value = currentEditorFontSize.value;
+  editableEditorFontFamily.value = currentEditorFontFamily.value; // 初始化编辑器字体家族
   localTerminalBackgroundEnabled.value = isTerminalBackgroundEnabled.value; // <-- 重新添加：在此处初始化
   editableTerminalBackgroundOverlayOpacity.value = currentTerminalBackgroundOverlayOpacity.value; // 初始化蒙版透明度
   console.log(`[StyleCustomizer initializeEditableState] Initializing localTerminalBackgroundEnabled to: ${localTerminalBackgroundEnabled.value} (from store: ${isTerminalBackgroundEnabled.value})`); 
@@ -154,7 +159,8 @@ watch([
         // 字体等信息需要从 newSettings 中获取
         editableTerminalFontFamily.value = newSettings?.terminalFontFamily || '';
         editableTerminalFontSize.value = newSettings?.terminalFontSize || 14;
-        editableEditorFontSize.value = newSettings?.editorFontSize || 14; // <-- 新增同步
+        editableEditorFontSize.value = newSettings?.editorFontSize || 14;
+        editableEditorFontFamily.value = newSettings?.editorFontFamily || 'Consolas, "Noto Sans SC", "Microsoft YaHei"'; // 同步编辑器字体家族
         // localTerminalBackgroundEnabled.value = newSettings?.terminalBackgroundEnabled ?? true; // <-- 移除此行，避免冲突
         // editableTerminalBackgroundOverlayOpacity.value = newSettings?.terminalBackgroundOverlayOpacity ?? 0.5; // 在 initializeEditableState 中处理
     }
@@ -195,7 +201,7 @@ const closeCustomizer = () => {
 };
 
 // 当前活动的标签页
-const currentTab = ref<'ui' | 'terminal' | 'background' | 'other'>('ui'); // <-- 添加 'other'
+const currentTab = ref<'ui' | 'terminal' | 'background' | 'other'>('ui'); 
 
 // --- 处理函数 ---
 
@@ -203,9 +209,10 @@ const currentTab = ref<'ui' | 'terminal' | 'background' | 'other'>('ui'); // <--
 const handleSaveUiTheme = async () => {
   try {
     await appearanceStore.saveCustomUiTheme(editableUiTheme.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.uiThemeSaved') }); 
   } catch (error: any) {
     console.error("保存 UI 主题失败:", error);
-    alert(t('styleCustomizer.uiThemeSaveFailed', { message: error.message }));
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.uiThemeSaveFailed', { message: error.message }) }); 
   }
 };
 
@@ -213,9 +220,10 @@ const handleSaveUiTheme = async () => {
 const handleResetUiTheme = async () => {
     try {
         await appearanceStore.resetCustomUiTheme();
+        notificationsStore.addNotification({ type: 'info', message: t('styleCustomizer.uiThemeReset') }); 
     } catch (error: any) {
         console.error("重置 UI 主题失败:", error);
-         alert(t('styleCustomizer.uiThemeResetFailed', { message: error.message }));
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.uiThemeResetFailed', { message: error.message }) }); 
     }
 };
 
@@ -256,10 +264,10 @@ const applyDarkMode = async () => {
     // 深拷贝覆盖当前编辑的主题
     editableUiTheme.value = JSON.parse(JSON.stringify(darkModeTheme));
     await appearanceStore.saveCustomUiTheme(editableUiTheme.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.darkModeApplied') }); 
   } catch (error: any) {
     console.error("应用黑暗模式失败:", error);
-    // TODO: 添加 i18n 翻译 'styleCustomizer.darkModeApplyFailed'
-    alert(t('styleCustomizer.darkModeApplyFailed', { message: error.message || '未知错误' }));
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.darkModeApplyFailed', { message: error.message || '未知错误' }) }); 
   }
 };
 
@@ -382,7 +390,7 @@ const handleUiThemeStringChange = () => {
         // 尝试提供更具体的错误信息
         let errorMessage = error.message || t('styleCustomizer.errorInvalidJsonConfig');
         if (error instanceof SyntaxError) {
-            errorMessage = `${t('styleCustomizer.errorJsonSyntax')}: ${error.message}`; // 需要添加翻译
+            errorMessage = `${t('styleCustomizer.errorJsonSyntax')}: ${error.message}`;
         }
         themeParseError.value = errorMessage;
     }
@@ -393,10 +401,10 @@ const handleUiThemeStringChange = () => {
 const handleSaveTerminalFont = async () => {
     try {
         await appearanceStore.setTerminalFontFamily(editableTerminalFontFamily.value);
-        alert(t('styleCustomizer.terminalFontSaved'));
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalFontSaved') }); 
     } catch (error: any) {
         console.error("保存终端字体失败:", error);
-        alert(t('styleCustomizer.terminalFontSaveFailed', { message: error.message }));
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalFontSaveFailed', { message: error.message }) }); 
     }
 };
 
@@ -405,14 +413,14 @@ const handleSaveTerminalFontSize = async () => {
     try {
         const size = Number(editableTerminalFontSize.value);
         if (isNaN(size) || size <= 0) {
-            alert(t('styleCustomizer.errorInvalidFontSize')); // 需要添加翻译
+            notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorInvalidFontSize') }); 
             return;
         }
         await appearanceStore.setTerminalFontSize(size);
-        alert(t('styleCustomizer.terminalFontSizeSaved')); // 需要添加翻译
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalFontSizeSaved') }); 
     } catch (error: any) {
         console.error("保存终端字体大小失败:", error);
-        alert(t('styleCustomizer.terminalFontSizeSaveFailed', { message: error.message })); // 需要添加翻译
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalFontSizeSaveFailed', { message: error.message }) }); 
     }
 };
 
@@ -421,17 +429,28 @@ const handleSaveEditorFontSize = async () => {
     try {
         const size = Number(editableEditorFontSize.value);
         if (isNaN(size) || size <= 0) {
-            alert(t('styleCustomizer.errorInvalidEditorFontSize')); // 需要添加翻译
+            notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorInvalidEditorFontSize') }); 
             return;
         }
         await appearanceStore.setEditorFontSize(size);
-        alert(t('styleCustomizer.editorFontSizeSaved')); // 需要添加翻译
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.editorFontSizeSaved') }); 
     } catch (error: any) {
         console.error("保存编辑器字体大小失败:", error);
-        alert(t('styleCustomizer.editorFontSizeSaveFailed', { message: error.message })); // 需要添加翻译
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.editorFontSizeSaveFailed', { message: error.message }) }); 
     }
 };
-
+ 
+// 保存编辑器字体家族
+const handleSaveEditorFontFamily = async () => {
+    try {
+        await appearanceStore.setEditorFontFamily(editableEditorFontFamily.value);
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.editorFontFamilySaved') });
+    } catch (error: any) {
+        console.error("保存编辑器字体失败:", error);
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.editorFontFamilySaveFailed', { message: error.message }) });
+    }
+};
+ 
 // 应用选定的终端主题
 const handleApplyTheme = async (theme: TerminalTheme) => {
     // theme._id 是字符串 ID
@@ -450,10 +469,10 @@ const handleApplyTheme = async (theme: TerminalTheme) => {
     try {
         // setActiveTerminalTheme action 现在需要字符串 ID
         await appearanceStore.setActiveTerminalTheme(theme._id);
-        // 成功后 activeTerminalThemeId 会自动更新
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.setActiveThemeSuccess', { themeName: theme.name }) }); 
     } catch (error: any) {
         console.error("应用终端主题失败:", error);
-        alert(t('styleCustomizer.setActiveThemeFailed', { message: error.message }));
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.setActiveThemeFailed', { message: error.message }) }); 
     }
 };
 
@@ -494,7 +513,7 @@ const handleEditTheme = async (theme: TerminalTheme) => {
     // 检查 theme._id 是否存在
     if (!theme._id) {
         console.error("尝试编辑没有 ID 的主题:", theme);
-        alert(t('styleCustomizer.errorEditThemeNoId')); // 需要添加翻译: "无法编辑没有 ID 的主题"
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorEditThemeNoId') }); 
         return;
     }
 
@@ -506,7 +525,7 @@ const handleEditTheme = async (theme: TerminalTheme) => {
         // 1. 加载主题数据
         themeDataToEdit = await appearanceStore.loadTerminalThemeData(theme._id);
         if (!themeDataToEdit) {
-            throw new Error(t('styleCustomizer.errorLoadThemeDataFailed')); // 需要添加翻译: "加载主题数据失败"
+            throw new Error(t('styleCustomizer.errorLoadThemeDataFailed')); 
         }
 
         // 2. 如果是预设主题，准备创建副本
@@ -544,7 +563,7 @@ const handleEditTheme = async (theme: TerminalTheme) => {
 
     } catch (error: any) {
         console.error("编辑主题失败 (加载数据时):", error);
-        saveThemeError.value = error.message || t('styleCustomizer.errorEditThemeFailed'); // 需要添加翻译: "编辑主题失败"
+        saveThemeError.value = error.message || t('styleCustomizer.errorEditThemeFailed'); 
         // 不进入编辑模式
         isEditingTheme.value = false;
         editingTheme.value = null;
@@ -560,7 +579,7 @@ const handleSaveEditingTheme = async () => {
     // 在保存前，确保 themeData 是最新的（以防 textarea 未失去焦点）
     handleTerminalThemeStringChange(); // 先尝试解析 textarea
     if (terminalThemeParseError.value) {
-        saveThemeError.value = t('styleCustomizer.errorFixJsonBeforeSave'); // 需要添加翻译: "请先修复 JSON 格式错误再保存"
+        saveThemeError.value = t('styleCustomizer.errorFixJsonBeforeSave'); 
         return;
     }
 
@@ -578,18 +597,18 @@ const handleSaveEditingTheme = async () => {
                 editingTheme.value._id,
                 updateDto.name,
                 updateDto.themeData
-            );
-             alert(t('styleCustomizer.themeUpdatedSuccess'));
-        } else { // 新建
-             // 确保传递的是 CreateTerminalThemeDto 兼容的格式
-            const createDto = { name: editingTheme.value.name, themeData: currentThemeData }; // 使用解析后的数据
-            await appearanceStore.createTerminalTheme(
-                createDto.name,
-                createDto.themeData
-            );
-             alert(t('styleCustomizer.themeCreatedSuccess'));
-        }
-        isEditingTheme.value = false; // 关闭编辑
+           );
+           notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeUpdatedSuccess') }); 
+       } else { // 新建
+            // 确保传递的是 CreateTerminalThemeDto 兼容的格式
+           const createDto = { name: editingTheme.value.name, themeData: currentThemeData }; // 使用解析后的数据
+           await appearanceStore.createTerminalTheme(
+               createDto.name,
+               createDto.themeData
+           );
+           notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeCreatedSuccess') }); 
+       }
+       isEditingTheme.value = false; // 关闭编辑
         editingTheme.value = null;
         editableTerminalThemeString.value = ''; // 清理
         terminalThemeParseError.value = null; // 清理
@@ -680,10 +699,10 @@ const handleDeleteTheme = async (theme: TerminalTheme) => {
     if (theme.isPreset) return;
     try {
         await appearanceStore.deleteTerminalTheme(theme._id!);
-         alert(t('styleCustomizer.themeDeletedSuccess'));
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeDeletedSuccess') }); 
     } catch (error: any) {
         console.error("删除终端主题失败:", error);
-         alert(t('styleCustomizer.themeDeleteFailed', { message: error.message }));
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.themeDeleteFailed', { message: error.message }) }); 
     }
 };
 
@@ -702,12 +721,15 @@ const handleImportThemeFile = async (event: Event) => {
             // 可以选择在前端解析文件名作为默认名称传递给后端
             const defaultName = file.name.endsWith('.json') ? file.name.slice(0, -5) : file.name;
             await appearanceStore.importTerminalTheme(file, defaultName); // 传递文件名作为备选名称
-            alert(t('styleCustomizer.importSuccess'));
+            notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.importSuccess') }); 
             input.value = ''; // 清空文件输入，以便再次选择相同文件
         } catch (error: any) {
             console.error("导入主题失败:", error);
-            importError.value = error.message || t('styleCustomizer.importFailed');
-             input.value = '';
+            const determinedErrorMessage = error.message || t('styleCustomizer.importFailed');
+            importError.value = determinedErrorMessage; // importError.value 的类型是 string | null
+            // 确保传递给 addNotification 的 message 是 string 类型
+            notificationsStore.addNotification({ type: 'error', message: determinedErrorMessage });
+            input.value = '';
         }
     }
 };
@@ -720,13 +742,15 @@ const handleExportActiveTheme = async () => {
         try {
             // exportTerminalTheme action 需要字符串 ID
             await appearanceStore.exportTerminalTheme(currentIdNum.toString());
+            // 导出通常是下载文件，可能不需要显式通知，或者可以有一个信息性通知
+            notificationsStore.addNotification({ type: 'info', message: t('styleCustomizer.exportInitiated') }); 
         } catch (error: any) {
             console.error("导出主题失败:", error);
-             alert(t('styleCustomizer.exportFailed', { message: error.message }));
+            notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.exportFailed', { message: error.message }) }); 
         }
     } else {
         console.warn("尝试导出主题，但 activeTerminalThemeId 为 null 或 undefined");
-        alert(t('styleCustomizer.noActiveThemeToExport'));
+        notificationsStore.addNotification({ type: 'warning', message: t('styleCustomizer.noActiveThemeToExport') }); 
     }
 };
 
@@ -747,10 +771,12 @@ const handlePageBgUpload = async (event: Event) => {
         const file = input.files[0];
         try {
             await appearanceStore.uploadPageBackground(file);
-            alert(t('styleCustomizer.pageBgUploadSuccess'));
+            notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.pageBgUploadSuccess') }); 
             input.value = ''; // 清空以便再次选择
         } catch (error: any) {
-            uploadError.value = error.message || t('styleCustomizer.uploadFailed');
+            const determinedErrorMessage = error.message || t('styleCustomizer.uploadFailed');
+            uploadError.value = determinedErrorMessage;
+            notificationsStore.addNotification({ type: 'error', message: determinedErrorMessage }); // 显示错误通知
             input.value = '';
         }
     }
@@ -762,10 +788,12 @@ const handleTerminalBgUpload = async (event: Event) => {
         const file = input.files[0];
         try {
             await appearanceStore.uploadTerminalBackground(file);
-             alert(t('styleCustomizer.terminalBgUploadSuccess'));
+            notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalBgUploadSuccess') }); 
             input.value = '';
         } catch (error: any) {
-            uploadError.value = error.message || t('styleCustomizer.uploadFailed');
+            const determinedErrorMessage = error.message || t('styleCustomizer.uploadFailed');
+            uploadError.value = determinedErrorMessage;
+            notificationsStore.addNotification({ type: 'error', message: determinedErrorMessage }); // 显示错误通知
             input.value = '';
         }
     }
@@ -774,20 +802,20 @@ const handleTerminalBgUpload = async (event: Event) => {
 const handleRemovePageBg = async () => {
     try {
         await appearanceStore.removePageBackground();
-         alert(t('styleCustomizer.pageBgRemoved'));
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.pageBgRemoved') }); 
     } catch (error: any) {
          console.error("移除页面背景失败:", error);
-         alert(t('styleCustomizer.removeBgFailed', { message: error.message }));
+         notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.removeBgFailed', { message: error.message }) }); 
     }
 };
 
 const handleRemoveTerminalBg = async () => {
     try {
         await appearanceStore.removeTerminalBackground();
-         alert(t('styleCustomizer.terminalBgRemoved'));
+        notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalBgRemoved') }); 
     } catch (error: any) {
          console.error("移除终端背景失败:", error);
-         alert(t('styleCustomizer.removeBgFailed', { message: error.message }));
+         notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.removeBgFailed', { message: error.message }) }); 
     }
 };
  
@@ -802,7 +830,7 @@ const handleToggleTerminalBackground = async () => {
         console.error("更新终端背景启用状态失败:", error);
         // 失败时回滚本地状态
         localTerminalBackgroundEnabled.value = !newValue;
-        alert(t('styleCustomizer.errorToggleTerminalBg', { message: error.message })); // 需要添加翻译
+        notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorToggleTerminalBg', { message: error.message }) }); 
     }
 };
  
@@ -811,14 +839,14 @@ const handleSaveTerminalBackgroundOverlayOpacity = async () => {
   try {
     const opacity = Number(editableTerminalBackgroundOverlayOpacity.value);
     if (isNaN(opacity) || opacity < 0 || opacity > 1) {
-      alert(t('styleCustomizer.errorInvalidOpacityValue')); // 需要添加翻译 "无效的透明度值，必须在0到1之间"
+      notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorInvalidOpacityValue') }); 
       return;
     }
     await appearanceStore.setTerminalBackgroundOverlayOpacity(opacity);
-    alert(t('styleCustomizer.terminalBgOverlayOpacitySaved')); // 需要添加翻译 "终端背景蒙版透明度已保存"
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalBgOverlayOpacitySaved') }); 
   } catch (error: any) {
     console.error("保存终端背景蒙版透明度失败:", error);
-    alert(t('styleCustomizer.terminalBgOverlayOpacitySaveFailed', { message: error.message })); // 需要添加翻译 "终端背景蒙版透明度保存失败"
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalBgOverlayOpacitySaveFailed', { message: error.message }) }); 
   }
 };
 
@@ -1372,8 +1400,16 @@ const handlePreviewButtonMouseDown = async (event: MouseEvent, themeToPreview: T
                  <input type="number" id="editorFontSize" v-model.number="editableEditorFontSize" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" min="1" />
                  <button @click="handleSaveEditorFontSize" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap justify-self-start mt-1 md:mt-0">{{ t('common.save') }}</button>
              </div>
+
+             <hr class="my-4 md:my-6">
+
+             <div class="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-start md:items-center gap-2 md:gap-3 mb-3">
+                 <label for="editorFontFamily" class="text-left text-foreground text-sm font-medium overflow-hidden text-ellipsis block w-full mb-1 md:mb-0">{{ t('styleCustomizer.editorFontFamily') }}:</label> 
+                 <input type="text" id="editorFontFamily" v-model="editableEditorFontFamily" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"> 
+                 <button @click="handleSaveEditorFontFamily" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap justify-self-start mt-1 md:mt-0">{{ t('common.save') }}</button>
+             </div>
            </section>
-        </main>
+       </main>
       </div>
       
       <footer class="flex justify-end p-3 md:p-4 border-t border-border bg-footer flex-shrink-0 flex-wrap gap-2"> 

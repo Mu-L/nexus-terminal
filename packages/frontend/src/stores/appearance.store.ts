@@ -115,6 +115,11 @@ export const useAppearanceStore = defineStore('appearance', () => {
         const size = appearanceSettings.value.editorFontSize;
         return typeof size === 'number' && size > 0 ? size : 14;
     });
+
+    // 当前编辑器字体家族
+    const currentEditorFontFamily = computed<string>(() => {
+        return appearanceSettings.value.editorFontFamily || 'Consolas, "Noto Sans SC", "Microsoft YaHei"'; // 提供默认值
+    });
  
     // 终端背景是否启用
     const isTerminalBackgroundEnabled = computed<boolean>(() => {
@@ -274,6 +279,14 @@ export const useAppearanceStore = defineStore('appearance', () => {
      */
     async function setEditorFontSize(size: number) {
         await updateAppearanceSettings({ editorFontSize: size });
+    }
+
+    /**
+     * 设置编辑器字体家族
+     * @param fontFamily 字体列表字符串
+     */
+    async function setEditorFontFamily(fontFamily: string) {
+        await updateAppearanceSettings({ editorFontFamily: fontFamily });
     }
  
     /**
@@ -639,6 +652,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
         terminalFontSizeDesktop, // + 用于在设置中分别显示/设置桌面端字号
         terminalFontSizeMobile,  // + 用于在设置中分别显示/设置移动端字号
         currentEditorFontSize,
+        currentEditorFontFamily, // 新增
         pageBackgroundImage,
         terminalBackgroundImage,
         currentTerminalBackgroundOverlayOpacity,
@@ -651,7 +665,8 @@ export const useAppearanceStore = defineStore('appearance', () => {
         setTerminalFontFamily,
         setTerminalFontSize, // 设置桌面端字体大小
         setTerminalFontSizeMobile, // + 设置移动端字体大小
-        setEditorFontSize, 
+        setEditorFontSize,
+        setEditorFontFamily, // 新增
         setTerminalBackgroundEnabled,
         createTerminalTheme,
         updateTerminalTheme, 

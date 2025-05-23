@@ -5,18 +5,21 @@ import MonacoEditor from './MonacoEditor.vue';
 import FileEditorTabs from './FileEditorTabs.vue';
 import type { FileTab } from '../stores/fileEditor.store'; 
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
-import { useSessionStore } from '../stores/session.store'; 
-import { useSettingsStore } from '../stores/settings.store'; 
-import { storeToRefs } from 'pinia'; 
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
+import { useSessionStore } from '../stores/session.store';
+import { useSettingsStore } from '../stores/settings.store';
+import { useAppearanceStore } from '../stores/appearance.store'; // +++ 导入外观 Store +++
+import { storeToRefs } from 'pinia';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 
 const { t } = useI18n();
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const sessionStore = useSessionStore(); // +++ 实例化会话 Store +++
 const settingsStore = useSettingsStore(); // +++ 实例化设置 Store +++
+const appearanceStore = useAppearanceStore(); // +++ 实例化外观 Store +++
 const { shareFileEditorTabsBoolean } = storeToRefs(settingsStore); // +++ 获取共享设置 +++
-
+const { currentEditorFontFamily } = storeToRefs(appearanceStore); // +++ 获取编辑器字体家族设置 +++
+ 
 // --- Props ---
 const props = defineProps({
   tabs: {
@@ -344,16 +347,17 @@ const handleKeyDown = (event: KeyboardEvent) => {
           v-else-if="activeTab"
           ref="monacoEditorRef"
           :key="activeTab.id"
-          v-model="localEditorContent" 
+          v-model="localEditorContent"
           :language="currentTabLanguage"
+          :font-family="currentEditorFontFamily"
           theme="vs-dark"
           class="editor-instance"
           @request-save="handleSaveRequest"
          :initialScrollTop="activeTab?.scrollTop ?? 0"
          :initialScrollLeft="activeTab?.scrollLeft ?? 0"
          @update:scrollPosition="handleEditorScroll"
-        />
-        <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
+       />
+       <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
       </div>
 
   </div>

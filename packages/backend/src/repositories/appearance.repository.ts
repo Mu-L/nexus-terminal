@@ -58,6 +58,9 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
                 settings.terminalBackgroundOverlayOpacity = parseFloat(row.value);
                 terminalBackgroundOverlayOpacityFound = true;
                 break;
+            case 'editorFontFamily':
+                settings.editorFontFamily = row.value || null; // 如果为空字符串，则视为 null
+                break;
         }
     }
  
@@ -69,6 +72,7 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
         terminalFontFamily: settings.terminalFontFamily ?? defaults.terminalFontFamily,
         terminalFontSize: settings.terminalFontSize ?? defaults.terminalFontSize,
         editorFontSize: settings.editorFontSize ?? defaults.editorFontSize,
+        editorFontFamily: settings.editorFontFamily ?? defaults.editorFontFamily,
         terminalBackgroundImage: settings.terminalBackgroundImage ?? defaults.terminalBackgroundImage,
         pageBackgroundImage: settings.pageBackgroundImage ?? defaults.pageBackgroundImage,
         // 修改：只有当数据库中未找到记录时才使用默认值
@@ -91,6 +95,7 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         terminalFontFamily: 'Consolas, "Courier New", monospace, "Microsoft YaHei", "微软雅黑"',
         terminalFontSize: 14,
         editorFontSize: 14,
+        editorFontFamily: 'Consolas, "Noto Sans SC", "Microsoft YaHei"',
         terminalBackgroundImage: undefined,
         pageBackgroundImage: undefined,
         terminalBackgroundEnabled: true, // 默认启用
@@ -117,6 +122,7 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalFontFamily', value: defaults.terminalFontFamily },
         { key: 'terminalFontSize', value: defaults.terminalFontSize },
         { key: 'editorFontSize', value: defaults.editorFontSize },
+        { key: 'editorFontFamily', value: defaults.editorFontFamily },
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'pageBackgroundImage', value: defaults.pageBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled },

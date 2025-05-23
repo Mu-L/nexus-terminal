@@ -12,6 +12,7 @@ export interface AppearanceSettings {
   terminalBackgroundImage?: string;
   pageBackgroundImage?: string;
   editorFontSize?: number;
+  editorFontFamily?: string | null; // Monaco Editor 字体偏好
   terminalBackgroundEnabled?: boolean; // 终端背景是否启用
   terminalBackgroundOverlayOpacity?: number; // 终端背景蒙版透明度 (0-1)
 }

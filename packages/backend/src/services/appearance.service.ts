@@ -69,6 +69,28 @@ export const updateSettings = async (settingsDto: UpdateAppearanceDto): Promise<
       settingsDto.editorFontSize = size;
   }
 
+  // 验证 editorFontFamily (如果提供了)
+  if (settingsDto.hasOwnProperty('editorFontFamily')) {
+    if (settingsDto.editorFontFamily === null) {
+      // 允许用户将字体设置为空 (null)，表示重置或使用默认
+      // 无需额外操作，仓库层会处理 null
+    } else if (typeof settingsDto.editorFontFamily === 'string') {
+      const fontFamily = settingsDto.editorFontFamily;
+      // 校验字体名称格式和长度
+      if (fontFamily.length > 255) {
+        throw new Error('编辑器字体名称过长，最多允许 255 个字符。');
+      }
+
+      if (fontFamily.trim() === '' && fontFamily !== '') {
+  
+      }
+ 
+    } else {
+      // 如果提供了 editorFontFamily 但不是 string 或 null
+      throw new Error('无效的编辑器字体名称类型，应为字符串或 null。');
+    }
+  }
+
   // 验证 terminalBackgroundOverlayOpacity (如果提供了)
   if (settingsDto.terminalBackgroundOverlayOpacity !== undefined && settingsDto.terminalBackgroundOverlayOpacity !== null) {
     const opacity = Number(settingsDto.terminalBackgroundOverlayOpacity);

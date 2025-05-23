@@ -25,17 +25,21 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  initialScrollTop: { // 新增 prop
+  fontFamily: {
+    type: String,
+    default: 'Consolas, "Courier New", monospace',
+  },
+  initialScrollTop: { 
     type: Number,
     default: 0,
   },
-  initialScrollLeft: { // 新增 prop
+  initialScrollLeft: { 
     type: Number,
     default: 0,
   },
 });
 
-const emit = defineEmits(['update:modelValue', 'request-save', 'update:scrollPosition']); // 新增 emit
+const emit = defineEmits(['update:modelValue', 'request-save', 'update:scrollPosition']); 
 
 const editorContainer = ref<HTMLElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
@@ -48,7 +52,8 @@ onMounted(() => {
       value: props.modelValue,
       language: props.language,
       theme: props.theme,
-      fontSize: localFontSize.value, 
+      fontSize: localFontSize.value,
+      fontFamily: props.fontFamily, // 使用 prop 的字体家族
       automaticLayout: true,
       readOnly: props.readOnly,
       minimap: { enabled: true },
@@ -211,6 +216,12 @@ watch(() => props.readOnly, (newReadOnly) => {
   }
 });
 
+watch(() => props.fontFamily, (newFontFamily) => {
+  if (editorInstance) {
+    editorInstance.updateOptions({ fontFamily: newFontFamily });
+  }
+});
+ 
 
 // --- 移除对全局字体大小的监听 ---
 onBeforeUnmount(() => {
