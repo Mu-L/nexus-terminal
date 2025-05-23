@@ -227,13 +227,12 @@ const definedMigrations: Migration[] = [
             ANALYZE; -- 重新分析数据库模式
         `
     },
-    // --- 未来可以添加更多迁移 ---
     {
         id: 6,
         name: 'Create passkeys table for WebAuthn credentials',
         check: async (db: Database): Promise<boolean> => {
             const passkeysTableAlreadyExists = await tableExists(db, 'passkeys');
-            return !passkeysTableAlreadyExists; // Only run if the table does NOT exist
+            return !passkeysTableAlreadyExists;
         },
         sql: `
             CREATE TABLE IF NOT EXISTS passkeys (
@@ -249,6 +248,21 @@ const definedMigrations: Migration[] = [
                 created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                 updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+        `
+    },
+    {
+        id: 7,
+        name: 'Create path_history table',
+        check: async (db: Database): Promise<boolean> => {
+            const tableAlreadyExists = await tableExists(db, 'path_history');
+            return !tableAlreadyExists;
+        },
+        sql: `
+            CREATE TABLE IF NOT EXISTS path_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT NOT NULL,
+                timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
             );
         `
     }

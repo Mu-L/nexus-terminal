@@ -158,6 +158,14 @@ CREATE TABLE IF NOT EXISTS command_history (
 );
 `;
 
+export const createPathHistoryTableSQL = `
+CREATE TABLE IF NOT EXISTS path_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL,
+    timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+`;
+
 export const createQuickCommandsTableSQL = `
 CREATE TABLE IF NOT EXISTS quick_commands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

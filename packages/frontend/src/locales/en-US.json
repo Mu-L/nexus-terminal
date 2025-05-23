@@ -1,5 +1,4 @@
 {
-
   "appName": "Nexus Terminal",
   "projectName": "Nexus Terminal",
   "slogan":"Stir the stars, command the terminal.",
@@ -1504,5 +1503,13 @@
     "transferInitiated": "Transfer task created",
     "transferInitiatedGeneric": "Transfer task created successfully.",
     "transferFailedError": "Failed to initiate transfer. Please try again."
+  },
+  "pathHistory": {
+    "loading": "Loading...",
+    "empty": "No path history",
+    "copy": "Copy path",
+    "delete": "Delete this history entry",
+    "copiedSuccess": "Path copied to clipboard",
+    "copiedError": "Failed to copy path"
   }
 }

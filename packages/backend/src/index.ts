@@ -54,6 +54,7 @@ import sshKeysRouter from './ssh_keys/ssh_keys.routes';
 import quickCommandTagRoutes from './quick-command-tags/quick-command-tag.routes'; 
 import sshSuspendRouter from './ssh-suspend/ssh-suspend.routes';
 import { transfersRoutes } from './transfers/transfers.routes';
+import pathHistoryRoutes from './path-history/path-history.routes';
 import { initializeWebSocket } from './websocket';
 import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
 
@@ -258,7 +259,8 @@ const startServer = () => {
     app.use('/api/v1/ssh-keys', sshKeysRouter); 
     app.use('/api/v1/quick-command-tags', quickCommandTagRoutes);
     app.use('/api/v1/ssh-suspend', sshSuspendRouter); 
-    app.use('/api/v1/transfers', transfersRoutes()); 
+    app.use('/api/v1/transfers', transfersRoutes());
+    app.use('/api/v1/path-history', pathHistoryRoutes);
     
     // 状态检查接口
     app.get('/api/v1/status', (req: Request, res: Response) => {

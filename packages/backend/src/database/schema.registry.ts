@@ -72,6 +72,7 @@ export const tableDefinitions: TableDefinition[] = [
     // Other utilities
     { name: 'ip_blacklist', sql: schemaSql.createIpBlacklistTableSQL },
     { name: 'command_history', sql: schemaSql.createCommandHistoryTableSQL },
+    { name: 'path_history', sql: schemaSql.createPathHistoryTableSQL },
     { name: 'quick_commands', sql: schemaSql.createQuickCommandsTableSQL },
 
     // Appearance related tables (often depend on others or have init logic)

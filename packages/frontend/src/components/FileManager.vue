@@ -18,6 +18,8 @@ import FileManagerContextMenu from './FileManagerContextMenu.vue';
 import FileManagerActionModal from './FileManagerActionModal.vue'; 
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
+import PathHistoryDropdown from './PathHistoryDropdown.vue'; 
+import { usePathHistoryStore } from '../stores/pathHistory.store'; 
 
 
 type SftpManagerInstance = ReturnType<typeof createSftpActionsManager>;
@@ -98,6 +100,7 @@ const fileEditorStore = useFileEditorStore(); // 实例化 File Editor Store
 // const sessionStore = useSessionStore(); // 已在上面实例化
 const settingsStore = useSettingsStore(); // +++ 实例化 Settings Store +++
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
+const pathHistoryStore = usePathHistoryStore(); // +++ 实例化 PathHistoryStore +++
 
 // 从 Settings Store 获取共享设置
 const {
@@ -126,6 +129,12 @@ const editablePath = ref('');
 const fileListContainerRef = ref<HTMLDivElement | null>(null); // 文件列表容器引用
 const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 拖拽蒙版引用 +++
 // const scrollIntervalId = ref<number | null>(null); // 已移至 useFileManagerDragAndDrop
+
+// +++ Path History Refs +++
+const showPathHistoryDropdown = ref(false);
+const pathInputWrapperRef = ref<HTMLDivElement | null>(null); // Wrapper for path input and dropdown
+const pathHistoryDropdownRef = ref<InstanceType<typeof PathHistoryDropdown> | null>(null);
+const { selectedIndex: pathSelectedIndex, filteredHistory: filteredPathHistory } = storeToRefs(pathHistoryStore); // Reactive store state
 
 // +++ 操作模态框状态 +++
 const isActionModalVisible = ref(false);
@@ -1066,7 +1075,8 @@ watch(() => focusSwitcherStore.activateFileManagerSearchTrigger, (newValue, oldV
 // --- 监听 sessionId prop 的变化 ---
 watch(() => props.sessionId, (newSessionId, oldSessionId) => {
     if (newSessionId && newSessionId !== oldSessionId) {
-
+        closePathHistory(); // 关闭可能打开的路径历史下拉菜单
+        pathHistoryStore.setSearchTerm(''); // 清空搜索词
         // 1. 重新初始化 SFTP 管理器
         initializeSftpManager(newSessionId, props.instanceId);
 
@@ -1098,6 +1108,7 @@ onMounted(() => {
   const focusSearchActionWrapper = async (): Promise<boolean | undefined> => {
     if (props.sessionId === sessionStore.activeSessionId) {
       console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Executing search focus action for active session.`);
+      closePathHistory(); // Close path history if open
       return focusSearchInput();
     } else {
       console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Search focus action skipped for inactive session.`);
@@ -1122,26 +1133,28 @@ onMounted(() => {
      }
   };
   unregisterPathFocusAction = focusSwitcherStore.registerFocusAction('fileManagerPathInput', focusPathActionWrapper);
+  document.addEventListener('click', handleClickOutsidePathInput);
 });
 
 onBeforeUnmount(() => {
-  // 注销搜索框动作
-  if (unregisterSearchFocusAction) {
-    unregisterSearchFocusAction();
-    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Unregistered search focus action on unmount.`);
-  }
-  unregisterSearchFocusAction = null;
+ // 注销搜索框动作
+ if (unregisterSearchFocusAction) {
+   unregisterSearchFocusAction();
+   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Unregistered search focus action on unmount.`);
+ }
+ unregisterSearchFocusAction = null;
 
-  // 注销路径编辑框动作
-  if (unregisterPathFocusAction) {
-    unregisterPathFocusAction();
-    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Unregistered path edit focus action on unmount.`);
-  }
-  unregisterPathFocusAction = null;
-  // // 调用注入的 SFTP 管理器提供的清理函数 (移除，由 store 处理)
-  // cleanupSftpHandlers();
-  // 调用 store 的清理方法
-  sessionStore.removeSftpManager(props.sessionId, props.instanceId);
+ // 注销路径编辑框动作
+ if (unregisterPathFocusAction) {
+   unregisterPathFocusAction();
+   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Unregistered path edit focus action on unmount.`);
+ }
+ unregisterPathFocusAction = null;
+ document.removeEventListener('click', handleClickOutsidePathInput);
+ // // 调用注入的 SFTP 管理器提供的清理函数 (移除，由 store 处理)
+ // cleanupSftpHandlers();
+ // 调用 store 的清理方法
+ sessionStore.removeSftpManager(props.sessionId, props.instanceId);
 });
 
 // +++ 监听蒙版可见性，动态调整高度 +++
@@ -1214,38 +1227,180 @@ const stopResize = () => {
     }
 };
 
-// --- 路径编辑逻辑 ---
+// --- 路径编辑逻辑 (包含路径历史) ---
+
+const openPathHistory = () => {
+  showPathHistoryDropdown.value = true; // 总是尝试显示下拉框
+  // 如果列表为空，则尝试获取历史记录。
+  // pathHistoryStore.fetchHistory() 应该能够处理未连接时 apiClient 的失败。
+  if (pathHistoryStore.historyList.length === 0) {
+    pathHistoryStore.fetchHistory();
+  }
+  // 总是设置搜索词，以便即使历史记录是旧的或空的，也能基于当前输入进行过滤或显示。
+  pathHistoryStore.setSearchTerm(editablePath.value);
+};
+
+const closePathHistory = () => {
+  showPathHistoryDropdown.value = false;
+  pathHistoryStore.resetSelection();
+};
+
+const handlePathInputFocus = () => {
+  isEditingPath.value = true; // Keep existing behavior
+  if (!currentSftpManager.value || currentSftpManager.value.isLoading.value || !props.wsDeps.isConnected.value) return;
+  editablePath.value = currentSftpManager.value.currentPath.value; // Set editable path on focus
+  openPathHistory();
+  nextTick(() => {
+    pathInputRef.value?.select();
+  });
+};
+
+const handlePathInputChange = () => {
+  if (showPathHistoryDropdown.value) {
+    pathHistoryStore.setSearchTerm(editablePath.value);
+  }
+};
+
+const navigateToPath = async (path: string) => {
+  if (!currentSftpManager.value || !path || path.trim().length === 0) return;
+  const trimmedPath = path.trim();
+  isEditingPath.value = false;
+  closePathHistory();
+
+  if (trimmedPath === currentSftpManager.value.currentPath.value) {
+    return;
+  }
+
+  console.log(`[FileManager ${props.sessionId}-${props.instanceId}] 尝试导航到新路径: ${trimmedPath}`);
+  try {
+    await currentSftpManager.value.loadDirectory(trimmedPath);
+    // 如果 loadDirectory 没有抛出错误，我们认为它成功了
+    pathHistoryStore.addPath(trimmedPath); // 导航成功后添加到历史
+    editablePath.value = trimmedPath; // 更新输入框内容
+  } catch (error) {
+    console.error(`[FileManager ${props.sessionId}-${props.instanceId}] 导航到路径 ${trimmedPath} 失败:`, error);
+    // 导航失败，不添加到历史记录，也不更新输入框内容 (除非有特定需求)
+  }
+};
+
+const handlePathInputKeydown = (event: KeyboardEvent) => {
+  if (!showPathHistoryDropdown.value) {
+    if (event.key === 'Enter') {
+      navigateToPath(editablePath.value);
+    } else if (event.key === 'Escape') {
+      cancelPathEdit();
+    }
+    return;
+  }
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      pathHistoryStore.selectNextPath();
+      // Dropdown component handles scrolling
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      pathHistoryStore.selectPreviousPath();
+      // Dropdown component handles scrolling
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (pathSelectedIndex.value >= 0 && filteredPathHistory.value[pathSelectedIndex.value]) {
+        navigateToPath(filteredPathHistory.value[pathSelectedIndex.value].path);
+      } else {
+        navigateToPath(editablePath.value);
+      }
+      closePathHistory();
+      break;
+    case 'Escape':
+      event.preventDefault();
+      closePathHistory();
+      // Keep isEditingPath true to allow user to continue editing or blur
+      break;
+  }
+};
+
+const handlePathSelectedFromDropdown = (path: string) => {
+  editablePath.value = path; // Update input field
+  navigateToPath(path); // Navigate and add to history
+  closePathHistory();
+};
+
 const startPathEdit = () => {
-    // 修改：检查 currentSftpManager 是否存在并使用其状态
     if (!currentSftpManager.value || currentSftpManager.value.isLoading.value || !props.wsDeps.isConnected.value) return;
-    // 修改：使用 currentSftpManager.value.currentPath 初始化编辑框
     editablePath.value = currentSftpManager.value.currentPath.value;
     isEditingPath.value = true;
+    openPathHistory(); // 打开历史记录
     nextTick(() => {
         pathInputRef.value?.focus();
         pathInputRef.value?.select();
     });
 };
 
-const handlePathInput = async (event?: Event) => {
+// Modified to handle path history logic
+const handlePathInput = async (event?: Event | FocusEvent) => {
+    // This function is now primarily for blur handling or if Enter is pressed outside keydown.
+    // Most Enter logic is in handlePathInputKeydown.
     if (event && event instanceof KeyboardEvent && event.key !== 'Enter') {
-        return;
+      // If it's a key event but not Enter, it's handled by keydown or change.
+      return;
     }
-    // 修改：检查 currentSftpManager 是否存在
+
+    // If it's a blur event, and the dropdown is not the target, close dropdown.
+    // The timeout ensures that a click on the dropdown item can be processed first.
+    if (event && event.type === 'blur') {
+      setTimeout(() => {
+        const activeEl = document.activeElement;
+        const dropdownEl = pathHistoryDropdownRef.value?.$el;
+        if (dropdownEl && dropdownEl.contains(activeEl)) {
+          // Focus is within the dropdown, do nothing yet
+          return;
+        }
+        if (pathInputRef.value !== activeEl) { // Focus moved away from input and not into dropdown
+            isEditingPath.value = false; // Only set to false if focus truly left
+            closePathHistory();
+        }
+      }, 150); // Slightly longer delay to allow dropdown item click
+      return; // Don't navigate on blur, only close dropdown
+    }
+
+    // If it's an Enter key press not handled by keydown (e.g. from a button click if any)
+    // or if the function is called directly without an event.
     if (!currentSftpManager.value) return;
+
     const newPath = editablePath.value.trim();
-    isEditingPath.value = false;
-    // 修改：使用 currentSftpManager.value.currentPath 比较
-    if (newPath === currentSftpManager.value.currentPath.value || !newPath) {
-        return;
+    // Check if dropdown has a selection, if so, it should have been handled by Enter in keydown
+    if (pathSelectedIndex.value >= 0 && filteredPathHistory.value[pathSelectedIndex.value]) {
+        // This case should ideally not be hit if keydown is working correctly
+        navigateToPath(filteredPathHistory.value[pathSelectedIndex.value].path);
+    } else {
+        navigateToPath(newPath);
     }
-    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] 尝试导航到新路径: ${newPath}`);
-    // 修改：使用 currentSftpManager.value.loadDirectory
-    await currentSftpManager.value.loadDirectory(newPath);
+    isEditingPath.value = false; // Ensure editing mode is exited
+    closePathHistory(); // Ensure dropdown is closed
 };
+
 
 const cancelPathEdit = () => {
     isEditingPath.value = false;
+    closePathHistory();
+    // Optionally, revert editablePath to currentSftpManager.currentPath.value
+    if (currentSftpManager.value) {
+        editablePath.value = currentSftpManager.value.currentPath.value;
+    }
+};
+
+const handleClickOutsidePathInput = (event: MouseEvent) => {
+  if (pathInputWrapperRef.value && !pathInputWrapperRef.value.contains(event.target as Node)) {
+    if (isEditingPath.value || showPathHistoryDropdown.value) {
+        // editablePath.value might be different from current manager path
+        // if user typed something and then clicked outside.
+        // Decide if we should commit or revert. For now, just close.
+        isEditingPath.value = false;
+        closePathHistory();
+    }
+  }
 };
 
 // 清除错误消息的函数 - 不再需要，错误由 UI 通知处理
@@ -1460,14 +1615,13 @@ const handleOpenEditorClick = () => {
                  </div>
              </div>
             </div> <!-- End Path Actions -->
-            <!-- Path Bar -->
-            <div class="flex items-center bg-background border border-border rounded px-1.5 py-0.5 overflow-hidden min-w-[100px] flex-shrink">
-              <span v-show="!isEditingPath" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2">
+            <!-- Path Bar with History Dropdown -->
+            <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 min-w-[100px] flex-shrink">
+              <span v-show="!isEditingPath && !showPathHistoryDropdown" @click="startPathEdit" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2 cursor-text">
                 <span v-if="!props.isMobile">{{ t('fileManager.currentPath') }}:</span>
                 <strong
-                  @click="startPathEdit"
                   :title="t('fileManager.editPathTooltip')"
-                  class="font-medium text-link ml-1 px-1 rounded cursor-text transition-colors duration-200"
+                  class="font-medium text-link ml-1 px-1 rounded transition-colors duration-200"
                   :class="{
                     'hover:bg-black/5': currentSftpManager && props.wsDeps.isConnected.value,
                     'opacity-60 cursor-not-allowed': !currentSftpManager || !props.wsDeps.isConnected.value
@@ -1477,15 +1631,23 @@ const handleOpenEditorClick = () => {
                 </strong>
               </span>
               <input
-                v-show="isEditingPath"
+                v-show="isEditingPath || showPathHistoryDropdown"
                 ref="pathInputRef"
                 type="text"
                 v-model="editablePath"
                 class="flex-grow bg-transparent text-foreground p-0.5 outline-none min-w-[100px]"
                 data-focus-id="fileManagerPathInput"
-                @keyup.enter="handlePathInput"
+                @focus="handlePathInputFocus"
+                @input="handlePathInputChange"
+                @keydown="handlePathInputKeydown"
                 @blur="handlePathInput"
-                @keyup.esc="cancelPathEdit"
+              />
+              <PathHistoryDropdown
+                v-if="showPathHistoryDropdown"
+                ref="pathHistoryDropdownRef"
+                @pathSelected="handlePathSelectedFromDropdown"
+                @closeDropdown="closePathHistory"
+                class="left-0 right-0 top-full mt-1"
               />
             </div>
         </div> <!-- End Wrapper -->
