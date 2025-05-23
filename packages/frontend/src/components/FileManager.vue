@@ -1783,8 +1783,8 @@ const handleOpenEditorClick = () => {
 
             
 
-            <!-- Path Bar with History Dropdown -->
-            <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 min-w-[100px] flex-shrink">
+           
+            <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 w-fit flex-shrink">
               <span v-show="!isEditingPath && !showPathHistoryDropdown" @click="startPathEdit" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2 cursor-text">
                 <strong
                   :title="t('fileManager.editPathTooltip')"
