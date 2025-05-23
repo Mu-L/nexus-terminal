@@ -18,7 +18,7 @@ const sessionStore = useSessionStore(); // +++ 实例化会话 Store +++
 const settingsStore = useSettingsStore(); // +++ 实例化设置 Store +++
 const appearanceStore = useAppearanceStore(); // +++ 实例化外观 Store +++
 const { shareFileEditorTabsBoolean } = storeToRefs(settingsStore); // +++ 获取共享设置 +++
-const { currentEditorFontFamily } = storeToRefs(appearanceStore); // +++ 获取编辑器字体家族设置 +++
+const { currentEditorFontFamily, currentEditorFontSize } = storeToRefs(appearanceStore);
  
 // --- Props ---
 const props = defineProps({
@@ -214,6 +214,11 @@ const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scro
   }
 };
 
+// +++ 处理编辑器字体大小更新事件 +++
+const handleEditorFontSizeUpdate = (newSize: number) => {
+    appearanceStore.setEditorFontSize(newSize);
+};
+
 
 // 注意：关闭/最小化按钮现在应该在 WorkspaceView 控制 Pane，而不是这里
 // const handleCloseContainer = () => { ... };
@@ -350,9 +355,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
           v-model="localEditorContent"
           :language="currentTabLanguage"
           :font-family="currentEditorFontFamily"
+          :font-size="currentEditorFontSize"
           theme="vs-dark"
           class="editor-instance"
           @request-save="handleSaveRequest"
+          @update:fontSize="handleEditorFontSizeUpdate"
          :initialScrollTop="activeTab?.scrollTop ?? 0"
          :initialScrollLeft="activeTab?.scrollLeft ?? 0"
          @update:scrollPosition="handleEditorScroll"

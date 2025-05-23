@@ -7,12 +7,14 @@ import FileEditorTabs from './FileEditorTabs.vue';
 import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useSettingsStore } from '../stores/settings.store';
 import { useSessionStore } from '../stores/session.store';
+import { useAppearanceStore } from '../stores/appearance.store';
 
 
 const { t } = useI18n();
 const fileEditorStore = useFileEditorStore();
 const settingsStore = useSettingsStore();
 const sessionStore = useSessionStore();
+const appearanceStore = useAppearanceStore(); 
 
 // --- 本地状态控制弹窗显示 ---
 const isVisible = ref(false);
@@ -33,6 +35,9 @@ const {
 
 // 设置 Store (用于判断模式)
 const { showPopupFileEditorBoolean, shareFileEditorTabsBoolean } = storeToRefs(settingsStore);
+
+// 从 Appearance Store 获取编辑器字体大小
+const { currentEditorFontSize } = storeToRefs(appearanceStore);
 
 // --- 从 Store 获取方法 ---
 // 全局 Store Actions (用于共享模式)
@@ -411,6 +416,11 @@ const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scro
         }
     }
 };
+
+// +++ 处理编辑器字体大小更新事件 +++
+const handleEditorFontSizeUpdate = (newSize: number) => {
+    appearanceStore.setEditorFontSize(newSize);
+};
  
 // 关闭弹窗 (保持不变)
 const handleCloseContainer = () => {
@@ -572,7 +582,9 @@ onBeforeUnmount(() => {
           :language="currentTabLanguage"
           theme="vs-dark"
           class="editor-instance"
+          :font-size="currentEditorFontSize"
           @request-save="handleSaveRequest"
+          @update:fontSize="handleEditorFontSizeUpdate"
          :initialScrollTop="activeTab?.scrollTop ?? 0"
          :initialScrollLeft="activeTab?.scrollLeft ?? 0"
          @update:scrollPosition="handleEditorScroll"

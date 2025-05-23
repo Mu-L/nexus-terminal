@@ -3,10 +3,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, defineExpose } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, defineExpose, defineProps, defineEmits } from 'vue';
 import * as monaco from 'monaco-editor';
 
-const localFontSize = ref(14); // 本地字体大小状态，默认 14
+const FONT_SIZE_STORAGE_KEY = 'monacoEditorFontSize'; // localStorage key
 
 const props = defineProps({
   modelValue: {
@@ -29,30 +29,54 @@ const props = defineProps({
     type: String,
     default: 'Consolas, "Courier New", monospace',
   },
-  initialScrollTop: { 
+  fontSize: { // 新增 prop
+    type: Number,
+    default: 14, // 默认字体大小
+  },
+  initialScrollTop: {
     type: Number,
     default: 0,
   },
-  initialScrollLeft: { 
+  initialScrollLeft: {
     type: Number,
     default: 0,
   },
 });
 
-const emit = defineEmits(['update:modelValue', 'request-save', 'update:scrollPosition']); 
+const emit = defineEmits(['update:modelValue', 'request-save', 'update:scrollPosition', 'update:fontSize']); // 添加 'update:fontSize'
 
 const editorContainer = ref<HTMLElement | null>(null);
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 
+// 用于驱动编辑器实例的 ref，并与 localStorage 和 props.fontSize 同步
+const internalEditorFontSize = ref(props.fontSize);
+
 
 
 onMounted(() => {
+  // 优先使用 props.fontSize 初始化 internalEditorFontSize
+  internalEditorFontSize.value = props.fontSize;
+
+  // 检查 localStorage 中是否有用户通过滚轮操作留下的偏好
+  const storedUserPreference = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+  if (storedUserPreference) {
+    const parsedSize = parseInt(storedUserPreference, 10);
+    if (!isNaN(parsedSize) && parsedSize >= 8 && parsedSize <= 40) {
+      // 如果 localStorage 的值与当前的 internalEditorFontSize (来自 prop) 不同，
+      // 表明用户可能通过滚轮调整过，此时以 localStorage 为准，并通知更新全局状态
+      if (parsedSize !== internalEditorFontSize.value) {
+        emit('update:fontSize', parsedSize);
+      }
+      internalEditorFontSize.value = parsedSize;
+    }
+  }
+
   if (editorContainer.value) {
     editorInstance = monaco.editor.create(editorContainer.value, {
       value: props.modelValue,
       language: props.language,
       theme: props.theme,
-      fontSize: localFontSize.value,
+      fontSize: internalEditorFontSize.value, // 使用 internalEditorFontSize
       fontFamily: props.fontFamily, // 使用 prop 的字体家族
       automaticLayout: true,
       readOnly: props.readOnly,
@@ -140,34 +164,32 @@ onMounted(() => {
 
     // --- 添加带防抖的鼠标滚轮缩放功能 ---
     const editorDomNode = editorInstance?.getDomNode();
-    if (editorDomNode) {
-        console.log('[MonacoEditor] Adding wheel event listener with debounce.');
+    if (editorDomNode && editorInstance) {
+        // console.log('[MonacoEditor] Adding wheel event listener.');
         editorDomNode.addEventListener('wheel', (event: WheelEvent) => {
-            if (event.ctrlKey) {
+            if (event.ctrlKey && editorInstance) {
                 event.preventDefault();
+                const currentSizeOpt = editorInstance.getOption(monaco.editor.EditorOption.fontSize);
+                const currentSize = typeof currentSizeOpt === 'number' ? currentSizeOpt : internalEditorFontSize.value;
 
-                
-                const currentSize = localFontSize.value; // 使用本地状态
                 let newSize: number;
                 if (event.deltaY < 0) {
-                    newSize = Math.min(currentSize + 1, 40);
+                    newSize = Math.min(currentSize + 1, 40); // 字体上限 40
                 } else {
-                    newSize = Math.max(currentSize - 1, 8);
+                    newSize = Math.max(currentSize - 1, 8);  // 字体下限 8
                 }
 
-                // Update visual font size and local state immediately
-                if (editorInstance && newSize !== currentSize) {
-                    console.log(`[MonacoEditor] Updating local font size to: ${newSize}`);
-                    localFontSize.value = newSize; // 更新本地状态
-                    editorInstance.updateOptions({ fontSize: newSize }); // 更新编辑器视觉效果
-
-                    // --- 移除触发防抖保存的逻辑 ---
-                    // debouncedSetEditorFontSize(newSize);
+                if (newSize !== currentSize) {
+                    // console.log(`[MonacoEditor] Updating font size to: ${newSize}`);
+                    editorInstance.updateOptions({ fontSize: newSize });
+                    localStorage.setItem(FONT_SIZE_STORAGE_KEY, newSize.toString());
+                    internalEditorFontSize.value = newSize; // 更新 internal ref
+                    emit('update:fontSize', newSize); // 发出事件以更新 store
                 }
             }
-        }, { passive: false }); 
+        }, { passive: false });
     } else {
-        console.error('[MonacoEditor] editorDomNode is null, cannot add wheel listener.');
+        // console.error('[MonacoEditor] editorDomNode or editorInstance is null, cannot add wheel listener.');
     }
 
 
@@ -219,11 +241,20 @@ watch(() => props.readOnly, (newReadOnly) => {
 watch(() => props.fontFamily, (newFontFamily) => {
   if (editorInstance) {
     editorInstance.updateOptions({ fontFamily: newFontFamily });
-  }
+  };
 });
  
+// 监听来自父组件 (全局设置) 的 fontSize 变化
+watch(() => props.fontSize, (newGlobalSize) => {
+  // 只有当全局设置的 fontSize (通过 prop) 改变时，并且与 internalEditorFontSize (编辑器当前实际或本地调整后) 不同时才更新
+  if (editorInstance && newGlobalSize !== internalEditorFontSize.value) {
+    // console.log(`[MonacoEditor] Global font size changed to: ${newGlobalSize}, updating editor.`);
+    editorInstance.updateOptions({ fontSize: newGlobalSize });
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, newGlobalSize.toString()); // 保持 localStorage 同步
+    internalEditorFontSize.value = newGlobalSize;
+  }
+});
 
-// --- 移除对全局字体大小的监听 ---
 onBeforeUnmount(() => {
   if (editorInstance) {
     editorInstance.dispose();
