@@ -150,8 +150,12 @@ const updatePosition = () => {
 
 // --- Click Outside Logic ---
 const handleClickOutside = (event: MouseEvent) => {
+  if (props.triggerElement && props.triggerElement.contains(event.target as Node)) {
+    return;
+  }
+
   if (modalContentRef.value && !modalContentRef.value.contains(event.target as Node)) {
-    if (!showAddEditModal.value) { // Do not close if add/edit modal is open
+    if (!showAddEditModal.value) { 
       closeModal();
     }
   }
@@ -223,7 +227,15 @@ onBeforeUnmount(() => {
 
       <!-- Path List -->
       <div class="overflow-y-auto flex-grow p-1 text-sm">
-        <ul v-if="!favoritePathsStore.isLoading && filteredPaths.length" class="list-none m-0 p-0">
+        <div v-if="favoritePathsStore.isLoading && filteredPaths.length === 0" class="p-3 text-center text-text-secondary">
+          <i class="fas fa-spinner fa-spin mr-1"></i>
+          {{ t('favoritePaths.loading', 'Loading favorites...') }}
+        </div>
+        <div v-else-if="!favoritePathsStore.isLoading && filteredPaths.length === 0" class="p-3 text-center text-text-secondary">
+          <i class="fas fa-star-half-alt mr-1"></i>
+          {{ searchTerm ? t('favoritePaths.noResults', 'No matching favorites found.') : t('favoritePaths.noFavorites', 'No favorite paths yet. Add one!') }}
+        </div>
+        <ul v-else-if="filteredPaths.length > 0" class="list-none m-0 p-0">
           <li
             v-for="favPath in filteredPaths"
             :key="favPath.id"
@@ -255,16 +267,8 @@ onBeforeUnmount(() => {
             </div>
           </li>
         </ul>
-        <div v-else-if="favoritePathsStore.isLoading" class="p-3 text-center text-text-secondary">
-          <i class="fas fa-spinner fa-spin mr-1"></i>
-          {{ t('favoritePaths.loading', 'Loading favorites...') }}
-        </div>
-        <div v-else class="p-3 text-center text-text-secondary">
-          <i class="fas fa-star-half-alt mr-1"></i>
-          {{ searchTerm ? t('favoritePaths.noResults', 'No matching favorites found.') : t('favoritePaths.noFavorites', 'No favorite paths yet. Add one!') }}
-        </div>
       </div>
-    </div> <!-- End of Favorite Paths Dropdown div -->
+    </div>
 
     <!-- Add/Edit Modal -->
     <AddEditFavoritePathForm
@@ -274,10 +278,7 @@ onBeforeUnmount(() => {
       @close="showAddEditModal = false"
       @save-success="() => { favoritePathsStore.fetchFavoritePaths(t); showAddEditModal = false; }"
     />
-  </div> <!-- End of new single root element -->
+  </div> 
 </template>
 
-<style scoped>
-/* Styles are mostly Tailwind. max-h-80 is applied to the main div */
-/* Styling for the add/edit form if it's part of this component's template directly and needs specific scoping */
-</style>
+
