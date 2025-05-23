@@ -21,6 +21,10 @@ let saveWidthTimeout: ReturnType<typeof setTimeout> | null = null;
 let saveHeightTimeout: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_DELAY = 500; // ms
 
+const MODAL_CONTAINER_PADDING = 32; 
+const maxAllowedWidth = computed(() => window.innerWidth - MODAL_CONTAINER_PADDING);
+const maxAllowedHeight = computed(() => window.innerHeight - MODAL_CONTAINER_PADDING);
+
 const rdpDisplayRef = ref<HTMLDivElement | null>(null);
 const rdpContainerRef = ref<HTMLDivElement | null>(null);
 const guacClient = ref<any | null>(null);
@@ -35,6 +39,10 @@ const keyboard = ref<any | null>(null);
 const mouse = ref<any | null>(null);
 const desiredModalWidth = ref(1064);
 const desiredModalHeight = ref(858);
+
+const tempInputWidth = ref<number | string>(desiredModalWidth.value);
+const tempInputHeight = ref<number | string>(desiredModalHeight.value);
+
 const isKeyboardDisabledForInput = ref(false); // 标记键盘是否因输入框聚焦而禁用
 const isMinimized = ref(false);
 const restoreButtonRef = ref<HTMLButtonElement | null>(null);
@@ -423,52 +431,55 @@ const closeModal = () => {
   emit('close');
 };
 
+const handleWidthInputBlur = () => {
+  const currentValue = Number(tempInputWidth.value) || MIN_MODAL_WIDTH;
+  const validatedValue = Math.min(Math.max(MIN_MODAL_WIDTH, currentValue), maxAllowedWidth.value);
+  
+  desiredModalWidth.value = validatedValue; 
+  tempInputWidth.value = validatedValue;    
 
-// 监听本地 ref 并将验证后的尺寸保存到设置存储
-watch(desiredModalWidth, (newWidth, oldWidth) => {
-  // 只有当值真正改变时才处理
-  if (newWidth === oldWidth) {
-      console.log(`[RDP 模态框] 宽度监听触发，但值 (${newWidth}) 未改变。跳过保存。`);
-      return;
-  }
-  console.log(`[RDP 模态框] 监听 desiredModalWidth 触发: ${oldWidth} -> ${newWidth}`);
-  // 保存前验证新宽度
-  const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
-  // 防抖保存 *验证后* 的宽度
   if (saveWidthTimeout) clearTimeout(saveWidthTimeout);
   saveWidthTimeout = setTimeout(() => {
-    // 只保存验证后的宽度，不要在此处更改输入值
-    console.log(`[RDP 模态框] 防抖保存 - 保存宽度: ${validatedWidth} (输入值: ${newWidth})`);
-    // 再次检查，确保在延迟期间值没有变回原来的 store 值
-    if (String(validatedWidth) !== settingsStore.settings.rdpModalWidth) {
-         settingsStore.updateSetting('rdpModalWidth', String(validatedWidth));
+    if (String(validatedValue) !== settingsStore.settings.rdpModalWidth) {
+      settingsStore.updateSetting('rdpModalWidth', String(validatedValue));
+      console.log(`[RDP Modal] Saved width to store: ${validatedValue}`);
     } else {
-         console.log(`[RDP 模态框] 防抖保存 - 宽度 ${validatedWidth} 与存储值匹配。跳过冗余保存。`);
+      console.log(`[RDP Modal] Debounced save - width ${validatedValue} matches store value. Skipped redundant save.`);
     }
   }, DEBOUNCE_DELAY);
-});
+  enableRdpKeyboard();
+};
 
-watch(desiredModalHeight, (newHeight, oldHeight) => {
-   // 只有当值真正改变时才处理
-   if (newHeight === oldHeight) {
-       console.log(`[RDP 模态框] 高度监听触发，但值 (${newHeight}) 未改变。跳过保存。`);
-       return;
-   }
-   console.log(`[RDP 模态框] 监听 desiredModalHeight 触发: ${oldHeight} -> ${newHeight}`);
-  // 保存前验证新高度
-  const validatedHeight = Math.max(MIN_MODAL_HEIGHT, Number(newHeight) || MIN_MODAL_HEIGHT);
-  // 防抖保存 *验证后* 的高度
+const handleHeightInputBlur = () => {
+  const currentValue = Number(tempInputHeight.value) || MIN_MODAL_HEIGHT;
+  const validatedValue = Math.min(Math.max(MIN_MODAL_HEIGHT, currentValue), maxAllowedHeight.value);
+
+  desiredModalHeight.value = validatedValue; 
+  tempInputHeight.value = validatedValue;     
+
   if (saveHeightTimeout) clearTimeout(saveHeightTimeout);
   saveHeightTimeout = setTimeout(() => {
-    // 只保存验证后的高度，不要在此处更改输入值
-    console.log(`[RDP 模态框] 防抖保存 - 保存高度: ${validatedHeight} (输入值: ${newHeight})`);
-    // 再次检查
-    if (String(validatedHeight) !== settingsStore.settings.rdpModalHeight) {
-        settingsStore.updateSetting('rdpModalHeight', String(validatedHeight));
+    if (String(validatedValue) !== settingsStore.settings.rdpModalHeight) {
+      settingsStore.updateSetting('rdpModalHeight', String(validatedValue));
+      console.log(`[RDP Modal] Saved height to store: ${validatedValue}`);
     } else {
-        console.log(`[RDP 模态框] 防抖保存 - 高度 ${validatedHeight} 与存储值匹配。跳过冗余保存。`);
+      console.log(`[RDP Modal] Debounced save - height ${validatedValue} matches store value. Skipped redundant save.`);
     }
   }, DEBOUNCE_DELAY);
+  enableRdpKeyboard();
+};
+
+
+watch(desiredModalWidth, (newVal) => {
+  if (Number(tempInputWidth.value) !== newVal) {
+    tempInputWidth.value = newVal;
+  }
+});
+
+watch(desiredModalHeight, (newVal) => {
+  if (Number(tempInputHeight.value) !== newVal) {
+    tempInputHeight.value = newVal;
+  }
 });
 
 // 组件挂载或设置更改时从设置存储加载初始尺寸
@@ -482,15 +493,22 @@ watchEffect(() => {
   const initialHeight = storeHeight ? parseInt(storeHeight, 10) : desiredModalHeight.value; // 使用当前 ref 值作为备用默认值
 
   // 根据最小值进行验证
-  const finalWidth = Math.max(MIN_MODAL_WIDTH, isNaN(initialWidth) ? MIN_MODAL_WIDTH : initialWidth);
-  const finalHeight = Math.max(MIN_MODAL_HEIGHT, isNaN(initialHeight) ? MIN_MODAL_HEIGHT : initialHeight);
+  const finalWidth = Math.min(Math.max(MIN_MODAL_WIDTH, isNaN(initialWidth) ? MIN_MODAL_WIDTH : initialWidth), maxAllowedWidth.value);
+  const finalHeight = Math.min(Math.max(MIN_MODAL_HEIGHT, isNaN(initialHeight) ? MIN_MODAL_HEIGHT : initialHeight), maxAllowedHeight.value);
   console.log(`[RDP 模态框] 应用验证后的尺寸 - 宽度: ${finalWidth}, 高度: ${finalHeight}`);
   desiredModalWidth.value = finalWidth;
   desiredModalHeight.value = finalHeight;
+  tempInputWidth.value = finalWidth;
+  tempInputHeight.value = finalHeight;
  });
- 
+  
 onMounted(() => {
-  // 初始尺寸加载现在由 watchEffect 处理
+  if (Number(tempInputWidth.value) !== desiredModalWidth.value) {
+    tempInputWidth.value = desiredModalWidth.value;
+  }
+  if (Number(tempInputHeight.value) !== desiredModalHeight.value) {
+    tempInputHeight.value = desiredModalHeight.value;
+  }
 
   if (props.connection) {
     nextTick(async () => {
@@ -531,8 +549,8 @@ watch(() => props.connection, (newConnection, oldConnection) => {
 const computedModalStyle = computed(() => {
 
   // 在此处为实际模态框样式应用最小约束
-  const actualWidth = Math.max(MIN_MODAL_WIDTH, desiredModalWidth.value);
-  const actualHeight = Math.max(MIN_MODAL_HEIGHT, desiredModalHeight.value);
+  const actualWidth = Math.min(Math.max(MIN_MODAL_WIDTH, desiredModalWidth.value), maxAllowedWidth.value);
+  const actualHeight = Math.min(Math.max(MIN_MODAL_HEIGHT, desiredModalHeight.value), maxAllowedHeight.value);
   return {
     width: `${actualWidth}px`,
     height: `${actualHeight}px`,
@@ -577,8 +595,9 @@ const doResize = (event: MouseEvent) => {
   let newWidth = initialModalWidthForResize.value + deltaX;
   let newHeight = initialModalHeightForResize.value + deltaY;
 
-  newWidth = Math.max(MIN_MODAL_WIDTH, newWidth);
-  newHeight = Math.max(MIN_MODAL_HEIGHT, newHeight);
+
+  newWidth = Math.min(Math.max(MIN_MODAL_WIDTH, newWidth), maxAllowedWidth.value);
+  newHeight = Math.min(Math.max(MIN_MODAL_HEIGHT, newHeight), maxAllowedHeight.value);
 
   desiredModalWidth.value = newWidth;
   desiredModalHeight.value = newHeight;
@@ -673,21 +692,21 @@ const stopResize = () => {
             <input
               id="modal-width"
               type="number"
-              v-model.number="desiredModalWidth"
+              v-model.number="tempInputWidth"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               @focus="disableRdpKeyboard"
-              @blur="enableRdpKeyboard"
+              @blur="handleWidthInputBlur"
             />
             <label for="modal-height" class="text-xs">{{ t('common.height') }}:</label>
             <input
               id="modal-height"
               type="number"
-              v-model.number="desiredModalHeight"
+              v-model.number="tempInputHeight"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               @focus="disableRdpKeyboard"
-              @blur="enableRdpKeyboard"
+              @blur="handleHeightInputBlur"
             />
              <!-- 添加重新连接按钮 -->
              <button

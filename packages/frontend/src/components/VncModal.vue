@@ -20,6 +20,10 @@ let saveWidthTimeout: ReturnType<typeof setTimeout> | null = null;
 let saveHeightTimeout: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_DELAY = 500; // ms
 
+const MODAL_CONTAINER_PADDING = 32; 
+const maxAllowedWidth = computed(() => window.innerWidth - MODAL_CONTAINER_PADDING);
+const maxAllowedHeight = computed(() => window.innerHeight - MODAL_CONTAINER_PADDING);
+
 const vncDisplayRef = ref<HTMLDivElement | null>(null);
 const vncContainerRef = ref<HTMLDivElement | null>(null);
 const guacClient = ref<any | null>(null);
@@ -79,8 +83,12 @@ const initialStoreHeight = settingsStore.settings.vncModalHeight
 const MIN_MODAL_WIDTH = 800;
 const MIN_MODAL_HEIGHT = 600;
 
-const desiredModalWidth = ref(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth));
-const desiredModalHeight = ref(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight));
+const desiredModalWidth = ref(Math.min(Math.max(MIN_MODAL_WIDTH, isNaN(initialStoreWidth) ? MIN_MODAL_WIDTH : initialStoreWidth), maxAllowedWidth.value));
+const desiredModalHeight = ref(Math.min(Math.max(MIN_MODAL_HEIGHT, isNaN(initialStoreHeight) ? MIN_MODAL_HEIGHT : initialStoreHeight), maxAllowedHeight.value));
+
+const tempInputWidth = ref<number | string>(desiredModalWidth.value);
+const tempInputHeight = ref<number | string>(desiredModalHeight.value);
+
 const isKeyboardDisabledForInput = ref(false);
 const isMinimized = ref(false);
 const restoreButtonRef = ref<HTMLButtonElement | null>(null);
@@ -423,54 +431,48 @@ const closeModal = () => {
   emit('close');
 };
 
-watch(desiredModalWidth, (newWidth, oldWidth) => {
-  if (newWidth === oldWidth && typeof newWidth === 'number' && typeof oldWidth === 'number') {
-      return;
-  }
-
+const handleWidthInputBlur = () => {
+  const currentValue = Number(tempInputWidth.value) || MIN_MODAL_WIDTH;
+  const validatedValue = Math.min(Math.max(MIN_MODAL_WIDTH, currentValue), maxAllowedWidth.value);
   
-  const validatedWidth = Math.max(MIN_MODAL_WIDTH, Number(newWidth) || MIN_MODAL_WIDTH);
-
-  if (validatedWidth !== Number(newWidth)) {
-    nextTick(() => {
-      desiredModalWidth.value = validatedWidth;
-    });
-  }
+  desiredModalWidth.value = validatedValue; 
+  tempInputWidth.value = validatedValue;
 
   if (saveWidthTimeout) clearTimeout(saveWidthTimeout);
   saveWidthTimeout = setTimeout(() => {
-    if (String(validatedWidth) !== settingsStore.settings.vncModalWidth) {
-         settingsStore.updateSetting('vncModalWidth', String(validatedWidth));
-    } else {
-        // console.log(`[VncModal] 防抖保存 - 宽度 ${validatedWidth} 与存储值匹配。跳过冗余保存。`);
+    if (String(validatedValue) !== settingsStore.settings.vncModalWidth) {
+      settingsStore.updateSetting('vncModalWidth', String(validatedValue));
     }
   }, DEBOUNCE_DELAY);
-});
+  enableVncKeyboard();
+};
 
-watch(desiredModalHeight, (newHeight, oldHeight) => {
-   if (newHeight === oldHeight && typeof newHeight === 'number' && typeof oldHeight === 'number') {
-       // console.log(`[VncModal] 高度监听触发，但值 (${newHeight}) 未改变。跳过。`);
-       return;
-   }
-   // console.log(`[VncModal] 监听 desiredModalHeight 触发: ${oldHeight} -> ${newHeight}`);
-  
-  const validatedHeight = Math.max(MIN_MODAL_HEIGHT, Number(newHeight) || MIN_MODAL_HEIGHT);
+const handleHeightInputBlur = () => {
+  const currentValue = Number(tempInputHeight.value) || MIN_MODAL_HEIGHT;
+  const validatedValue = Math.min(Math.max(MIN_MODAL_HEIGHT, currentValue), maxAllowedHeight.value);
 
-  if (validatedHeight !== Number(newHeight)) {
-    nextTick(() => {
-      desiredModalHeight.value = validatedHeight;
-    });
-  }
+  desiredModalHeight.value = validatedValue; 
+  tempInputHeight.value = validatedValue;
 
   if (saveHeightTimeout) clearTimeout(saveHeightTimeout);
   saveHeightTimeout = setTimeout(() => {
-    // console.log(`[VncModal] 防抖保存 - 保存高度: ${validatedHeight}`);
-    if (String(validatedHeight) !== settingsStore.settings.vncModalHeight) {
-        settingsStore.updateSetting('vncModalHeight', String(validatedHeight));
-    } else {
-        // console.log(`[VncModal] 防抖保存 - 高度 ${validatedHeight} 与存储值匹配。跳过冗余保存。`);
+    if (String(validatedValue) !== settingsStore.settings.vncModalHeight) {
+      settingsStore.updateSetting('vncModalHeight', String(validatedValue));
     }
   }, DEBOUNCE_DELAY);
+  enableVncKeyboard();
+};
+
+watch(desiredModalWidth, (newVal) => {
+  if (Number(tempInputWidth.value) !== newVal) {
+    tempInputWidth.value = newVal;
+  }
+});
+
+watch(desiredModalHeight, (newVal) => {
+  if (Number(tempInputHeight.value) !== newVal) {
+    tempInputHeight.value = newVal;
+  }
 });
 
 
@@ -478,6 +480,8 @@ watch(desiredModalHeight, (newHeight, oldHeight) => {
 
 onMounted(() => {
   if (props.connection) {
+    tempInputWidth.value = desiredModalWidth.value;
+    tempInputHeight.value = desiredModalHeight.value;
     nextTick(async () => {
         await handleConnection();
     });
@@ -511,13 +515,14 @@ watch(() => props.connection, (newConnection, oldConnection) => {
 });
 
 const computedModalStyle = computed(() => {
-  const actualWidth = Math.max(MIN_MODAL_WIDTH, desiredModalWidth.value);
-  const actualHeight = Math.max(MIN_MODAL_HEIGHT, desiredModalHeight.value);
+  const actualWidth = Math.min(Math.max(MIN_MODAL_WIDTH, desiredModalWidth.value), maxAllowedWidth.value);
+  const actualHeight = Math.min(Math.max(MIN_MODAL_HEIGHT, desiredModalHeight.value), maxAllowedHeight.value);
   return {
     width: `${actualWidth}px`,
     height: `${actualHeight}px`,
   };
 });
+
 watchEffect(() => {
   // 依赖 computedModalStyle，当其变化时此 effect 会重新运行
   const currentStyle = computedModalStyle.value;
@@ -562,6 +567,10 @@ const doResize = (event: MouseEvent) => {
   // Apply minimum size constraints
   newWidth = Math.max(MIN_MODAL_WIDTH, newWidth);
   newHeight = Math.max(MIN_MODAL_HEIGHT, newHeight);
+
+  // Apply maximum screen size constraints
+  newWidth = Math.min(newWidth, maxAllowedWidth.value);
+  newHeight = Math.min(newHeight, maxAllowedHeight.value);
 
   desiredModalWidth.value = newWidth;
   desiredModalHeight.value = newHeight;
@@ -679,21 +688,21 @@ const stopResize = () => {
             <input
               id="modal-width"
               type="number"
-              v-model.number="desiredModalWidth"
+              v-model.number="tempInputWidth"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               @focus="disableVncKeyboard"
-              @blur="enableVncKeyboard"
+              @blur="handleWidthInputBlur"
             />
             <label for="modal-height" class="text-xs">{{ t('common.height') }}:</label>
             <input
               id="modal-height"
               type="number"
-              v-model.number="desiredModalHeight"
+              v-model.number="tempInputHeight"
               step="10"
               class="w-16 px-1 py-0.5 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               @focus="disableVncKeyboard"
-              @blur="enableVncKeyboard"
+              @blur="handleHeightInputBlur"
             />
              <button
                @click="handleConnection"
