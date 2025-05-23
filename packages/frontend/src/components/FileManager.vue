@@ -18,8 +18,9 @@ import FileManagerContextMenu from './FileManagerContextMenu.vue';
 import FileManagerActionModal from './FileManagerActionModal.vue'; 
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
-import PathHistoryDropdown from './PathHistoryDropdown.vue'; 
-import { usePathHistoryStore } from '../stores/pathHistory.store'; 
+import PathHistoryDropdown from './PathHistoryDropdown.vue';
+import { usePathHistoryStore } from '../stores/pathHistory.store';
+import FavoritePathsModal from './FavoritePathsModal.vue'; // +++ Import FavoritePathsModal +++
 
 
 type SftpManagerInstance = ReturnType<typeof createSftpActionsManager>;
@@ -129,6 +130,10 @@ const editablePath = ref('');
 const fileListContainerRef = ref<HTMLDivElement | null>(null); // 文件列表容器引用
 const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 拖拽蒙版引用 +++
 // const scrollIntervalId = ref<number | null>(null); // 已移至 useFileManagerDragAndDrop
+
+// +++ Favorite Paths Modal State +++
+const showFavoritePathsModal = ref(false);
+const favoritePathsButtonRef = ref<HTMLButtonElement | null>(null); // Ref for the trigger button
 
 // +++ Path History Refs +++
 const showPathHistoryDropdown = ref(false);
@@ -1548,8 +1553,23 @@ const handleOpenEditorClick = () => {
   // 暂时使用 triggerPopup，传递空字符串表示空编辑器
   // 后续可能需要 fileEditorStore.triggerEmptyPopup(props.sessionId);
   fileEditorStore.triggerPopup('', props.sessionId); // 修复：传递空字符串而不是 null
-};
-</script>
+ };
+ 
+ // +++ Favorite Paths Modal Logic +++
+ const toggleFavoritePathsModal = () => {
+   showFavoritePathsModal.value = !showFavoritePathsModal.value;
+   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Toggled FavoritePathsModal. Visible: ${showFavoritePathsModal.value}`);
+ };
+ 
+ const handleNavigateToPathFromFavorites = (path: string) => {
+   if (currentSftpManager.value) {
+     currentSftpManager.value.loadDirectory(path);
+     // Optionally, add to local path history if not already handled by the store/modal
+     // pathHistoryStore.addPath(path);
+   }
+   showFavoritePathsModal.value = false; // Close modal after navigation
+ };
+ </script>
 
 <template>
   <div class="flex flex-col h-full overflow-hidden bg-background text-foreground text-sm font-sans">
@@ -1615,13 +1635,31 @@ const handleOpenEditorClick = () => {
                  </div>
              </div>
             </div> <!-- End Path Actions -->
+            <!-- Wrapper for Favorite Paths Button and Modal -->
+            <div class="relative flex-shrink-0">
+              <!-- Favorite Paths Button -->
+              <button
+                  ref="favoritePathsButtonRef"
+                  class="flex items-center justify-center w-7 h-7 text-text-secondary rounded transition-colors duration-200 hover:enabled:bg-black/10 hover:enabled:text-foreground"
+                  @click="toggleFavoritePathsModal"
+              >
+                  <i class="fas fa-star text-base"></i>
+              </button>
+              <!-- Favorite Paths Modal -->
+              <FavoritePathsModal
+                :is-visible="showFavoritePathsModal"
+                :trigger-element="favoritePathsButtonRef"
+                @close="showFavoritePathsModal = false"
+                @navigate-to-path="handleNavigateToPathFromFavorites"
+              />
+            </div>
+
             <!-- Path Bar with History Dropdown -->
             <div ref="pathInputWrapperRef" class="relative flex items-center bg-background border border-border rounded px-1.5 py-0.5 min-w-[100px] flex-shrink">
               <span v-show="!isEditingPath && !showPathHistoryDropdown" @click="startPathEdit" class="text-text-secondary whitespace-nowrap overflow-x-auto pr-2 cursor-text">
-                <span v-if="!props.isMobile">{{ t('fileManager.currentPath') }}:</span>
                 <strong
                   :title="t('fileManager.editPathTooltip')"
-                  class="font-medium text-link ml-1 px-1 rounded transition-colors duration-200"
+                  class="font-medium text-link px-1 rounded transition-colors duration-200"
                   :class="{
                     'hover:bg-black/5': currentSftpManager && props.wsDeps.isConnected.value,
                     'opacity-60 cursor-not-allowed': !currentSftpManager || !props.wsDeps.isConnected.value
@@ -1902,8 +1940,10 @@ const handleOpenEditorClick = () => {
      @confirm="handleModalConfirm"
    />
 
+  <!-- Favorite Paths Modal is now positioned near its button -->
 
- </div>
+
+</div>
 </template>
 
 <style scoped>

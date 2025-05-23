@@ -1504,6 +1504,37 @@
     "transferInitiatedGeneric": "Transfer task created successfully.",
     "transferFailedError": "Failed to initiate transfer. Please try again."
   },
+"favoritePaths": {
+    "addEditForm": {
+      "validation": {
+        "pathRequired": "Path is required."
+      },
+      "editTitle": "Edit Favorite Path",
+      "addTitle": "Add New Favorite Path",
+      "pathLabel": "Path",
+      "pathPlaceholder": "/example/folder/path",
+      "nameLabel": "Name (Optional)",
+      "namePlaceholder": "My Documents",
+      "errors": {
+        "genericSaveError": "Failed to save favorite path."
+      }
+    },
+    "confirmDelete": "Are you sure you want to delete \"{name}\"?",
+    "searchPlaceholder": "Search by name or path...",
+    "addNew": "Add new favorite path",
+    "loading": "Loading favorites...",
+    "noResults": "No matching favorites found.",
+    "noFavorites": "No favorite paths yet. Add one!",
+    "notifications": {
+      "fetchError": "Failed to load favorite paths.",
+      "addSuccess": "Favorite path added successfully.",
+      "addError": "Failed to add favorite path.",
+      "updateSuccess": "Favorite path updated successfully.",
+      "updateError": "Failed to update favorite path.",
+      "deleteSuccess": "Favorite path deleted successfully.",
+      "deleteError": "Failed to delete favorite path."
+    }
+  },
   "pathHistory": {
     "loading": "Loading...",
     "empty": "No path history",

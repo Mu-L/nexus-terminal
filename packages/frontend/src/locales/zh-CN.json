@@ -1509,6 +1509,37 @@
       "logExportError": "导出已挂起会话日志失败: {error}"
     }
   },
+"favoritePaths": {
+    "addEditForm": {
+      "validation": {
+        "pathRequired": "路径不能为空。"
+      },
+      "editTitle": "编辑收藏路径",
+      "addTitle": "添加新收藏路径",
+      "pathLabel": "路径",
+      "pathPlaceholder": "/example/folder/path",
+      "nameLabel": "名称 (可选)",
+      "namePlaceholder": "我的文档",
+      "errors": {
+        "genericSaveError": "保存收藏路径失败。"
+      }
+    },
+    "confirmDelete": "您确定要删除 \"{name}\" 吗？",
+    "searchPlaceholder": "按名称或路径搜索...",
+    "addNew": "添加新收藏路径",
+    "loading": "正在加载收藏...",
+    "noResults": "未找到匹配的收藏。",
+    "noFavorites": "还没有收藏路径，快添加一个吧！",
+    "notifications": {
+      "fetchError": "加载收藏路径失败。",
+      "addSuccess": "收藏路径添加成功。",
+      "addError": "添加收藏路径失败。",
+      "updateSuccess": "收藏路径更新成功。",
+      "updateError": "更新收藏路径失败。",
+      "deleteSuccess": "收藏路径删除成功。",
+      "deleteError": "删除收藏路径失败。"
+    }
+  },
   "pathHistory": {
     "loading": "加载中...",
     "empty": "没有路径历史记录",

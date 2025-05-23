@@ -265,6 +265,24 @@ const definedMigrations: Migration[] = [
                 timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
             );
         `
+    },
+    {
+        id: 8,
+        name: 'Create favorite_paths table',
+        check: async (db: Database): Promise<boolean> => {
+            const tableAlreadyExists = await tableExists(db, 'favorite_paths');
+            return !tableAlreadyExists; // Only run if the table does NOT exist
+        },
+        sql: `
+            CREATE TABLE IF NOT EXISTS favorite_paths (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NULL,
+                path TEXT NOT NULL,
+                last_used_at INTEGER NULL;
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+            );
+        `
     }
 ];
 

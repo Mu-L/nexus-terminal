@@ -240,3 +240,13 @@ CREATE TABLE IF NOT EXISTS appearance_settings (
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 `;
+export const createFavoritePathsTableSQL = `
+CREATE TABLE IF NOT EXISTS favorite_paths (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NULL, 
+    path TEXT NOT NULL, 
+    last_used_at INTEGER NULL, 
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+`;
