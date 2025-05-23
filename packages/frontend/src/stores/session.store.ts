@@ -138,7 +138,7 @@ export const useSessionStore = defineStore('session', () => {
     closeOtherTabsInSession,
     closeTabsToTheRightInSession,
     closeTabsToTheLeftInSession,
-    updateTabScrollPositionInSession, // +++ 导出新的 action +++
+    updateTabScrollPositionInSession,
     openRdpModal,
     closeRdpModal,
     openVncModal,

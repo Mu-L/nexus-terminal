@@ -22,7 +22,7 @@ export type WorkspaceEventPayloads = {
   'editor:closeOtherTabs': { tabId: string };
   'editor:closeTabsToRight': { tabId: string };
   'editor:closeTabsToLeft': { tabId: string };
-  'editor:updateScrollPosition': { tabId: string; scrollTop: number; scrollLeft: number }; // 新增编辑器滚动事件
+  'editor:updateScrollPosition': { tabId: string; scrollTop: number; scrollLeft: number };
  
   // Connection Events
   'connection:connect': { connectionId: number }; // 来自 WorkspaceConnectionList 或其他地方
