@@ -235,50 +235,148 @@ const handleSort = (key: keyof FileListItem | 'type' | 'size' | 'mtime') => {
 // --- 列表项点击与选择逻辑 (使用 Composable) ---
 // 定义单击时的动作回调 (移到 Selection 实例化之前)
 const handleItemAction = (item: FileListItem) => {
-    // 修改：检查 currentSftpManager 是否存在
-    if (!currentSftpManager.value) return;
+  if (!currentSftpManager.value) return;
 
-    if (item.attrs.isDirectory) {
-        // 修改：使用 currentSftpManager.value.isLoading
-        if (currentSftpManager.value.isLoading.value) {
-            console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Ignoring directory click, already loading...`);
-            return;
-        }
-        const newPath = item.filename === '..'
-            // 修改：使用 currentSftpManager.value 的 currentPath 和 joinPath
-            ? currentSftpManager.value.currentPath.value.substring(0, currentSftpManager.value.currentPath.value.lastIndexOf('/')) || '/'
-            : currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
-        // 修改：使用 currentSftpManager.value.loadDirectory
-        currentSftpManager.value.loadDirectory(newPath);
-    } else if (item.attrs.isFile) {
-        // 在移动端多选模式下，不打开文件而是选择它
+  const itemPath = currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
+
+  if (item.attrs.isSymbolicLink) {
+    if (currentSftpManager.value.isLoading.value) {
+      return;
+    }
+    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Symbolic link clicked: ${itemPath}. Attempting to resolve with sftp:realpath...`);
+
+    const { sendMessage: wsSend, onMessage: wsOnMessage } = props.wsDeps;
+    const requestId = generateRequestId();
+
+    const handleResolvedPath = (realPath: string, targetType: 'file' | 'directory' | 'unknown', originalLinkItem: FileListItem) => {
+      if (!currentSftpManager.value) return;
+
+
+      if (targetType === 'directory') {
+        currentSftpManager.value.loadDirectory(realPath);
+      } else if (targetType === 'file') {
+        const targetFilename = realPath.substring(realPath.lastIndexOf('/') + 1) || originalLinkItem.filename; // Get filename from realPath
+        const fileInfo: FileInfo = { name: targetFilename, fullPath: realPath };
+
+        // Preserve mobile multi-select behavior for the original link item
         if (props.isMobile && isMultiSelectMode.value) {
-            if (selectedItems.value.has(item.filename)) {
-                selectedItems.value.delete(item.filename);
-            } else {
-                selectedItems.value.add(item.filename);
-            }
-            return;
+          if (selectedItems.value.has(originalLinkItem.filename)) {
+            selectedItems.value.delete(originalLinkItem.filename);
+          } else {
+            selectedItems.value.add(originalLinkItem.filename);
+          }
+          return;
         }
-        // 修改：使用 currentSftpManager.value 的 currentPath 和 joinPath
-        const filePath = currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
-        const fileInfo: FileInfo = { name: item.filename, fullPath: filePath };
 
         if (settingsStore.showPopupFileEditorBoolean) {
-            console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Triggering popup for: ${filePath}`);
-            fileEditorStore.triggerPopup(filePath, props.sessionId); // Popup 仍然关联 sessionId
+          fileEditorStore.triggerPopup(realPath, props.sessionId);
+        }
+        if (shareFileEditorTabsBoolean.value) {
+          fileEditorStore.openFile(realPath, props.sessionId, props.instanceId);
+        } else {
+          sessionStore.openFileInSession(props.sessionId, fileInfo);
+        }
+      } else { // targetType is 'unknown' or not provided as expected
+        console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] Symlink target '${realPath}' has an unknown type from server ('${targetType}'). Defaulting to open as file.`);
+        // Fallback: attempt to open as file, or display an error
+        const targetFilename = realPath.substring(realPath.lastIndexOf('/') + 1) || originalLinkItem.filename;
+        const fileInfo: FileInfo = { name: targetFilename, fullPath: realPath };
+        if (settingsStore.showPopupFileEditorBoolean) {
+          fileEditorStore.triggerPopup(realPath, props.sessionId);
+        }
+        if (shareFileEditorTabsBoolean.value) {
+          fileEditorStore.openFile(realPath, props.sessionId, props.instanceId);
+        } else {
+          sessionStore.openFileInSession(props.sessionId, fileInfo);
+        }
+      }
+    };
+
+    let unregisterSuccess: (() => void) | undefined;
+    let unregisterError: (() => void) | undefined;
+    let timeoutId: NodeJS.Timeout | number | undefined;
+
+    const cleanupListeners = () => {
+      unregisterSuccess?.();
+      unregisterError?.();
+      if (timeoutId) clearTimeout(timeoutId as any);
+      timeoutId = undefined;
+    };
+
+    unregisterSuccess = wsOnMessage('sftp:realpath:success', (payload: any, message: WebSocketMessage) => {
+      if (message.requestId === requestId && payload.requestedPath === itemPath) {
+        cleanupListeners();
+        if (!currentSftpManager.value) return;
+        // 从 payload 中获取 absolutePath 和 targetType
+        const absolutePath = payload.absolutePath;
+        const targetType = payload.targetType as ('file' | 'directory' | 'unknown'); // 类型断言
+
+        if (!absolutePath) {
+            console.error(`[FileManager ${props.sessionId}-${props.instanceId}] sftp:realpath:success for ${itemPath} missing absolutePath. Payload:`, payload);
+            alert(`Failed to resolve symbolic link "${item.filename}": Server did not return a valid path.`);
+            return;
+        }
+         if (!targetType) {
+            console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] sftp:realpath:success for ${itemPath} missing targetType. Defaulting to 'file'. Payload:`, payload);
         }
 
-        if (shareFileEditorTabsBoolean.value) {
-            console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Opening file in shared mode (store handles loading): ${filePath}`);
-            // 修改：传递 instanceId 给 openFile
-            fileEditorStore.openFile(filePath, props.sessionId, props.instanceId);
-        } else {
-            // 独立模式由 sessionStore 处理，它内部应该已经知道 instanceId 或不需要它
-            console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Opening file in independent mode (session store handles loading): ${filePath}`);
-            sessionStore.openFileInSession(props.sessionId, fileInfo); // Independent mode 关联 sessionId
-        }
+        handleResolvedPath(absolutePath, targetType || 'unknown', item);
+      }
+    });
+
+    unregisterError = wsOnMessage('sftp:realpath:error', (payload: any, message: WebSocketMessage) => {
+      if (message.requestId === requestId && payload?.requestedPath === itemPath) {
+        cleanupListeners();
+        // payload.error 可能包含来自后端的具体错误信息
+        // payload.absolutePath 可能在 stat 失败时仍然存在
+        const serverErrorMsg = payload.error || 'Unknown error resolving symlink target type';
+        const resolvedPathInfo = payload.absolutePath ? ` (Resolved path: ${payload.absolutePath})` : '';
+
+        console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Failed to get realpath or target type for symlink '${itemPath}': ${serverErrorMsg}${resolvedPathInfo}`);
+        alert(`Failed to resolve symbolic link "${item.filename}": ${serverErrorMsg}.${resolvedPathInfo} Please ensure the target exists and you have permissions.`);
+      }
+    });
+
+    timeoutId = setTimeout(() => {
+      cleanupListeners();
+      console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Timeout getting realpath for symlink '${itemPath}' (ID: ${requestId}).`);
+      alert(`Timeout resolving symbolic link "${item.filename}".`);
+    }, 10000); // 10 秒超时
+    wsSend({ type: 'sftp:realpath', requestId: requestId, payload: { path: itemPath } });
+    return; // Handled by async callbacks
+  }
+
+  if (item.attrs.isDirectory) {
+    if (currentSftpManager.value.isLoading.value) {
+      return;
     }
+    const newPath = item.filename === '..'
+      ? currentSftpManager.value.currentPath.value.substring(0, currentSftpManager.value.currentPath.value.lastIndexOf('/')) || '/'
+      : currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
+    currentSftpManager.value.loadDirectory(newPath);
+  } else if (item.attrs.isFile) {
+    // This block now only handles regular files, as symlinks are handled above.
+    if (props.isMobile && isMultiSelectMode.value) {
+      if (selectedItems.value.has(item.filename)) {
+        selectedItems.value.delete(item.filename);
+      } else {
+        selectedItems.value.add(item.filename);
+      }
+      return;
+    }
+    const filePath = itemPath; // itemPath is already calculated
+    const fileInfo: FileInfo = { name: item.filename, fullPath: filePath };
+
+    if (settingsStore.showPopupFileEditorBoolean) {
+      fileEditorStore.triggerPopup(filePath, props.sessionId);
+    }
+
+    if (shareFileEditorTabsBoolean.value) {
+      fileEditorStore.openFile(filePath, props.sessionId, props.instanceId);
+    } else {
+      sessionStore.openFileInSession(props.sessionId, fileInfo);
+    }
+  }
 };
 
 // 切换多选模式 (主要用于移动端)

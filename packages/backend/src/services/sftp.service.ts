@@ -692,11 +692,61 @@ export class SftpService {
             state.sftp.realpath(path, (err, absPath) => {
                 if (err) {
                     console.error(`[SFTP ${sessionId}] realpath ${path} failed (ID: ${requestId}):`, err);
-                    state.ws.send(JSON.stringify({ type: 'sftp:realpath:error', path: path, payload: `获取绝对路径失败: ${err.message}`, requestId: requestId }));
+                    state.ws.send(JSON.stringify({ type: 'sftp:realpath:error', path: path, payload: { requestedPath: path, error: `获取绝对路径失败: ${err.message}` }, requestId: requestId }));
                 } else {
-                    console.log(`[SFTP ${sessionId}] realpath ${path} -> ${absPath} success (ID: ${requestId})`);
-                    // 在 payload 中同时发送请求的路径和绝对路径
-            state.ws.send(JSON.stringify({ type: 'sftp:realpath:success', path: path, payload: { requestedPath: path, absolutePath: absPath }, requestId: requestId }));
+                    console.log(`[SFTP ${sessionId}] realpath ${path} -> ${absPath} success (ID: ${requestId}). Fetching target type...`);
+                    // 再次检查 state 和 state.sftp 是否仍然有效，因为回调是异步的
+                    const currentState = this.clientStates.get(sessionId);
+                    if (!currentState || !currentState.sftp) {
+                        console.warn(`[SFTP ${sessionId}] SFTP session for ${absPath} became invalid before stat call (ID: ${requestId}).`);
+                        // 即使 SFTP 会话失效，也尝试发送已解析的路径，但标记错误
+                        state.ws.send(JSON.stringify({
+                            type: 'sftp:realpath:error',
+                            path: path, // 原始请求路径
+                            payload: {
+                                requestedPath: path,
+                                absolutePath: absPath,
+                                error: 'SFTP 会话在获取目标类型前已失效'
+                            },
+                            requestId: requestId
+                        }));
+                        return;
+                    }
+                    // 对 absPath 执行 stat 操作以获取其真实类型
+                    currentState.sftp.stat(absPath, (statErr, stats) => { // 使用 sftp.stat()
+                        if (statErr) {
+                            console.error(`[SFTP ${sessionId}] stat on realpath target ${absPath} failed (ID: ${requestId}):`, statErr);
+                            // 如果 stat 失败，发送带有错误信息的 realpath:error，但仍包含已解析的路径
+                            state.ws.send(JSON.stringify({
+                                type: 'sftp:realpath:error',
+                                path: path, // 原始请求路径
+                                payload: {
+                                    requestedPath: path,
+                                    absolutePath: absPath, // 仍然发送已解析的路径
+                                    error: `获取目标类型失败: ${statErr.message}`
+                                },
+                                requestId: requestId
+                            }));
+                        } else {
+                            let targetType: 'file' | 'directory' | 'unknown' = 'unknown';
+                            if (stats.isFile()) {
+                                targetType = 'file';
+                            } else if (stats.isDirectory()) {
+                                targetType = 'directory';
+                            }
+                            console.log(`[SFTP ${sessionId}] Target type for ${absPath} is ${targetType} (ID: ${requestId})`);
+                            state.ws.send(JSON.stringify({
+                                type: 'sftp:realpath:success',
+                                path: path, // 原始请求路径
+                                payload: {
+                                    requestedPath: path,
+                                    absolutePath: absPath,
+                                    targetType: targetType // 新增字段
+                                },
+                                requestId: requestId
+                            }));
+                        }
+                    });
                 }
             });
         } catch (error: any) {
