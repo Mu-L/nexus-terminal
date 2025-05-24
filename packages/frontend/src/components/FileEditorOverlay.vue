@@ -36,8 +36,8 @@ const {
 // 设置 Store (用于判断模式)
 const { showPopupFileEditorBoolean, shareFileEditorTabsBoolean } = storeToRefs(settingsStore);
 
-// 从 Appearance Store 获取编辑器字体大小
-const { currentEditorFontSize } = storeToRefs(appearanceStore);
+// 从 Appearance Store 获取编辑器字体大小和字体
+const { currentEditorFontSize, currentEditorFontFamily } = storeToRefs(appearanceStore);
 
 // --- 从 Store 获取方法 ---
 // 全局 Store Actions (用于共享模式)
@@ -580,6 +580,7 @@ onBeforeUnmount(() => {
           :key="activeTab.id"
           v-model="activeEditorContent"
           :language="currentTabLanguage"
+          :font-family="currentEditorFontFamily"
           theme="vs-dark"
           class="editor-instance"
           :font-size="currentEditorFontSize"
