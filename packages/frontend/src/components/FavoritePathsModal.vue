@@ -163,7 +163,6 @@ const handleClickOutside = (event: MouseEvent) => {
 
 watch(() => props.isVisible, (newValue: boolean) => {
   if (newValue) {
-    favoritePathsStore.fetchFavoritePaths(t);
     searchTerm.value = '';
     document.addEventListener('mousedown', handleClickOutside);
     nextTick(() => { // Ensure DOM is ready for measurements
@@ -178,8 +177,12 @@ watch(() => props.isVisible, (newValue: boolean) => {
 
 onMounted(() => {
   if (props.isVisible) {
-    favoritePathsStore.fetchFavoritePaths(t);
+    searchTerm.value = ''; 
     document.addEventListener('mousedown', handleClickOutside);
+    nextTick(() => { 
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+    });
   }
 });
 
