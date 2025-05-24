@@ -208,3 +208,15 @@ button.bg-primary:hover .far,
 button.bg-primary:hover .fab {
   color: white !important; /* Keep white on hover */
 }
+
+/* 移除按钮的聚焦光圈 */
+button:focus {
+  outline: none !important;
+  box-shadow: none !important; /* 同时移除 box-shadow 以防其被用于聚焦指示 */
+}
+
+/* 针对使用 :focus-visible 的浏览器 */
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
