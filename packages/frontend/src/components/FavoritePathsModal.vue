@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
         </button>
         <button
           @click="openAddModal"
-          class="flex items-center justify-center w-8 h-8 bg-primary text-white border-none rounded-lg text-sm font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-shrink-0"
+          class="flex items-center justify-center w-8 h-8 bg-primary text-white border-none rounded-lg text-sm font-semibold cursor-pointer shadow-md transition-colors duration-200 ease-in-out hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-shrink-0"
           :title="t('favoritePaths.addNew', 'Add new favorite path')"
         >
           <i class="fas fa-plus text-base"></i>
