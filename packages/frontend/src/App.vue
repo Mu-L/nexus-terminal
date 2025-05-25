@@ -80,8 +80,15 @@ onMounted(() => {
   
   // +++ 加载 Header 可见性状态 +++
   layoutStore.loadHeaderVisibility();
-  favoritePathsStore.initializeFavoritePaths(t); // +++ 初始化收藏路径数据 +++
+
 });
+
+// +++ 监听用户认证状态，登录后初始化收藏路径 +++
+watch(isAuthenticated, (loggedIn) => {
+  if (loggedIn) {
+    favoritePathsStore.initializeFavoritePaths(t);
+  }
+}, { immediate: true });
 
 // +++ 卸载钩子以移除监听器 +++
 onUnmounted(() => {
