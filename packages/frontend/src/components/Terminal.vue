@@ -230,7 +230,7 @@ onMounted(() => {
       cols: 80, // 初始列数
       allowTransparency: true,
       disableStdin: false,
-      convertEol: false,
+      convertEol: true,
       scrollback: getScrollbackValue(terminalScrollbackLimitNumber.value), //  Use setting from store
       scrollOnUserInput: true, // 输入时滚动到底部
       ...props.options, // 合并外部传入的选项

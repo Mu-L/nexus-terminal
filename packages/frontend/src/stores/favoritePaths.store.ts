@@ -93,10 +93,6 @@ export const useFavoritePathsStore = defineStore('favoritePaths', {
       } catch (err: any) {
         this.error = err.message || 'Failed to fetch favorite paths';
         console.error('Error fetching favorite paths:', err);
-        notificationsStore.addNotification({
-          message: t('favoritePaths.notifications.fetchError', 'Failed to load favorite paths.'),
-          type: 'error',
-        });
         this.isInitialized = false; // +++ 如果获取失败，允许重试初始化 +++
       } finally {
         this.isLoading = false;
