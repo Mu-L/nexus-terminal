@@ -1,0 +1,632 @@
+<script setup lang="ts">
+import { ref, reactive, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useAppearanceStore } from '../../stores/appearance.store';
+import { useUiNotificationsStore } from '../../stores/uiNotifications.store';
+import { storeToRefs } from 'pinia';
+import type { ITheme } from 'xterm';
+import type { TerminalTheme } from '../../types/terminal-theme.types';
+import { defaultXtermTheme } from '../../features/appearance/config/default-themes';
+
+const { t } = useI18n();
+const appearanceStore = useAppearanceStore();
+const notificationsStore = useUiNotificationsStore();
+
+const props = defineProps<{
+  isEditingTheme: boolean;
+  editingTheme: TerminalTheme | null;
+  modalRootRef: HTMLDivElement | null;
+}>();
+
+const emit = defineEmits<{
+  (e: 'update:isEditingTheme', value: boolean): void;
+  (e: 'update:editingTheme', value: TerminalTheme | null): void;
+}>();
+
+const {
+  allTerminalThemes,
+  activeTerminalThemeId,
+  currentTerminalFontFamily,
+  currentTerminalFontSize,
+} = storeToRefs(appearanceStore);
+
+const editableTerminalFontFamily = ref('');
+const editableTerminalFontSize = ref(14);
+const themeSearchTerm = ref('');
+const saveThemeError = ref<string | null>(null);
+const editableTerminalThemeString = ref('');
+const terminalThemeParseError = ref<string | null>(null);
+const terminalThemePlaceholder = `background: #000000
+foreground: #ffffff
+cursor: #ffffff
+selectionBackground: #555555
+black: #000000
+red: #ff0000
+green: #00ff00
+yellow: #ffff00
+blue: #0000ff
+magenta: #ff00ff
+cyan: #00ffff
+white: #ffffff
+brightBlack: #555555
+brightRed: #ff5555
+brightGreen: #55ff55
+brightYellow: #ffff55
+brightBlue: #5555ff
+brightMagenta: #ff55ff
+brightCyan: #55ffff
+brightWhite: #ffffff`;
+// Theme preview refs
+const originalModalRootBackgroundColor = ref<string | null>(null);
+const originalModalContentOpacity = ref<string | null>(null);
+const originalModalRootTransition = ref<string | null>(null);
+const originalModalContentTransition = ref<string | null>(null);
+
+const initializeEditableState = () => {
+  editableTerminalFontFamily.value = currentTerminalFontFamily.value;
+  editableTerminalFontSize.value = currentTerminalFontSize.value;
+  saveThemeError.value = null;
+  terminalThemeParseError.value = null;
+};
+
+// Watch for external changes to current font settings
+watch(currentTerminalFontFamily, (newValue) => {
+  if (!props.isEditingTheme) { // Only update if not actively editing a theme (to avoid overriding user input during theme edit)
+    editableTerminalFontFamily.value = newValue;
+  }
+});
+
+watch(currentTerminalFontSize, (newValue) => {
+  if (!props.isEditingTheme) {
+    editableTerminalFontSize.value = newValue;
+  }
+});
+
+// Initialize on mount and when relevant props change
+watch(() => [currentTerminalFontFamily.value, currentTerminalFontSize.value], () => {
+    // Re-initialize only if not in the middle of editing a theme,
+    // as editing a theme might involve temporary font changes or different contexts.
+    if (!props.isEditingTheme) {
+        initializeEditableState();
+    }
+}, { immediate: true });
+
+
+// Methods
+const handleSaveTerminalFont = async () => {
+  try {
+    await appearanceStore.setTerminalFontFamily(editableTerminalFontFamily.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalFontSaved') });
+  } catch (error: any) {
+    console.error("保存终端字体失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalFontSaveFailed', { message: error.message }) });
+  }
+};
+
+const handleSaveTerminalFontSize = async () => {
+  try {
+    const size = Number(editableTerminalFontSize.value);
+    if (isNaN(size) || size <= 0) {
+      notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorInvalidFontSize') });
+      return;
+    }
+    await appearanceStore.setTerminalFontSize(size);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.terminalFontSizeSaved') });
+  } catch (error: any) {
+    console.error("保存终端字体大小失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalFontSizeSaveFailed', { message: error.message }) });
+  }
+};
+
+const handleApplyTheme = async (theme: TerminalTheme) => {
+  if (!theme._id) return;
+  const themeIdNum = parseInt(theme._id, 10);
+  if (isNaN(themeIdNum)) {
+    console.error(`无效的主题 ID 格式: ${theme._id}`);
+    return;
+  }
+  if (themeIdNum === activeTerminalThemeId.value) return;
+  try {
+    await appearanceStore.setActiveTerminalTheme(theme._id);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.setActiveThemeSuccess', { themeName: theme.name }) });
+  } catch (error: any) {
+    console.error("应用终端主题失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.setActiveThemeFailed', { message: error.message }) });
+  }
+};
+
+const handleAddNewTheme = () => {
+  saveThemeError.value = null;
+  terminalThemeParseError.value = null;
+  const newTheme: TerminalTheme = {
+    _id: undefined,
+    name: t('styleCustomizer.newThemeDefaultName'),
+    themeData: JSON.parse(JSON.stringify(defaultXtermTheme)),
+    isPreset: false,
+  };
+  emit('update:editingTheme', newTheme);
+  try {
+    const themeObject = newTheme.themeData;
+    if (themeObject && typeof themeObject === 'object' && Object.keys(themeObject).length > 0) {
+      const lines = Object.entries(themeObject).map(([key, value]) => `${key}: ${value}`);
+      editableTerminalThemeString.value = lines.join('\n');
+    } else {
+      editableTerminalThemeString.value = '';
+    }
+  } catch (e) {
+    console.error("格式化新终端主题字符串失败:", e);
+    editableTerminalThemeString.value = '';
+  }
+  emit('update:isEditingTheme', true);
+};
+
+const handleEditTheme = async (theme: TerminalTheme) => {
+  saveThemeError.value = null;
+  terminalThemeParseError.value = null;
+  if (!theme._id) {
+    console.error("尝试编辑没有 ID 的主题:", theme);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorEditThemeNoId') });
+    return;
+  }
+
+  let themeDataToEdit: ITheme | null = null;
+  let themeNameToEdit = theme.name;
+  let themeIdToEdit: string | undefined = theme._id;
+
+  try {
+    themeDataToEdit = await appearanceStore.loadTerminalThemeData(theme._id);
+    if (!themeDataToEdit) {
+      throw new Error(t('styleCustomizer.errorLoadThemeDataFailed'));
+    }
+
+    if (theme.isPreset) {
+      themeNameToEdit = `${theme.name} (Copy)`;
+      themeIdToEdit = undefined;
+    }
+    
+    const themeToEdit: TerminalTheme = {
+      _id: themeIdToEdit,
+      name: themeNameToEdit,
+      themeData: JSON.parse(JSON.stringify(themeDataToEdit)),
+      isPreset: false,
+    };
+    emit('update:editingTheme', themeToEdit);
+
+    try {
+      const themeObject = themeToEdit.themeData;
+      if (themeObject && typeof themeObject === 'object' && Object.keys(themeObject).length > 0) {
+        const lines = Object.entries(themeObject).map(([key, value]) => `${key}: ${value}`);
+        editableTerminalThemeString.value = lines.join('\n');
+      } else {
+        editableTerminalThemeString.value = '';
+      }
+    } catch (e) {
+      console.error("格式化编辑终端主题字符串失败:", e);
+      editableTerminalThemeString.value = '';
+    }
+    emit('update:isEditingTheme', true);
+  } catch (error: any) {
+    console.error("编辑主题失败 (加载数据时):", error);
+    saveThemeError.value = error.message || t('styleCustomizer.errorEditThemeFailed');
+    emit('update:isEditingTheme', false);
+    emit('update:editingTheme', null);
+  }
+};
+
+const handleSaveEditingTheme = async () => {
+  if (!props.editingTheme || !props.editingTheme.name) {
+    saveThemeError.value = t('styleCustomizer.errorThemeNameRequired');
+    return;
+  }
+  handleTerminalThemeStringChange();
+  if (terminalThemeParseError.value) {
+    saveThemeError.value = t('styleCustomizer.errorFixJsonBeforeSave');
+    return;
+  }
+
+  saveThemeError.value = null;
+  try {
+    if (!props.editingTheme) return; // Should not happen due to above check
+    const currentThemeData = props.editingTheme.themeData;
+
+    if (props.editingTheme._id) {
+      const updateDto = { name: props.editingTheme.name, themeData: currentThemeData };
+      await appearanceStore.updateTerminalTheme(
+        props.editingTheme._id,
+        updateDto.name,
+        updateDto.themeData
+      );
+      notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeUpdatedSuccess') });
+    } else {
+      const createDto = { name: props.editingTheme.name, themeData: currentThemeData };
+      await appearanceStore.createTerminalTheme(
+        createDto.name,
+        createDto.themeData
+      );
+      notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeCreatedSuccess') });
+    }
+    emit('update:isEditingTheme', false);
+    emit('update:editingTheme', null);
+    editableTerminalThemeString.value = '';
+    terminalThemeParseError.value = null;
+  } catch (error: any) {
+    console.error("保存终端主题失败:", error);
+    saveThemeError.value = error.message || t('styleCustomizer.themeSaveFailed');
+  }
+};
+
+const handleCancelEditingTheme = () => {
+  emit('update:isEditingTheme', false);
+  emit('update:editingTheme', null);
+  saveThemeError.value = null;
+  terminalThemeParseError.value = null;
+  editableTerminalThemeString.value = '';
+};
+
+const handleTerminalThemeStringChange = () => {
+  terminalThemeParseError.value = null;
+  if (!props.editingTheme) return;
+
+  let inputText = editableTerminalThemeString.value.trim();
+  if (!inputText) {
+    const updatedTheme = { ...props.editingTheme, themeData: {} };
+    emit('update:editingTheme', updatedTheme);
+    return;
+  }
+
+  let jsonStringToParse = inputText
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && line.includes(':'))
+    .map(line => {
+      const parts = line.split(/:(.*)/s);
+      if (parts.length < 2) return null;
+      let key = parts[0].trim();
+      let value = parts[1].trim();
+      if (key.startsWith('"') && key.endsWith('"')) key = key.slice(1, -1);
+      if (key.startsWith("'") && key.endsWith("'")) key = key.slice(1, -1);
+      key = JSON.stringify(key);
+      if (value.endsWith(',')) value = value.slice(0, -1).trim();
+      let originalValue = value;
+      if (value.startsWith('"') && value.endsWith('"')) originalValue = value.slice(1, -1);
+      else if (value.startsWith("'") && value.endsWith("'")) originalValue = value.slice(1, -1);
+      if (isNaN(Number(originalValue)) && originalValue !== 'true' && originalValue !== 'false' && originalValue !== 'null') {
+        value = JSON.stringify(originalValue);
+      } else {
+        value = originalValue;
+      }
+      return `  ${key}: ${value}`;
+    })
+    .filter(line => line !== null)
+    .join(',\n');
+
+  const fullJsonString = `{\n${jsonStringToParse}\n}`;
+
+  try {
+    const parsedThemeData = JSON.parse(fullJsonString);
+    if (typeof parsedThemeData !== 'object' || parsedThemeData === null || Array.isArray(parsedThemeData)) {
+      throw new Error(t('styleCustomizer.errorInvalidJsonObject'));
+    }
+    const updatedTheme = { ...props.editingTheme, themeData: parsedThemeData };
+    emit('update:editingTheme', updatedTheme);
+  } catch (error: any) {
+    console.error('解析终端主题配置失败:', error);
+    let errorMessage = error.message || t('styleCustomizer.errorInvalidJsonConfig');
+    if (error instanceof SyntaxError) {
+      errorMessage = `${t('styleCustomizer.errorJsonSyntax')}: ${error.message}`;
+    }
+    terminalThemeParseError.value = errorMessage;
+  }
+};
+
+const handleDeleteTheme = async (theme: TerminalTheme) => {
+  if (theme.isPreset || !theme._id) return;
+  try {
+    await appearanceStore.deleteTerminalTheme(theme._id);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.themeDeletedSuccess') });
+  } catch (error: any) {
+    console.error("删除终端主题失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.themeDeleteFailed', { message: error.message }) });
+  }
+};
+
+const formatXtermLabel = (key: keyof ITheme): string => {
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+};
+
+const handleFocusAndSelect = (event: FocusEvent) => {
+  const target = event.target;
+  if (target instanceof HTMLInputElement) {
+    target.select();
+  }
+};
+
+const handlePreviewButtonMouseDown = async (event: MouseEvent, themeToPreview: TerminalTheme) => {
+  event.preventDefault();
+  if (props.modalRootRef && themeToPreview._id) {
+    const modalContentElement = props.modalRootRef.firstElementChild as HTMLElement;
+    try {
+      const themeData = await appearanceStore.loadTerminalThemeData(themeToPreview._id);
+      if (!themeData) {
+        console.error('Preview failed: Could not load theme data for', themeToPreview.name);
+        return;
+      }
+      appearanceStore.startTerminalThemePreview(themeData);
+
+      if (originalModalRootBackgroundColor.value === null && modalContentElement) {
+        originalModalRootBackgroundColor.value = window.getComputedStyle(props.modalRootRef).backgroundColor;
+        originalModalRootTransition.value = props.modalRootRef.style.transition;
+        originalModalContentOpacity.value = window.getComputedStyle(modalContentElement).opacity;
+        originalModalContentTransition.value = modalContentElement.style.transition;
+      }
+
+      props.modalRootRef.style.transition = 'background-color 0.05s ease-out, opacity 0.05s ease-out';
+      props.modalRootRef.style.backgroundColor = 'transparent';
+      if (modalContentElement) {
+        modalContentElement.style.transition = 'opacity 0.05s ease-out';
+        modalContentElement.style.opacity = '0';
+      }
+
+      const restoreOnMouseUp = () => {
+        appearanceStore.stopTerminalThemePreview();
+        if (props.modalRootRef) {
+          props.modalRootRef.style.backgroundColor = originalModalRootBackgroundColor.value || '';
+          props.modalRootRef.style.transition = originalModalRootTransition.value || '';
+        }
+        if (modalContentElement) {
+          modalContentElement.style.opacity = originalModalContentOpacity.value || '1';
+          modalContentElement.style.transition = originalModalContentTransition.value || '';
+        }
+        originalModalRootBackgroundColor.value = null;
+        originalModalContentOpacity.value = null;
+        originalModalRootTransition.value = null;
+        originalModalContentTransition.value = null;
+        document.removeEventListener('mouseup', restoreOnMouseUp);
+        const currentTargetButton = event.currentTarget as HTMLElement | null;
+        if (currentTargetButton) {
+            currentTargetButton.removeEventListener('mouseleave', restoreOnMouseUp);
+        }
+      };
+      document.addEventListener('mouseup', restoreOnMouseUp, { once: true });
+      const currentTargetButton = event.currentTarget as HTMLElement | null;
+      if (currentTargetButton) {
+          currentTargetButton.addEventListener('mouseleave', restoreOnMouseUp, { once: true });
+      }
+    } catch (error) {
+      console.error('Error during theme preview:', error);
+      appearanceStore.stopTerminalThemePreview();
+      if (props.modalRootRef && modalContentElement) {
+          props.modalRootRef.style.backgroundColor = originalModalRootBackgroundColor.value || '';
+          props.modalRootRef.style.transition = originalModalRootTransition.value || '';
+          modalContentElement.style.opacity = originalModalContentOpacity.value || '1';
+          modalContentElement.style.transition = originalModalContentTransition.value || '';
+          originalModalRootBackgroundColor.value = null;
+          originalModalContentOpacity.value = null;
+          originalModalRootTransition.value = null;
+          originalModalContentTransition.value = null;
+      }
+    }
+  }
+};
+
+// Computed Properties
+const activeThemeName = computed(() => {
+  const currentIdNum = activeTerminalThemeId.value;
+  if (currentIdNum === null || currentIdNum === undefined) {
+    return t('styleCustomizer.noThemeSelected');
+  }
+  const theme = allTerminalThemes.value.find((t: TerminalTheme) => t._id === currentIdNum.toString());
+  return theme ? theme.name : t('styleCustomizer.unknownTheme');
+});
+
+const filteredAndSortedThemes = computed(() => {
+  const searchTerm = themeSearchTerm.value.toLowerCase().trim();
+  let themes = [...allTerminalThemes.value];
+  if (searchTerm) {
+    themes = themes.filter((theme: TerminalTheme) => theme.name.toLowerCase().includes(searchTerm));
+  }
+  themes.sort((a: TerminalTheme, b: TerminalTheme) => a.name.localeCompare(b.name));
+  return themes;
+});
+
+// Watchers
+watch(() => props.editingTheme?.themeData, (newThemeData) => {
+  if (newThemeData && (document.activeElement?.id !== 'terminalThemeTextarea' || terminalThemeParseError.value)) {
+    try {
+      let newStringValue = '';
+      if (typeof newThemeData === 'object' && Object.keys(newThemeData).length > 0) {
+        const lines = Object.entries(newThemeData).map(([key, value]) => `${key}: ${value}`);
+        newStringValue = lines.join('\n');
+      }
+      if (newStringValue !== editableTerminalThemeString.value) {
+        editableTerminalThemeString.value = newStringValue;
+      }
+      if (terminalThemeParseError.value && document.activeElement?.id !== 'terminalThemeTextarea') {
+        terminalThemeParseError.value = null;
+      }
+    } catch (e) {
+      console.error("格式化终端主题字符串失败 (watcher):", e);
+    }
+  }
+}, { deep: true });
+
+watch(() => props.isEditingTheme, (isEditing) => {
+    if (isEditing && props.editingTheme) {
+        // Sync editableTerminalThemeString when editing starts
+        try {
+            const themeObject = props.editingTheme.themeData;
+            if (themeObject && typeof themeObject === 'object' && Object.keys(themeObject).length > 0) {
+                const lines = Object.entries(themeObject).map(([key, value]) => `${key}: ${value}`);
+                editableTerminalThemeString.value = lines.join('\n');
+            } else {
+                editableTerminalThemeString.value = terminalThemePlaceholder; // Or empty
+            }
+        } catch (e) {
+            console.error("初始化编辑终端主题字符串失败:", e);
+            editableTerminalThemeString.value = terminalThemePlaceholder; // Or empty
+        }
+        terminalThemeParseError.value = null; // Clear parse error when starting to edit
+    } else if (!isEditing) {
+        // Clear fields when not editing
+        editableTerminalThemeString.value = '';
+        terminalThemeParseError.value = null;
+        saveThemeError.value = null;
+        // Re-initialize font settings from store if not editing
+        initializeEditableState();
+    }
+}, { immediate: true });
+
+
+</script>
+
+<template>
+  <section v-if="!isEditingTheme">
+    <h3 class="mt-0 border-b border-border pb-2 mb-4 text-lg font-semibold text-foreground">{{ t('styleCustomizer.terminalStyles') }}</h3>
+    
+    <div class="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-start md:items-center gap-2 md:gap-3 mb-3">
+        <label for="terminalFontFamily" class="text-left text-foreground text-sm font-medium overflow-hidden text-ellipsis block w-full mb-1 md:mb-0">{{ t('styleCustomizer.terminalFontFamily') }}:</label>
+        <input type="text" id="terminalFontFamily" v-model="editableTerminalFontFamily" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" :placeholder="t('styleCustomizer.terminalFontPlaceholder')" />
+        <button @click="handleSaveTerminalFont" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap justify-self-start mt-1 md:mt-0">{{ t('common.save') }}</button>
+    </div>
+    <p class="text-xs text-text-secondary -mt-1 mb-2">{{ t('styleCustomizer.terminalFontDescription') }}</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-start md:items-center gap-2 md:gap-3 mb-3">
+        <label for="terminalFontSize" class="text-left text-foreground text-sm font-medium overflow-hidden text-ellipsis block w-full mb-1 md:mb-0">{{ t('styleCustomizer.terminalFontSize') }}:</label>
+        <input type="number" id="terminalFontSize" v-model.number="editableTerminalFontSize" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" min="1" />
+        <button @click="handleSaveTerminalFontSize" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap justify-self-start mt-1 md:mt-0">{{ t('common.save') }}</button>
+    </div>
+
+    <hr class="my-4 md:my-6"> 
+
+    <h4 class="mt-6 mb-2 text-base font-semibold text-foreground">{{ t('styleCustomizer.terminalThemeSelection') }}</h4>
+     
+     <div class="mb-4 py-2 text-sm md:text-[0.95rem] flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-3"> 
+         <span class="text-text-secondary">{{ t('styleCustomizer.activeTheme') }}:</span>
+         <strong class="text-foreground font-semibold">{{ activeThemeName }}</strong>
+    </div>
+
+    <div class="mt-4 mb-6 flex gap-2 flex-wrap items-center pb-4 border-b border-dashed border-border">
+        <button @click="handleAddNewTheme" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.addNewTheme') }}</button>
+    </div>
+     
+     <div class="mb-4">
+          <input
+              type="text"
+              v-model="themeSearchTerm"
+              :placeholder="t('styleCustomizer.searchThemePlaceholder', '搜索主题名称...')"
+              class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+     </div>
+
+     <ul class="list-none p-0 mt-4 max-h-[200px] md:max-h-[280px] overflow-y-auto border border-border rounded bg-background"> 
+         <li v-if="filteredAndSortedThemes.length === 0" class="text-center text-text-secondary p-4 italic">
+             {{ t('styleCustomizer.noThemesFound', 'No matching themes found') }}
+         </li>
+         <li v-else v-for="(theme, index) in filteredAndSortedThemes" :key="theme._id"
+            :class="[
+              'block md:grid md:grid-cols-[1fr_auto] items-center px-3 py-2.5 text-sm md:text-[0.95rem] transition-colors duration-200 ease-in-out gap-2',
+              index < filteredAndSortedThemes.length - 1 ? 'border-b border-border' : '',
+              { 'bg-button text-button-text': theme._id === activeTerminalThemeId?.toString() },
+              { 'hover:bg-header': theme._id !== activeTerminalThemeId?.toString() }
+            ]"
+         >
+             <span class="block md:col-start-1 md:col-end-2 overflow-hidden text-ellipsis whitespace-nowrap mb-2 md:mb-0" :class="theme._id === activeTerminalThemeId?.toString() ? 'font-bold text-button-text' : 'text-foreground'" :title="theme.name">{{ theme.name }}</span>
+             <div class="flex md:col-start-2 md:col-end-3 flex-shrink-0 gap-2 justify-start md:justify-end flex-wrap"> 
+                  <button
+                      @click="handleApplyTheme(theme)"
+                      :disabled="theme._id === activeTerminalThemeId?.toString()"
+                      :title="t('styleCustomizer.applyThemeTooltip', 'Apply this theme')"
+                      :class="[
+                        'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed',
+                        theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50 disabled:opacity-50 disabled:cursor-default disabled:bg-transparent disabled:border-transparent' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
+                      ]"
+                  >
+                      {{ t('styleCustomizer.applyButton', 'Apply') }}
+                 </button>
+                 <button
+                     @mousedown="(event) => handlePreviewButtonMouseDown(event, theme)"
+                     :class="[
+                       'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap',
+                       theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
+                     ]"
+                 >
+                      {{ t('styleCustomizer.previewButton', 'Preview') }}
+                 </button>
+                <button @click="handleEditTheme(theme)" :title="theme.isPreset ? t('styleCustomizer.editAsCopy', 'Edit as Copy') : t('common.edit')"
+                   :class="[
+                     'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed',
+                     theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
+                   ]"
+                >{{ t('common.edit') }}</button>
+                <button @click="handleDeleteTheme(theme)" :disabled="theme.isPreset" :title="theme.isPreset ? t('styleCustomizer.cannotDeletePreset', 'Cannot delete preset theme') : t('common.delete')"
+                   :class="[
+                     'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed',
+                     theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'bg-error/10 text-error border-error/30 hover:bg-error/20'
+                   ]"
+                >{{ t('common.delete') }}</button>
+             </div>
+         </li>
+     </ul>
+  </section>
+
+  <section v-if="isEditingTheme && editingTheme">
+      <h3 class="mt-0 border-b border-border pb-2 mb-4 text-lg font-semibold text-foreground">{{ editingTheme._id ? t('styleCustomizer.editThemeTitle') : t('styleCustomizer.newThemeTitle') }}</h3>
+       <p v-if="saveThemeError" class="text-error-text bg-error/10 border border-error/30 px-3 py-2 rounded text-sm mb-3">{{ saveThemeError }}</p>
+      <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-start md:items-center gap-2 mb-2">
+          <label for="editingThemeName" class="text-left text-foreground text-sm font-medium overflow-hidden text-ellipsis block w-full mb-1 md:mb-0">{{ t('styleCustomizer.themeName') }}:</label>
+          <input type="text" id="editingThemeName" v-model="editingTheme.name" required class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+      </div>
+
+       <hr class="my-4 md:my-8 border-border">
+       <h4 class="mt-6 mb-2 text-base font-semibold text-foreground">{{ t('styleCustomizer.terminalThemeColorEditorTitle') }}</h4>
+
+    <div v-for="(value, key) in editingTheme.themeData" :key="key" class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-start md:items-center gap-2 mb-2">
+      <label :for="`xterm-${key}`" class="text-left text-foreground text-sm font-medium overflow-hidden text-ellipsis block w-full mb-1 md:mb-0">{{ formatXtermLabel(key as keyof ITheme) }}:</label>
+      <div class="flex items-center gap-2 w-full">
+        <input
+          v-if="typeof value === 'string' && value.startsWith('#')"
+          type="color"
+          :id="`xterm-${key}`"
+          v-model="(editingTheme.themeData as any)[key]"
+          class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+        />
+        <input
+          v-if="typeof value === 'string' && value.startsWith('#')"
+          type="text"
+          :value="(editingTheme.themeData as any)[key]"
+          readonly
+          class="flex-grow min-w-[80px] bg-header cursor-text border border-border px-[0.7rem] py-2 rounded text-sm text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          @focus="handleFocusAndSelect"
+        />
+        <input
+          v-else
+          type="text"
+          :id="`xterm-${key}`"
+          v-model="(editingTheme.themeData as any)[key]"
+          class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground w-full box-border transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+   </div>
+
+      <hr class="my-4 md:my-8 border-border">
+      <h4 class="mt-6 mb-2 text-base font-semibold text-foreground">{{ t('styleCustomizer.terminalThemeJsonEditorTitle') }}</h4>
+      <p class="text-text-secondary text-sm leading-relaxed mb-3">{{ t('styleCustomizer.terminalThemeJsonEditorDesc') }}</p>
+      <div class="mt-4">
+         <label for="terminalThemeTextarea" class="sr-only">{{ t('styleCustomizer.terminalThemeJsonEditorTitle') }}</label>
+         <textarea
+           id="terminalThemeTextarea"
+           v-model="editableTerminalThemeString"
+           @blur="handleTerminalThemeStringChange"
+           rows="10"
+           :placeholder="terminalThemePlaceholder"
+           spellcheck="false"
+           class="w-full font-mono text-sm leading-snug border border-border rounded p-3 bg-background text-foreground resize-y min-h-[150px] md:min-h-[200px] box-border whitespace-pre-wrap break-words transition duration-200 ease-in-out focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+         ></textarea>
+      </div>
+       <p v-if="terminalThemeParseError" class="text-error-text bg-error/10 border border-error/30 px-3 py-2 rounded text-sm mt-2">{{ terminalThemeParseError }}</p>
+  <div class="mt-4 flex justify-end gap-2 pt-4 border-t border-border">
+       <button @click="handleCancelEditingTheme" class="px-4 md:px-5 py-2 rounded font-bold border border-border bg-header text-foreground hover:bg-border disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base">{{ t('common.cancel') }}</button> 
+       <button @click="handleSaveEditingTheme" class="px-4 md:px-5 py-2 rounded font-bold border border-button bg-button text-button-text hover:bg-button-hover hover:border-button-hover disabled:opacity-60 disabled:cursor-not-allowed text-sm md:text-base">{{ t('common.save') }}</button> 
+   </div>
+  </section>
+</template>
