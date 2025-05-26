@@ -1,5 +1,4 @@
 {
-
   "appName": "星枢终端",
   "projectName": "星枢终端",
   "slogan": "星垂平野阔，枢动万端通",
@@ -196,6 +195,9 @@
       "tags": "标签:",
       "notes": "备注:",
       "notesPlaceholder": "输入连接备注...",
+      "connectionMode": "代理类型:",
+      "connectionModeProxy": "代理服务器",
+      "connectionModeJumpHost": "跳板机",
       "connectionType": "连接类型",
       "typeSsh": "SSH",
       "typeRdp": "RDP",
@@ -259,7 +261,13 @@
       "scriptErrorInvalidUserHostPortFormat": "'{part}' 部分格式无效，期望格式为 'user@host' 或 'user@host:port'",
       "scriptTagCreated": "标签 '{tagName}' 已创建",
       "scriptErrorTagCreationFailed": "创建标签 '{tagName}' 失败",
-      "scriptModeAddingConnections": "正在通过脚本模式添加 {count} 个连接..."
+      "scriptModeAddingConnections": "正在通过脚本模式添加 {count} 个连接...",
+      "jumpHostsTitle": "跳板机链配置",
+      "jumpHostLabel": "跳板机",
+      "selectJumpHost": "请选择跳板机",
+      "removeJumpHostTitle": "移除此跳板机",
+      "addJumpHost": "添加跳板机",
+      "noAvailableSshConnectionsForJump": "没有可用的SSH连接作为跳板机。请先创建一些SSH连接。"
     },
     "test": {
       "success": "连接测试成功！",

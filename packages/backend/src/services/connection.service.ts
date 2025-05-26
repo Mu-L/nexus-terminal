@@ -7,10 +7,49 @@ import {
     ConnectionWithTags,
     CreateConnectionInput,
     UpdateConnectionInput,
-    FullConnectionData
-} from '../types/connection.types'; 
+    FullConnectionData,
+    ConnectionWithTags as ConnectionWithTagsType // Alias to avoid conflict with variable name
+} from '../types/connection.types';
 
 export type { ConnectionBase, ConnectionWithTags, CreateConnectionInput, UpdateConnectionInput };
+
+/**
+ * 辅助函数：验证 jump_chain 并处理与 proxy_id 的互斥关系
+ * @param jumpChain 输入的 jump_chain
+ * @param proxyId 输入的 proxy_id
+ * @param connectionId 当前正在操作的连接ID (仅在更新时提供)
+ * @returns 处理过的 jump_chain (null 如果无效或应被忽略)
+ * @throws Error 如果验证失败
+ */
+const _validateAndProcessJumpChain = async (
+    jumpChain: number[] | null | undefined,
+    proxyId: number | null | undefined,
+    connectionId?: number
+): Promise<number[] | null> => {
+
+    if (!jumpChain || jumpChain.length === 0) {
+        return null;
+    }
+
+    const validatedChain: number[] = [];
+    for (const id of jumpChain) {
+        if (typeof id !== 'number') {
+            throw new Error('jump_chain 中的 ID 必须是数字。');
+        }
+        if (connectionId && id === connectionId) {
+            throw new Error(`jump_chain 不能包含当前连接自身的 ID (${connectionId})。`);
+        }
+        const existingConnection = await ConnectionRepository.findConnectionByIdWithTags(id);
+        if (!existingConnection) {
+            throw new Error(`jump_chain 中的连接 ID ${id} 未找到。`);
+        }
+        if (existingConnection.type !== 'SSH') {
+            throw new Error(`jump_chain 中的连接 ID ${id} (${existingConnection.name}) 不是 SSH 类型。`);
+        }
+        validatedChain.push(id);
+    }
+    return validatedChain.length > 0 ? validatedChain : null;
+};
 
 
 const auditLogService = new AuditLogService(); 
@@ -38,9 +77,14 @@ export const getConnectionById = async (id: number): Promise<ConnectionWithTags 
  */
 export const createConnection = async (input: CreateConnectionInput): Promise<ConnectionWithTags> => {
     // +++ Define a local type alias for clarity, including ssh_key_id +++
-    type ConnectionDataForRepo = Omit<FullConnectionData, 'id' | 'created_at' | 'updated_at' | 'last_connected_at' | 'tag_ids'>;
+    type ConnectionDataForRepo = Omit<FullConnectionData, 'id' | 'created_at' | 'updated_at' | 'last_connected_at' | 'tag_ids'> & { jump_chain?: number[] | null; proxy_type?: 'proxy' | 'jump' | null };
 
     console.log('[Service:createConnection] Received input:', JSON.stringify(input, null, 2)); // Log input
+
+    // 0. 处理和验证 jump_chain
+    const processedJumpChain = await _validateAndProcessJumpChain(input.jump_chain, input.proxy_id);
+
+
     // 1. 验证输入 (包含 type)
     // Convert type to uppercase for validation and consistency
     const connectionType = input.type?.toUpperCase() as 'SSH' | 'RDP' | 'VNC' | undefined; // Ensure type safety
@@ -154,14 +198,16 @@ export const createConnection = async (input: CreateConnectionInput): Promise<Co
         encrypted_passphrase: encryptedPassphrase, // Null if using ssh_key_id or RDP
         ssh_key_id: sshKeyIdToSave, // +++ Add ssh_key_id +++
 notes: input.notes ?? null, // Add notes field
-        proxy_id: input.proxy_id ?? null,
+        proxy_id: input.proxy_id ?? null, // 直接使用输入的 proxy_id
+        proxy_type: input.proxy_type ?? null, // 新增 proxy_type
+        jump_chain: processedJumpChain,
     };
     // Remove ssh_key_id property if it's null before logging/saving if repository expects exact type match without optional nulls
     const finalConnectionData = { ...connectionData };
     if (finalConnectionData.ssh_key_id === null) {
         delete (finalConnectionData as any).ssh_key_id; // Adjust based on repository function signature if needed
     }
-    console.log('[Service:createConnection] Data to be saved:', JSON.stringify(finalConnectionData, null, 2)); // Log data before saving
+    console.log('[Service:createConnection] Data being passed to ConnectionRepository.createConnection:', JSON.stringify(finalConnectionData, null, 2)); // Log data before saving
 
     // 4. 在仓库中创建连接记录
     // Pass the potentially modified finalConnectionData
@@ -197,11 +243,35 @@ export const updateConnection = async (id: number, input: UpdateConnectionInput)
     }
 
     // 2. 准备更新数据
-    // Explicitly type dataToUpdate to match the repository's expected input, including ssh_key_id
-    const dataToUpdate: Partial<Omit<ConnectionRepository.FullConnectionData & { ssh_key_id?: number | null }, 'id' | 'created_at' | 'last_connected_at' | 'tag_ids'>> = {};
+    // Explicitly type dataToUpdate to match the repository's expected input, including ssh_key_id, jump_chain and proxy_type
+    const dataToUpdate: Partial<Omit<ConnectionRepository.FullConnectionData & { ssh_key_id?: number | null; jump_chain?: number[] | null; proxy_type?: 'proxy' | 'jump' | null }, 'id' | 'created_at' | 'last_connected_at' | 'tag_ids'>> = {};
     let needsCredentialUpdate = false;
     // Determine the final type, converting input type to uppercase if provided
     const targetType = input.type?.toUpperCase() as 'SSH' | 'RDP' | 'VNC' | undefined || currentFullConnection.type;
+
+    // 处理 jump_chain 和 proxy_id
+    if (input.jump_chain !== undefined || input.proxy_id !== undefined) {
+        const currentProxyId = input.proxy_id !== undefined ? input.proxy_id : currentFullConnection.proxy_id;
+        
+        let jumpChainFromDb: number[] | null = null;
+        if (currentFullConnection.jump_chain) { // currentFullConnection.jump_chain is string | null
+            try {
+                jumpChainFromDb = JSON.parse(currentFullConnection.jump_chain) as number[];
+            } catch (e) {
+                console.error(`[Service:updateConnection] Failed to parse jump_chain from DB for connection ${id}: ${currentFullConnection.jump_chain}`, e);
+                // Treat as null if parsing fails, or consider throwing an error
+                jumpChainFromDb = null;
+            }
+        }
+        const currentJumpChainForValidation: number[] | null | undefined = input.jump_chain !== undefined ? input.jump_chain : jumpChainFromDb;
+        
+        const processedJumpChain = await _validateAndProcessJumpChain(currentJumpChainForValidation, currentProxyId, id);
+        
+        dataToUpdate.jump_chain = processedJumpChain;
+        // 直接使用 currentProxyId，不再因为 jump_chain 存在而将其设为 null
+        dataToUpdate.proxy_id = currentProxyId;
+    }
+
 
     // 更新非凭证字段
     if (input.name !== undefined) dataToUpdate.name = input.name || '';
@@ -210,8 +280,10 @@ export const updateConnection = async (id: number, input: UpdateConnectionInput)
     if (input.host !== undefined) dataToUpdate.host = input.host;
     if (input.port !== undefined) dataToUpdate.port = input.port;
     if (input.username !== undefined) dataToUpdate.username = input.username;
-if (input.notes !== undefined) dataToUpdate.notes = input.notes; // Add notes update
-    if (input.proxy_id !== undefined) dataToUpdate.proxy_id = input.proxy_id;
+    if (input.notes !== undefined) dataToUpdate.notes = input.notes; // Add notes update
+    // proxy_id 的处理已移至 jump_chain 逻辑块中
+    // if (input.proxy_id !== undefined) dataToUpdate.proxy_id = input.proxy_id;
+    if (input.proxy_type !== undefined) dataToUpdate.proxy_type = input.proxy_type; // 新增 proxy_type 更新
     // Handle ssh_key_id update (can be set to null or a new ID)
     if (input.ssh_key_id !== undefined) dataToUpdate.ssh_key_id = input.ssh_key_id;
 
@@ -336,6 +408,7 @@ if (input.notes !== undefined) dataToUpdate.notes = input.notes; // Add notes up
     let updatedFieldsForAudit: string[] = []; // 跟踪审计日志的字段
     if (hasNonTagChanges) {
         updatedFieldsForAudit = Object.keys(dataToUpdate); // 在更新调用之前获取字段
+        console.log(`[Service:updateConnection] Data being passed to ConnectionRepository.updateConnection for ID ${id}:`, JSON.stringify(dataToUpdate, null, 2)); // ADD THIS LOG
         const updated = await ConnectionRepository.updateConnection(id, dataToUpdate);
         if (!updated) {
             // 如果 findFullConnectionById 成功，则不应发生这种情况，但这是良好的实践
@@ -504,6 +577,9 @@ export const cloneConnection = async (originalId: number, newName: string): Prom
         encrypted_passphrase: originalFullConnection.encrypted_passphrase ?? null,
         ssh_key_id: originalFullConnection.ssh_key_id ?? null, // 保留原始的 ssh_key_id
         proxy_id: originalFullConnection.proxy_id ?? null,
+        proxy_type: originalFullConnection.proxy_type ?? null, // 新增 proxy_type 复制
+        notes: originalFullConnection.notes ?? null, // 确保 notes 被复制
+        jump_chain: originalFullConnection.jump_chain ? JSON.parse(originalFullConnection.jump_chain) as number[] : null, // 复制并解析 jump_chain
         // 移除不存在的 RDP 字段复制
         // ...(originalFullConnection.rdp_security && { rdp_security: originalFullConnection.rdp_security }),
         // ...(originalFullConnection.rdp_ignore_cert !== undefined && { rdp_ignore_cert: originalFullConnection.rdp_ignore_cert }),

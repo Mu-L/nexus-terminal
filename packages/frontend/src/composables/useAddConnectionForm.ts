@@ -31,31 +31,35 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
   const sshKeysStore = useSshKeysStore();
   const uiNotificationsStore = useUiNotificationsStore();
 
-  const { isLoading: isConnLoading, error: connStoreError } = storeToRefs(connectionsStore);
+  const { isLoading: isConnLoading, error: connStoreError, connections } = storeToRefs(connectionsStore);
   const { proxies, isLoading: isProxyLoading, error: proxyStoreError } = storeToRefs(proxiesStore);
   const { tags, isLoading: isTagLoading, error: tagStoreError } = storeToRefs(tagsStore);
   const { sshKeys, isLoading: isSshKeyLoading, error: sshKeyStoreError } = storeToRefs(sshKeysStore);
 
   // 表单数据模型
   const initialFormData = {
-    type: 'SSH' as 'SSH' | 'RDP' | 'VNC', 
+    type: 'SSH' as 'SSH' | 'RDP' | 'VNC',
     name: '',
     host: '',
     port: 22,
     username: '',
-    auth_method: 'password' as 'password' | 'key', 
+    auth_method: 'password' as 'password' | 'key',
     password: '',
-    private_key: '', 
-    passphrase: '', 
+    private_key: '',
+    passphrase: '',
     selected_ssh_key_id: null as number | null,
     proxy_id: null as number | null,
-    tag_ids: [] as number[], 
-    notes: '', 
-    vncPassword: '', 
+    jump_chain: null as Array<any> | null, 
+    proxy_type: null as 'proxy' | 'jump' | null, 
+    tag_ids: [] as number[],
+    notes: '',
+    vncPassword: '',
   };
   const formData = reactive({ ...initialFormData });
 
   const formError = ref<string | null>(null); // 表单级别的错误信息
+  const advancedConnectionMode = ref<'proxy' | 'jump'>('proxy');
+
   // 合并所有 store 的加载和错误状态
   const isLoading = computed(() => isConnLoading.value || isProxyLoading.value || isTagLoading.value || isSshKeyLoading.value); // +++ Include SSH Key loading +++
   const storeError = computed(() => connStoreError.value || proxyStoreError.value || tagStoreError.value || sshKeyStoreError.value); // +++ Include SSH Key error +++
@@ -103,6 +107,10 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
           formData.username = newVal.username;
           formData.auth_method = newVal.auth_method;
           formData.proxy_id = newVal.proxy_id ?? null;
+          formData.proxy_type = newVal.proxy_type ?? null; 
+          formData.jump_chain = newVal.jump_chain ? JSON.parse(JSON.stringify(newVal.jump_chain)) : null; 
+          console.log('[Debug] watch connectionToEdit - newVal.jump_chain:', newVal.jump_chain);
+          console.log('[Debug] watch connectionToEdit - formData.jump_chain initialized:', formData.jump_chain);
           formData.notes = newVal.notes ?? '';
           formData.tag_ids = newVal.tag_ids ? [...newVal.tag_ids] : [];
 
@@ -112,13 +120,24 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
               formData.selected_ssh_key_id = null;
           }
 
+          if (newVal.proxy_type === 'jump' && newVal.jump_chain && newVal.jump_chain.length > 0) {
+              advancedConnectionMode.value = 'jump';
+          } else if (newVal.proxy_type === 'proxy' && newVal.proxy_id !== null && newVal.proxy_id !== undefined) {
+              advancedConnectionMode.value = 'proxy';
+          }
+          else if (newVal.jump_chain && newVal.jump_chain.length > 0 && (newVal.proxy_id === null || newVal.proxy_id === undefined)) {
+             advancedConnectionMode.value = 'jump';
+          } else {
+             advancedConnectionMode.value = 'proxy';
+          }
+
           formData.password = '';
           formData.private_key = '';
           formData.passphrase = '';
           if (newVal.type !== 'VNC') {
                formData.vncPassword = '';
           } else {
-              formData.vncPassword = '';
+              formData.vncPassword = ''; // 保持原逻辑或根据需求调整
           }
      } else {
          Object.assign(formData, initialFormData);
@@ -126,7 +145,11 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
          formData.selected_ssh_key_id = null;
          formData.notes = '';
          formData.vncPassword = '';
-      }
+         formData.jump_chain = null; 
+         formData.proxy_type = null;
+         console.log('[Debug] watch connectionToEdit - formData.jump_chain reset');
+         advancedConnectionMode.value = 'proxy'; 
+    }
   }, { immediate: true });
 
   // 组件挂载时获取代理、标签和 SSH 密钥列表
@@ -150,6 +173,22 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
           formData.selected_ssh_key_id = null;
       }
   });
+
+  
+  watch([() => formData.type, advancedConnectionMode], ([newType, newAdvMode], [oldType, oldAdvMode]) => {
+    if (newType === 'SSH') {
+      if (newAdvMode === 'proxy') {
+        formData.proxy_type = 'proxy';
+      } else if (newAdvMode === 'jump') {
+        formData.proxy_type = 'jump';
+      } else {
+        formData.proxy_type = null;
+      }
+    } else {
+      formData.proxy_type = null;
+    }
+    console.log(`[Debug] useAddConnectionForm: proxy_type set to ${formData.proxy_type} (type: ${newType}, mode: ${newAdvMode})`);
+  }, { immediate: true });
 
   // Helper function to parse IP range
   const parseIpRange = (ipRangeStr: string): string[] | { error: string } => {
@@ -615,6 +654,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
                     notes: formData.notes,
                     proxy_id: formData.proxy_id || null,
                     tag_ids: currentSelectedValidTagIds,
+                    proxy_type: formData.proxy_type,
                 };
 
                 if (formData.type === 'SSH') {
@@ -678,7 +718,9 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
         notes: formData.notes,
         username: formData.username,
         proxy_id: formData.proxy_id || null,
+        proxy_type: formData.proxy_type,
         tag_ids: currentSelectedValidTagIds,
+        jump_chain: formData.jump_chain ? JSON.parse(JSON.stringify(formData.jump_chain)) : null,
     };
 
     if (formData.type === 'SSH') {
@@ -839,6 +881,20 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       return t('connections.form.testConnection');
   });
 
+  // --- Jump Host Chain Management ---
+  const addJumpHost = () => {
+    if (formData.jump_chain === null || formData.jump_chain === undefined) {
+      formData.jump_chain = [];
+    }
+    formData.jump_chain.push(null);
+  };
+
+  const removeJumpHost = (index: number) => {
+    if (formData.jump_chain && index >= 0 && index < formData.jump_chain.length) {
+      formData.jump_chain.splice(index, 1);
+    }
+  };
+
   return {
     formData,
     isLoading,
@@ -863,7 +919,9 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
     handleDeleteTag,
     latencyColor,
     testButtonText,
-    // Expose stores if child components or template parts need direct access, though usually not.
-    // uiNotificationsStore, // Used internally, not needed to be returned
+    advancedConnectionMode, 
+    addJumpHost,         
+    removeJumpHost,         
+    connections,
   };
 }

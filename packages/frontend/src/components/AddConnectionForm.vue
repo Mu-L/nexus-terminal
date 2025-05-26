@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, Teleport, nextTick } from 'vue';
+import { ref, Teleport, nextTick, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ConnectionInfo } from '../stores/connections.store'; // Keep ConnectionInfo type
 import { useAddConnectionForm } from '../composables/useAddConnectionForm';
@@ -34,10 +34,14 @@ const {
   submitButtonText,
   proxies,
   tags,
+  connections,
   isProxyLoading,
   proxyStoreError,
   isTagLoading,
   tagStoreError,
+  advancedConnectionMode,
+  addJumpHost,
+  removeJumpHost,
   handleSubmit,
   handleDeleteConnection,
   handleTestConnection,
@@ -46,6 +50,10 @@ const {
   latencyColor,
   testButtonText,
 } = useAddConnectionForm(props, emit);
+
+const handleAdvancedConnectionModeUpdate = (newMode: 'proxy' | 'jump') => {
+  advancedConnectionMode.value = newMode;
+};
 
 // Tooltip state and refs - Kept in component as it's purely view-related
 const showHostTooltip = ref(false);
@@ -104,14 +112,19 @@ const handleHostIconMouseLeave = () => {
             :form-data="formData"
             :proxies="proxies"
             :tags="tags"
+            :connections="connections"
             :is-proxy-loading="isProxyLoading"
             :proxy-store-error="proxyStoreError"
             :is-tag-loading="isTagLoading"
             :tag-store-error="tagStoreError"
+            :advanced-connection-mode="advancedConnectionMode"
+            @update:advancedConnectionMode="handleAdvancedConnectionModeUpdate"
+            :add-jump-host="addJumpHost"
+            :remove-jump-host="removeJumpHost"
             @create-tag="handleCreateTag"
             @delete-tag="handleDeleteTag"
           />
-        </template> <!-- End of v-if="!isScriptModeActive" -->
+        </template>
        
         <!-- Script Mode Section Toggle -->
        <div v-if="!isEditMode" class="space-y-4 p-4 border border-border rounded-md bg-header/30 mt-6">
