@@ -33,7 +33,6 @@ let resizeObserver: ResizeObserver | null = null;
 let observedElement: HTMLElement | null = null; // +++ Store the observed element +++
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
 let selectionListenerDisposable: IDisposable | null = null; // +++ 提升声明并添加类型 +++
-// const fontSize = ref(14); // 移除本地字体大小状态，将由 store 管理
 
 
 const { isMobile } = useDeviceDetection(); // 设备检测
@@ -56,9 +55,9 @@ const {
 const settingsStore = useSettingsStore(); // +++ 实例化设置 store +++
 const {
   autoCopyOnSelectBoolean,
-  terminalScrollbackLimitNumber, //  Import scrollback limit getter
-  terminalEnableRightClickPasteBoolean, //  Import right-click paste setting getter
-} = storeToRefs(settingsStore); // +++ 获取设置状态 +++
+  terminalScrollbackLimitNumber, 
+  terminalEnableRightClickPasteBoolean, 
+} = storeToRefs(settingsStore); 
 
 // 防抖函数
 const debounce = (func: Function, delay: number) => {
@@ -104,7 +103,6 @@ const fitAndEmitResizeNow = (term: Terminal) => {
             console.log(`[Terminal ${props.sessionId}] Immediate resize emit:`, dimensions);
             emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
 
-            // *** 恢复：仅使用 nextTick 触发 window resize ***
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
             nextTick(() => {
                 // 再次检查终端实例是否仍然存在
@@ -302,7 +300,6 @@ onMounted(() => {
                 // Perform fit after a delay to ensure visibility and layout stability
                 nextTick(() => {
                     setTimeout(() => {
-                        // Re-check if still active and terminal exists
                         // 检查内部容器 terminalRef
                         if (props.isActive && terminal && terminalRef.value && terminalRef.value.offsetHeight > 0) {
                             fitAndEmitResizeNow(terminal);
@@ -322,24 +319,13 @@ onMounted(() => {
                 } catch (e) {
                      console.warn(`[Terminal ${props.sessionId}] Error unobserving element:`, e);
                 }
-                // Optionally clear debounce timer if resize was pending for this inactive terminal
-                // (debouncedEmitResize already checks isActive, so maybe not strictly needed)
-                // if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+ 
             }
         } else {
             console.warn(`[Terminal ${props.sessionId}] Cannot handle isActive change: resizeObserver or observedElement missing.`);
         }
     });
 
-    // // 监听 fitAddon 的 resize 事件，获取新的尺寸并触发 emit
-    // // 注意：fitAddon 本身不直接触发 resize 事件，我们需要在 fit() 后手动获取
-    // const originalFit = fitAddon.fit.bind(fitAddon);
-    // fitAddon.fit = () => {
-    //     originalFit();
-    //     if (terminal) {
-    //         emit('resize', { cols: terminal.cols, rows: terminal.rows });
-    //     }
-    // };
 
 
     // 处理传入的数据流 (如果提供了 stream prop)
@@ -510,27 +496,6 @@ onMounted(() => {
     // 重新添加鼠标滚轮缩放功能到内部容器 terminalRef
     if (terminalRef.value) {
       terminalRef.value.addEventListener('wheel', (event: WheelEvent) => {
-    //     // 只在按下Ctrl键时才触发缩放
-    //     if (event.ctrlKey) {
-    //       event.preventDefault(); // 阻止默认的滚动行为
-          
-    //       // 根据滚轮方向调整字体大小
-    //       if (event.deltaY < 0) {
-    //         // 向上滚动，增大字体
-    //         fontSize.value = Math.min(fontSize.value + 1, 40); // 设置最大字体大小为40
-    //       } else {
-    //         // 向下滚动，减小字体
-    //         fontSize.value = Math.max(fontSize.value - 1, 8); // 设置最小字体大小为8
-    //       }
-          
-    //       // 更新终端字体大小
-    //       if (terminal) {
-    //         terminal.options.fontSize = fontSize.value;
-    //         // 调整终端大小以适应新的字体大小
-    //         fitAddon?.fit();
-    //         emit('resize', { cols: terminal.cols, rows: terminal.rows });
-    //       }
-        // 只在按下Ctrl键时才触发缩放
         if (event.ctrlKey) {
           event.preventDefault(); // 阻止默认的滚动行为
 
@@ -547,11 +512,6 @@ onMounted(() => {
 
             if (newSize !== currentSize) { // 仅在字体大小实际改变时执行
                 console.log(`[Terminal ${props.sessionId}] Font size changed via wheel: ${newSize}`);
-                // 立即更新视觉效果 - fitAndEmitResizeNow 会处理
-                // terminal.options.fontSize = newSize; // fitAndEmitResizeNow 内部会设置
-                // fitAddon?.fit(); // fitAndEmitResizeNow 会处理
-
-                // *** 修改：调用 fitAndEmitResizeNow 来处理 fit 和事件触发 ***
                 terminal.options.fontSize = newSize; // 先更新选项
                 fitAndEmitResizeNow(terminal); // 调用统一函数
 
