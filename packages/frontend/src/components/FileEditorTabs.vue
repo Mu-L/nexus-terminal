@@ -172,6 +172,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: nowrap; /* 防止标签换行 */
   overflow-x: auto; /* 水平滚动 */
+  overflow-y: hidden; /* 防止垂直滚动 */
   background-color: #252526; /* VSCode 风格的标签背景 */
   border-bottom: 1px solid #3f3f46; /* 分隔线 */
   flex-shrink: 0; /* 防止标签栏被压缩 */
