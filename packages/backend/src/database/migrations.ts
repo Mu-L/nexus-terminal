@@ -283,7 +283,20 @@ const definedMigrations: Migration[] = [
                 updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
             );
         `
-    }
+    },
+    {
+        id: 9,
+        name: 'Add jump_chain and proxy_type columns to connections table',
+        sql: `
+            ALTER TABLE connections ADD COLUMN jump_chain TEXT NULL;
+            ALTER TABLE connections ADD COLUMN proxy_type TEXT NULL;
+        `,
+        check: async (db: Database): Promise<boolean> => {
+            const jumpChainColumnExists = await columnExists(db, 'connections', 'jump_chain');
+            const proxyTypeColumnExists = await columnExists(db, 'connections', 'proxy_type');
+            return !jumpChainColumnExists || !proxyTypeColumnExists;
+        }
+    },
 ];
 
 /**

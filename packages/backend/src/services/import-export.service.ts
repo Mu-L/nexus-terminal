@@ -261,26 +261,7 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
                 line += ` -p ${escapeCliArgument(conn.password)}`;
             }
 
-            if (conn.proxy) {
-                line += ` -proxy-name ${escapeCliArgument(conn.proxy.name)}`;
-                line += ` -proxy-type ${conn.proxy.type}`;
-                line += ` -proxy-host ${escapeCliArgument(conn.proxy.host)}`;
-                line += ` -proxy-port ${conn.proxy.port}`;
-                if (conn.proxy.username) {
-                    line += ` -proxy-username ${escapeCliArgument(conn.proxy.username)}`;
-                }
-                if (conn.proxy.auth_method && conn.proxy.auth_method !== 'none') {
-                    line += ` -proxy-auth-method ${conn.proxy.auth_method}`;
-                    if (conn.proxy.auth_method === 'password' && conn.proxy.password) {
-                        line += ` -proxy-password ${escapeCliArgument(conn.proxy.password)}`;
-                    } else if (conn.proxy.auth_method === 'key' && conn.proxy.private_key) {
-                        line += ` -proxy-key ${escapeCliArgument('key-content-not-exported-for-security')}`;
-                        if (conn.proxy.passphrase) {
-                            line += ` -proxy-passphrase ${escapeCliArgument(conn.proxy.passphrase)}`;
-                        }
-                    }
-                }
-            }
+            // 移除了代理设置的导出，以避免跳板机相关问题
 
             if (conn.tag_ids && conn.tag_ids.length > 0) {
                 const tagNames = conn.tag_ids.map(id => tagsMap.get(id)).filter(name => !!name) as string[];
@@ -334,8 +315,22 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
             archive.append(connectionsScriptContent, { name: 'connections.txt' });
 
             if (includeSshKeys && allSshKeys.length > 0) {
-                const sshKeysJsonContent = JSON.stringify(allSshKeys, null, 2);
-                archive.append(sshKeysJsonContent, { name: 'ssh_keys.json' });
+                // 创建一个名为 ssh_keys 的文件夹，并将每个密钥保存为一个单独的文件
+                // 确保 ssh_keys 目录首先被创建（如果 archive 库不自动创建）
+                // archive.append(null, { name: 'ssh_keys/', type: 'directory' }); // archiver 会自动创建目录结构
+
+                for (const sshKey of allSshKeys) {
+                    // DecryptedSshKeyDetails 包含 name 和 privateKey
+                    if (sshKey.name && sshKey.privateKey) {
+                        // 移除文件名中可能存在的非法字符，或进行更安全的编码
+                        // 为了简单起见，这里假设 sshKey.name 是一个有效的文件名组件
+                        const sanitizedKeyName = sshKey.name.replace(/[<>:"/\\|?*]/g, '_'); // 基本的文件名清理
+                        const filePathInZip = `ssh_keys/${sanitizedKeyName}.txt`;
+                        archive.append(sshKey.privateKey, { name: filePathInZip });
+                    } else {
+                        console.warn(`SSH 密钥 (ID: ${sshKey.id}) 缺少名称或私钥内容，跳过导出。`);
+                    }
+                }
             }
 
             archive.finalize()
@@ -448,7 +443,8 @@ export const importConnections = async (fileBuffer: Buffer): Promise<ImportResul
                     encrypted_private_key: connData.encrypted_private_key || null,
                     encrypted_passphrase: connData.encrypted_passphrase || null,
                     proxy_id: proxyIdToUse,
-                    tag_ids: connData.tag_ids || []
+                    tag_ids: connData.tag_ids || [],
+                    jump_chain: null, // 为 jump_chain 添加默认值
                 });
 
             } catch (connError: any) {

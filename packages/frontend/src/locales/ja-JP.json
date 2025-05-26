@@ -176,7 +176,10 @@
             "tags": "タグ:",
             "notes": "備考：",
 "notesPlaceholder": "接続に関する備考を入力してください...",
-            "testConnection": "接続をテスト",
+"connectionMode": "プロキシタイプ:",
+"connectionModeProxy": "プロキシサーバー",
+"connectionModeJumpHost": "踏み台サーバー",
+"testConnection": "接続をテスト",
             "testing": "テスト中...",
             "title": "新しい接続を追加",
             "titleEdit": "接続の編集",
@@ -239,7 +242,14 @@
             "scriptErrorInvalidUserHostPortFormat": "'{part}' の形式が無効です、期待される形式は 'user@host' または 'user@host:port' です",
             "scriptTagCreated": "タグ '{tagName}' が作成されました",
             "scriptErrorTagCreationFailed": "タグ '{tagName}' の作成に失敗しました",
-            "scriptModeAddingConnections": "スクリプトモードで {count} 個の接続を追加しています..."
+            "scriptModeAddingConnections": "スクリプトモードで {count} 件の接続を追加中...",
+"jumpHostsTitle": "ジャンプホストチェーン設定",
+"jumpHostLabel": "ジャンプホスト",
+"selectJumpHost": "ジャンプホストを選択してください",
+"removeJumpHostTitle": "このジャンプホストを削除",
+"addJumpHost": "ジャンプホストを追加",
+"noAvailableSshConnectionsForJump": "ジャンプホストとして使用できるSSH接続がありません。先にSSH接続を作成してください。"
+
         },
         "noConnections": "接続がありません。'新しい接続を追加'をクリックして作成してください。",
         "noUntaggedConnections": "タグなしの接続はありません。",
