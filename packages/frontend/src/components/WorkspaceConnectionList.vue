@@ -907,75 +907,79 @@ const cancelEditingTag = () => {
     </div>
 
     <!-- Context Menu -->
-    <div
-      v-if="contextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[180px] context-menu"
-      :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
-      @click.stop
-    >
-      <ul class="list-none p-0 m-0">
-        <li class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('add')">
-            <i class="fas fa-plus mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
-            <span>{{ t('connections.addConnection') }}</span>
-        </li>
-        <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('edit')">
-            <i class="fas fa-edit mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
-            <span>{{ t('connections.actions.edit') }}</span>
-        </li>
-        <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('clone')">
-            <i class="fas fa-clone mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
-            <span>{{ t('connections.actions.clone') }}</span>
-        </li>
-        <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-error hover:bg-error/10 text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('delete')">
-            <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
-            <span>{{ t('connections.actions.delete') }}</span>
-        </li>
-      </ul>
-    </div>
+    <teleport to="body">
+      <div
+        v-if="contextMenuVisible"
+        class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-[9999] min-w-[180px] context-menu"
+        :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
+        @click.stop
+      >
+        <ul class="list-none p-0 m-0">
+          <li class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('add')">
+              <i class="fas fa-plus mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+              <span>{{ t('connections.addConnection') }}</span>
+          </li>
+          <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('edit')">
+              <i class="fas fa-edit mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+              <span>{{ t('connections.actions.edit') }}</span>
+          </li>
+          <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('clone')">
+              <i class="fas fa-clone mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+              <span>{{ t('connections.actions.clone') }}</span>
+          </li>
+          <li v-if="contextTargetConnection" class="group px-4 py-1.5 cursor-pointer flex items-center text-error hover:bg-error/10 text-sm transition-colors duration-150 rounded-md mx-1" @click="handleMenuAction('delete')">
+              <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
+              <span>{{ t('connections.actions.delete') }}</span>
+          </li>
+        </ul>
+      </div>
+    </teleport>
 
     <!-- 标签右键菜单 -->
-    <div
-      v-if="tagContextMenuVisible"
-      class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-50 min-w-[200px] tag-context-menu"
-      :style="{ top: `${tagContextMenuPosition.y}px`, left: `${tagContextMenuPosition.x}px` }"
-      @click.stop
-    >
-      <ul class="list-none p-0 m-0">
-        <li
-          v-if="contextTargetTagGroup && contextTargetTagGroup.connections.some((c: ConnectionInfo) => c.type === 'SSH')"
-          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
-          @click="handleTagMenuAction('connectAll')"
-        >
-          <i class="fas fa-network-wired mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
-          <span>{{ t('workspaceConnectionList.connectAllSshInGroupMenu') }}</span>
-        </li>
-         <li
-          v-else-if="contextTargetTagGroup"
-          class="group px-4 py-1.5 flex items-center text-text-disabled text-sm rounded-md mx-1 cursor-not-allowed"
-        >
-          <i class="fas fa-ban mr-3 w-4 text-center text-text-disabled"></i>
-          <span>{{ t('workspaceConnectionList.noSshConnectionsToConnectMenu') }}</span>
-        </li>
-        <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"></li>
-        <li
-          v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"
-          class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
-          @click="handleTagMenuAction('manageTag')"
-        >
-          <i class="fas fa-tags mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
-          <span>{{ t('workspaceConnectionList.manageTags.menuItem') }}</span>
-        </li>
-        <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"></li>
-        <li
-          v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"
-          class="group px-4 py-1.5 cursor-pointer flex items-center text-error hover:bg-error/10 text-sm transition-colors duration-150 rounded-md mx-1"
-          @click="handleTagMenuAction('deleteAllConnections')"
-        >
-          <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
-          <span>{{ t('workspaceConnectionList.deleteAllConnectionsInGroupMenu') }}</span>
-        </li>
-      </ul>
-    </div>
+    <teleport to="body">
+      <div
+        v-if="tagContextMenuVisible"
+        class="fixed bg-background border border-border/50 shadow-xl rounded-lg py-1.5 z-[9999] min-w-[200px] tag-context-menu"
+        :style="{ top: `${tagContextMenuPosition.y}px`, left: `${tagContextMenuPosition.x}px` }"
+        @click.stop
+      >
+        <ul class="list-none p-0 m-0">
+          <li
+            v-if="contextTargetTagGroup && contextTargetTagGroup.connections.some((c: ConnectionInfo) => c.type === 'SSH')"
+            class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+            @click="handleTagMenuAction('connectAll')"
+          >
+            <i class="fas fa-network-wired mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+            <span>{{ t('workspaceConnectionList.connectAllSshInGroupMenu') }}</span>
+          </li>
+           <li
+            v-else-if="contextTargetTagGroup"
+            class="group px-4 py-1.5 flex items-center text-text-disabled text-sm rounded-md mx-1 cursor-not-allowed"
+          >
+            <i class="fas fa-ban mr-3 w-4 text-center text-text-disabled"></i>
+            <span>{{ t('workspaceConnectionList.noSshConnectionsToConnectMenu') }}</span>
+          </li>
+          <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"></li>
+          <li
+            v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null"
+            class="group px-4 py-1.5 cursor-pointer flex items-center text-foreground hover:bg-primary/10 hover:text-primary text-sm transition-colors duration-150 rounded-md mx-1"
+            @click="handleTagMenuAction('manageTag')"
+          >
+            <i class="fas fa-tags mr-3 w-4 text-center text-text-secondary group-hover:text-primary"></i>
+            <span>{{ t('workspaceConnectionList.manageTags.menuItem') }}</span>
+          </li>
+          <li class="my-1 border-t border-border/50" v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"></li>
+          <li
+            v-if="contextTargetTagGroup && contextTargetTagGroup.tagId !== null && contextTargetTagGroup.connections.length > 0"
+            class="group px-4 py-1.5 cursor-pointer flex items-center text-error hover:bg-error/10 text-sm transition-colors duration-150 rounded-md mx-1"
+            @click="handleTagMenuAction('deleteAllConnections')"
+          >
+            <i class="fas fa-trash-alt mr-3 w-4 text-center text-error/80 group-hover:text-error"></i>
+            <span>{{ t('workspaceConnectionList.deleteAllConnectionsInGroupMenu') }}</span>
+          </li>
+        </ul>
+      </div>
+    </teleport>
 
    <teleport to="body">
      <ManageTagConnectionsModal
