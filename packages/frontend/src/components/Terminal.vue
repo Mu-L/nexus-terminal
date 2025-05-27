@@ -29,7 +29,6 @@ const terminalOuterWrapperRef = ref<HTMLElement | null>(null); // 最外层容�
 let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let searchAddon: SearchAddon | null = null; // *** 添加 searchAddon 变量 ***
-const customHtmlLayerRef = ref<HTMLElement | null>(null); // Ref for the custom HTML layer
 let resizeObserver: ResizeObserver | null = null;
 let observedElement: HTMLElement | null = null; // +++ Store the observed element +++
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
@@ -49,11 +48,7 @@ const appearanceStore = useAppearanceStore();
 const {
   effectiveTerminalTheme,
   currentTerminalFontFamily,
-  terminalBackgroundImage,
   currentTerminalFontSize,
-  isTerminalBackgroundEnabled,
-  currentTerminalBackgroundOverlayOpacity, // 获取蒙版透明度
-  terminalCustomHTML, // 用于自定义终端背景 HTML
   // --- 文字描边和阴影状态 ---
   terminalTextStrokeEnabled,
   terminalTextStrokeWidth,
@@ -122,17 +117,6 @@ const fitAndEmitResizeNow = (term: Terminal) => {
 
 
             
-            // --- 稳定 customHtmlLayerRef 的尺寸 (确保在 DOM 更新后) ---
-            nextTick(() => {
-                if (customHtmlLayerRef.value && terminalRef.value) {
-                    const newWidth = terminalRef.value.offsetWidth;
-                    const newHeight = terminalRef.value.offsetHeight;
-                    customHtmlLayerRef.value.style.width = `${newWidth}px`;
-                    customHtmlLayerRef.value.style.height = `${newHeight}px`;
-                    console.log(`[Terminal ${props.sessionId}] customHtmlLayerRef stabilized (in nextTick) after immediate fit to: ${newWidth}x${newHeight}`);
-                }
-            });
-
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
             nextTick(() => {
                 // 再次检查终端实例是否仍然存在
@@ -332,16 +316,6 @@ onMounted(() => {
                   fitAddon?.fit();
                   // console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] After fitAddon.fit(). New xterm_cols: ${terminal.cols}, xterm_rows: ${terminal.rows}`);
                   
-                  // --- 稳定 customHtmlLayerRef 的尺寸 (确保在DOM更新后) ---
-                  nextTick(() => {
-                    if (customHtmlLayerRef.value) {
-                        customHtmlLayerRef.value.style.width = `${roundedWidth}px`;
-                        customHtmlLayerRef.value.style.height = `${roundedHeight}px`;
-                        console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] customHtmlLayerRef stabilized (in nextTick) after ResizeObserver fit to: ${roundedWidth}x${roundedHeight}`);
-                    }
-                  });
-                  // --- 稳定 customHtmlLayerRef 尺寸结束 ---
-
                   debouncedEmitResize(terminal); // This will log the cols/rows after debouncing
                  } catch (e) {
                     console.warn(`[TerminalResizeObserver sessionId=${props.sessionId}] Fit addon or debouncedEmitResize failed:`, e);
@@ -499,14 +473,6 @@ onMounted(() => {
             fitAndEmitResizeNow(terminal);
         }
     });
-
-    // 监听背景图片和启用状态的变化
-    watch([terminalBackgroundImage, isTerminalBackgroundEnabled], () => {
-        console.log(`[Terminal Watcher] Background image or enabled status changed. Image: ${terminalBackgroundImage.value}, Enabled: ${isTerminalBackgroundEnabled.value}`);
-        applyTerminalBackground();
-    }, { immediate: true }); // 强制立即执行一次
-    // 移除 onMounted 中的 applyTerminalBackground 调用，完全依赖 watch
-    // applyTerminalBackground(); // 初始应用一次
 
     // 聚焦终端 (添加 null check)
     if (terminal) {
@@ -747,120 +713,10 @@ watchEffect(() => {
   }
 });
  
-// --- 应用终端背景 ---
-const applyTerminalBackground = () => {
-    // 背景应用到 terminalOuterWrapperRef
-    if (terminalOuterWrapperRef.value) {
-        if (isTerminalBackgroundEnabled.value) {
-            // 只要启用了背景功能，就应该让 xterm 透明以显示下方内容
-            nextTick(() => {
-                if (terminalOuterWrapperRef.value) {
-                    terminalOuterWrapperRef.value.classList.add('has-terminal-background');
-                    if (terminalBackgroundImage.value) {
-                        const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
-                        const imagePath = terminalBackgroundImage.value;
-                        const fullImageUrl = `${backendUrl}${imagePath}`;
-                        terminalOuterWrapperRef.value.style.backgroundImage = `url(${fullImageUrl})`;
-                        terminalOuterWrapperRef.value.style.backgroundSize = 'cover';
-                        terminalOuterWrapperRef.value.style.backgroundPosition = 'center';
-                        terminalOuterWrapperRef.value.style.backgroundRepeat = 'no-repeat';
-                        console.log(`[Terminal ${props.sessionId}] 应用终端背景图片: ${terminalBackgroundImage.value}`);
-                    } else {
-                        terminalOuterWrapperRef.value.style.backgroundImage = 'none';
-                        console.log(`[Terminal ${props.sessionId}] 终端背景功能已启用，但无背景图片，xterm 应透明。`);
-                    }
-                }
-            });
-        } else {
-            // 背景功能禁用
-            nextTick(() => {
-                 if (terminalOuterWrapperRef.value) {
-                    terminalOuterWrapperRef.value.style.backgroundImage = 'none';
-                    terminalOuterWrapperRef.value.classList.remove('has-terminal-background');
-                 }
-            });
-            console.log(`[Terminal ${props.sessionId}] 终端背景已禁用，移除背景。`);
-        }
-    }
-};
-
-// Function to execute scripts within an element
-const executeScriptsInElement = (container: HTMLElement) => {
-  if (!container) return;
-  console.log('[Terminal] Attempting to execute scripts in custom HTML container:', container);
-
-  const scripts = Array.from(container.getElementsByTagName('script'));
-  console.log(`[Terminal] Found ${scripts.length} script(s) in custom HTML.`);
-
-  scripts.forEach((oldScript, index) => {
-    console.log(`[Terminal] Processing script #${index + 1}:`, oldScript.outerHTML.substring(0, 100) + '...');
-    const newScript = document.createElement('script');
-
-    // Copy attributes (type, src, async, defer, etc.)
-    Array.from(oldScript.attributes).forEach(attr => {
-      newScript.setAttribute(attr.name, attr.value);
-      console.log(`[Terminal] Script #${index + 1}: Copied attribute ${attr.name}="${attr.value}"`);
-    });
-
-    // Copy content for inline scripts
-    if (oldScript.textContent) {
-      newScript.textContent = oldScript.textContent;
-      console.log(`[Terminal] Script #${index + 1}: Copied inline content.`);
-    }
-
-    if (oldScript.parentNode) {
-      oldScript.parentNode.insertBefore(newScript, oldScript.nextSibling); // Insert new after old
-      oldScript.parentNode.removeChild(oldScript); // Then remove old
-      console.log('[Terminal] Script #${index + 1} re-inserted and old one removed.');
-    } else {
-      container.appendChild(newScript);
-    }
-  });
-};
-
-// Watch for changes in terminalCustomHTML and execute scripts
-watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
-  console.log(`[TerminalCustomHTML Watch sessionId=${props.sessionId}] Triggered. New HTML defined: ${!!newHtmlContent}, Old HTML defined: ${!!oldHtmlContent}. New === Old: ${newHtmlContent === oldHtmlContent}`);
-  // 仅当实际 HTML 字符串内容发生变化时才继续。
-  if (newHtmlContent === oldHtmlContent && oldHtmlContent !== undefined) { // Ensure initial undefined oldHtmlContent still proceeds if newHtmlContent exists
-    console.log(`[TerminalCustomHTML Watch sessionId=${props.sessionId}] HTML content is same as old and old was defined. Skipping script execution.`);
-    return;
-  }
-
-  // 始终在 nextTick 中操作，以确保 v-html 已更新 DOM
-  nextTick(() => {
-    const container = customHtmlLayerRef.value;
-    if (container) {
-      if (newHtmlContent) {
-        // console.log('[Terminal] terminalCustomHTML 内容已更改，正在为脚本处理新的 HTML 内容。'); // 保留原始的简单日志（注释掉）
-        executeScriptsInElement(container);
-      } else {
-        // console.log('[Terminal] terminalCustomHTML 内容已清除，脚本将不被处理。'); // 保留原始的简单日志（注释掉）
-      }
-    }
-  });
-}, { immediate: true });
-                         
-                         
-                       
-
 </script>
 
 <template>
   <div ref="terminalOuterWrapperRef" class="terminal-outer-wrapper">
-    <!-- 蒙版层 -->
-    <div
-      v-if="isTerminalBackgroundEnabled"
-      class="terminal-background-overlay"
-      :style="{ backgroundColor: `rgba(0, 0, 0, ${currentTerminalBackgroundOverlayOpacity})` }"
-    ></div>
-    <div
-      ref="customHtmlLayerRef"
-      v-if="isTerminalBackgroundEnabled && terminalCustomHTML"
-      class="terminal-custom-html-layer"
-      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;"
-      v-html="terminalCustomHTML"
-    ></div>
     <!-- xterm 实际挂载点 -->
     <div ref="terminalRef" class="terminal-inner-container"></div>
   </div>
@@ -874,21 +730,11 @@ watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
   position: relative;
 }
 
-.terminal-background-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none; /* 允许鼠标事件穿透 */
-  z-index: 1; /* 在背景图之上 */
-}
-
 .terminal-inner-container {
   width: 100%;
   height: 100%;
-  position: relative; /* 使 z-index 生效 */
-  z-index: 2; /* 在蒙版之上 */
+  /* position: relative;  移除了 position relative */
+  /* z-index 调整或移除，因为背景层不再在此组件内 */
 }
 
 /* 文字描边和阴影样式 */
@@ -910,10 +756,9 @@ watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
   text-shadow: var(--terminal-shadow);
 }
 
-/* 当最外层容器有背景图时，强制内部 xterm 视口和屏幕背景透明 */
-.terminal-outer-wrapper.has-terminal-background .terminal-inner-container :deep(.xterm-viewport),
-.terminal-outer-wrapper.has-terminal-background .terminal-inner-container :deep(.xterm-screen) {
-  background-color: transparent !important;
-}
+/*
+  移除以下样式，因为它依赖于本组件内部管理的 .has-terminal-background 类，
+  该逻辑已移至 LayoutRenderer.vue
+*/
 </style>
 

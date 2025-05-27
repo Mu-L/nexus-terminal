@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import type { ConnectionInfo } from '../stores/connections.store'; 
-import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n'; 
+import type { ConnectionInfo } from '../stores/connections.store';
+import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted, nextTick, type CSSProperties } from 'vue'; // Added nextTick and CSSProperties
+import { useI18n } from 'vue-i18n';
 
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { Splitpanes, Pane } from 'splitpanes';
 import { useLayoutStore, type LayoutNode, type PaneName } from '../stores/layout.store';
 import { useSessionStore } from '../stores/session.store';
 import { useFileEditorStore } from '../stores/fileEditor.store'; 
-import { useSettingsStore } from '../stores/settings.store'; 
-import { useSidebarResize } from '../composables/useSidebarResize'; 
+import { useSettingsStore } from '../stores/settings.store';
+import { useAppearanceStore } from '../stores/appearance.store'; // +++ Import appearance store +++
+import { useSidebarResize } from '../composables/useSidebarResize';
 import { storeToRefs } from 'pinia';
 
 
@@ -54,6 +55,16 @@ const sessionStore = useSessionStore();
 const fileEditorStore = useFileEditorStore(); // <-- Initialize FileEditorStore
 const settingsStore = useSettingsStore(); // +++ Initialize SettingsStore +++
 const { t } = useI18n(); // <-- Get translation function
+
+// +++ Appearance Store Refs +++
+const appearanceStore = useAppearanceStore();
+const {
+  terminalBackgroundImage,
+  isTerminalBackgroundEnabled,
+  currentTerminalBackgroundOverlayOpacity,
+  terminalCustomHTML,
+} = storeToRefs(appearanceStore);
+
 const { activeSession } = storeToRefs(sessionStore);
 const { workspaceSidebarPersistentBoolean, getSidebarPaneWidth } = storeToRefs(settingsStore);
 const { sidebarPanes } = storeToRefs(layoutStore);
@@ -66,6 +77,7 @@ const leftSidebarPanelRef = ref<HTMLElement | null>(null); // +++ Ref for left p
 const rightSidebarPanelRef = ref<HTMLElement | null>(null); // +++ Ref for right panel +++
 const leftResizeHandleRef = ref<HTMLElement | null>(null); // +++ Ref for left handle +++
 const rightResizeHandleRef = ref<HTMLElement | null>(null); // +++ Ref for right handle +++
+const customHtmlLayerRef = ref<HTMLElement | null>(null); // +++ Ref for custom HTML layer +++
 
 // --- Component Mapping ---
 // 使用 defineAsyncComponent 优化加载，并映射 PaneName 到实际组件
@@ -385,6 +397,74 @@ onMounted(() => {
   });
 });
 
+// +++ Background Image Style +++
+const terminalBackgroundImageStyle = computed((): CSSProperties => {
+  if (isTerminalBackgroundEnabled.value && terminalBackgroundImage.value && props.layoutNode.component === 'terminal') {
+    const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const imagePath = terminalBackgroundImage.value;
+    const fullImageUrl = `${backendUrl}${imagePath}`;
+    return {
+      backgroundImage: `url(${fullImageUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      zIndex: 0, // Base layer for background
+    };
+  }
+  return {
+    backgroundImage: 'none',
+    position: 'absolute',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
+  };
+});
+
+// +++ Function to execute scripts (migrated from Terminal.vue) +++
+const executeScriptsInElement = (container: HTMLElement) => {
+  if (!container) return;
+  const scripts = Array.from(container.getElementsByTagName('script'));
+  scripts.forEach((oldScript) => {
+    const newScript = document.createElement('script');
+    Array.from(oldScript.attributes).forEach(attr => {
+      newScript.setAttribute(attr.name, attr.value);
+    });
+    if (oldScript.textContent) {
+      newScript.textContent = oldScript.textContent;
+    }
+    if (oldScript.parentNode) {
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    } else {
+       container.appendChild(newScript); // Fallback, though less likely if script was in container
+    }
+  });
+};
+
+// +++ Watch for changes in terminalCustomHTML and execute scripts (migrated) +++
+watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
+  if (props.layoutNode.component !== 'terminal') return; // Only for terminal panes
+
+  if (newHtmlContent === oldHtmlContent && oldHtmlContent !== undefined) {
+    return;
+  }
+  nextTick(() => {
+    const container = customHtmlLayerRef.value;
+    if (container) {
+      if (newHtmlContent) {
+        executeScriptsInElement(container);
+      }
+    }
+  });
+}, { immediate: true });
+
+
 </script>
 
 <template>
@@ -438,24 +518,60 @@ onMounted(() => {
             <template v-else-if="layoutNode.type === 'pane'">
                 <!-- Terminal Pane: Render ALL SSH sessions, show only the active one -->
                <template v-if="layoutNode.component === 'terminal'">
-                   <div class="terminal-pane-container relative flex-grow overflow-hidden bg-background"> <!-- Add bg-background -->
+                   <div
+                       class="terminal-pane-container relative flex-grow overflow-hidden"
+                       :class="{ 'has-global-terminal-background': isTerminalBackgroundEnabled, 'bg-background': !isTerminalBackgroundEnabled }"
+                   >
+                       <!-- Shared Background Layers -->
+                       <div
+                           v-if="isTerminalBackgroundEnabled"
+                           class="shared-terminal-background-layers"
+                           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"
+                       >
+                           <!-- Background Image -->
+                           <div
+                               class="terminal-background-image-layer"
+                               :style="terminalBackgroundImageStyle"
+                           ></div>
+                           <!-- Color Overlay -->
+                           <div
+                               class="terminal-background-overlay-layer"
+                               :style="{
+                                   position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
+                                   backgroundColor: `rgba(0, 0, 0, ${currentTerminalBackgroundOverlayOpacity})`,
+                                   zIndex: 1, pointerEvents: 'none'
+                               }"
+                           ></div>
+                           <!-- Custom HTML -->
+                           <div
+                               ref="customHtmlLayerRef"
+                               v-if="terminalCustomHTML"
+                               class="terminal-custom-html-layer"
+                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2;"
+                               v-html="terminalCustomHTML"
+                           ></div>
+                       </div>
+
+                       <!-- Terminal Instances -->
                        <template v-for="[sessionId, sessionState] in sessionStore.sessions" :key="sessionId">
-                           <!-- Only render terminals if terminalManager exists (indicates SSH) -->
                            <template v-if="sessionState.terminalManager">
-                                <keep-alive>
+                               <keep-alive>
                                    <component
                                        :is="componentMap.terminal"
                                        v-show="sessionId === activeSessionId"
                                        :session-id="sessionId"
                                        :is-active="sessionId === activeSessionId"
-                                       class="absolute inset-0 w-full h-full"
+                                       :class="['terminal-instance-wrapper absolute inset-0 w-full h-full', { 'terminal-transparent': isTerminalBackgroundEnabled }]"
+                                       :style="{ zIndex: 3 }"
                                        :options="{}"
                                    />
-                                </keep-alive>
+                               </keep-alive>
                            </template>
                        </template>
-                       <!-- Placeholder if no session is active or no SSH sessions exist -->
-                       <div v-if="!activeSessionId || !hasSshSessions" class="absolute inset-0 flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4"> <!-- Use absolute positioning for placeholder too -->
+                       <!-- Placeholder -->
+                       <div v-if="!activeSessionId || !hasSshSessions"
+                            class="absolute inset-0 flex justify-center items-center text-center text-text-secondary bg-header text-sm p-4"
+                            :style="{ zIndex: 4 }">
                            <div class="flex flex-col items-center justify-center p-8 w-full h-full">
                                <i class="fas fa-plug text-4xl mb-3 text-text-secondary"></i>
                                <span class="text-lg font-medium text-text-secondary mb-2">{{ activeSessionId ? t('layout.noSshSessionActive.title', '无活动的 SSH 会话') : t('layout.noActiveSession.title') }}</span>
@@ -671,6 +787,16 @@ onMounted(() => {
 .splitpanes.layout-locked .splitpanes__splitter:hover {
   background-color: var(--border-color) !important; /* Override hover effect */
 }
+
+.terminal-pane-container.has-global-terminal-background .terminal-outer-wrapper.terminal-transparent {
+  background-color: transparent !important; /* 使 Terminal.vue 的最外层容器背景透明 */
+}
+
+.terminal-pane-container.has-global-terminal-background .terminal-outer-wrapper.terminal-transparent .terminal-inner-container .xterm-viewport,
+.terminal-pane-container.has-global-terminal-background .terminal-outer-wrapper.terminal-transparent .terminal-inner-container .xterm-screen {
+  background-color: transparent !important;
+}
+
 
 </style>
 
