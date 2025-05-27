@@ -469,6 +469,7 @@ const filteredRemoteHtmlPresets = computed(() => {
     </div>
 
     <hr class="my-6 border-border">
+    <div v-if="localTerminalBackgroundEnabled">
 
     <!-- Tab Switcher for HTML Background Themes -->
     <div class="flex items-center gap-2 mb-3">
@@ -638,6 +639,7 @@ const filteredRemoteHtmlPresets = computed(() => {
         {{ remoteHtmlSearchTerm ? t('styleCustomizer.noMatchingRemotePresetsFound', '未找到匹配的远程主题') : t('styleCustomizer.noRemotePresetsFound') }}
       </div>
     </div>
+    </div> 
 
 
     <!-- Preset Editor (Modal or Inline) - Simplified for now -->
