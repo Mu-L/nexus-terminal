@@ -45,7 +45,6 @@ const formatTaskTitle = (task: TransferTask): string => {
   return `${sourceServerName} (${fileName} -> ${targetPath})`;
 };
 
-// --- 新增：文件传输相关 ---
 
 // 数据结构参考
 interface TransferSubTask {

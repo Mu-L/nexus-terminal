@@ -145,6 +145,34 @@ export const useAppearanceStore = defineStore('appearance', () => {
     // 获取终端自定义 CSS
     const terminalCustomHTML = computed(() => appearanceSettings.value.terminal_custom_html ?? null);
 
+    // 文字描边设置
+    const terminalTextStrokeEnabled = computed<boolean>(() => {
+        return appearanceSettings.value.terminalTextStrokeEnabled ?? false;
+    });
+    const terminalTextStrokeWidth = computed<number>(() => {
+        return appearanceSettings.value.terminalTextStrokeWidth ?? 1;
+    });
+    const terminalTextStrokeColor = computed<string>(() => {
+        return appearanceSettings.value.terminalTextStrokeColor ?? '#000000';
+    });
+
+    // 文字阴影设置
+    const terminalTextShadowEnabled = computed<boolean>(() => {
+        return appearanceSettings.value.terminalTextShadowEnabled ?? false;
+    });
+    const terminalTextShadowOffsetX = computed<number>(() => {
+        return appearanceSettings.value.terminalTextShadowOffsetX ?? 0;
+    });
+    const terminalTextShadowOffsetY = computed<number>(() => {
+        return appearanceSettings.value.terminalTextShadowOffsetY ?? 0;
+    });
+    const terminalTextShadowBlur = computed<number>(() => {
+        return appearanceSettings.value.terminalTextShadowBlur ?? 0;
+    });
+    const terminalTextShadowColor = computed<string>(() => {
+        return appearanceSettings.value.terminalTextShadowColor ?? 'rgba(0,0,0,0.5)';
+    });
+
     // --- Actions ---
 
     /**
@@ -202,7 +230,15 @@ export const useAppearanceStore = defineStore('appearance', () => {
     async function updateAppearanceSettings(updates: UpdateAppearanceDto) {
         try {
             // 移除预设主题闪烁修复逻辑，不再需要
-            const response = await apiClient.put<AppearanceSettings>('/appearance', updates); // 使用 apiClient
+
+            // Construct the full payload to send to the backend
+            // This includes all current settings merged with the specific updates
+            const payloadToSend: Partial<AppearanceSettings> = {
+                ...appearanceSettings.value, // Start with all current settings from the store
+                ...updates // Apply the specific changes passed to this function
+            };
+
+            const response = await apiClient.put<AppearanceSettings>('/appearance', payloadToSend); // 使用 apiClient, 发送合并后的 payload
             // 使用后端返回的最新设置更新本地状态
             appearanceSettings.value = response.data;
             console.log('[AppearanceStore] 外观设置已更新:', appearanceSettings.value);
@@ -336,6 +372,34 @@ export const useAppearanceStore = defineStore('appearance', () => {
             // 可以在此调用 uiNotifications.store 来显示失败消息
             throw new Error(err.response?.data?.message || err.message || '设置终端自定义 HTML 失败');
         }
+    }
+
+    // --- 文字描边 Actions ---
+    async function setTerminalTextStrokeEnabled(enabled: boolean) {
+        await updateAppearanceSettings({ terminalTextStrokeEnabled: enabled });
+    }
+    async function setTerminalTextStrokeWidth(width: number) {
+        await updateAppearanceSettings({ terminalTextStrokeWidth: width });
+    }
+    async function setTerminalTextStrokeColor(color: string) {
+        await updateAppearanceSettings({ terminalTextStrokeColor: color });
+    }
+
+    // --- 文字阴影 Actions ---
+    async function setTerminalTextShadowEnabled(enabled: boolean) {
+        await updateAppearanceSettings({ terminalTextShadowEnabled: enabled });
+    }
+    async function setTerminalTextShadowOffsetX(offset: number) {
+        await updateAppearanceSettings({ terminalTextShadowOffsetX: offset });
+    }
+    async function setTerminalTextShadowOffsetY(offset: number) {
+        await updateAppearanceSettings({ terminalTextShadowOffsetY: offset });
+    }
+    async function setTerminalTextShadowBlur(blur: number) {
+        await updateAppearanceSettings({ terminalTextShadowBlur: blur });
+    }
+    async function setTerminalTextShadowColor(color: string) {
+        await updateAppearanceSettings({ terminalTextShadowColor: color });
     }
 
     // --- 终端主题列表管理 Actions ---
@@ -847,13 +911,33 @@ export const useAppearanceStore = defineStore('appearance', () => {
         uploadTerminalBackground,
         setTerminalBackgroundOverlayOpacity,
         setTerminalCustomHTML, // 设置终端自定义 HTML
+        // 文字描边 Actions
+        setTerminalTextStrokeEnabled,
+        setTerminalTextStrokeWidth,
+        setTerminalTextStrokeColor,
+        // 文字阴影 Actions
+        setTerminalTextShadowEnabled,
+        setTerminalTextShadowOffsetX,
+        setTerminalTextShadowOffsetY,
+        setTerminalTextShadowBlur,
+        setTerminalTextShadowColor,
         removePageBackground,
         removeTerminalBackground,
-        loadTerminalThemeData, 
+        loadTerminalThemeData,
         isTerminalBackgroundEnabled,
         terminalCustomHTML, // 获取终端自定义 HTML
+        // 文字描边 Computed
+        terminalTextStrokeEnabled,
+        terminalTextStrokeWidth,
+        terminalTextStrokeColor,
+        // 文字阴影 Computed
+        terminalTextShadowEnabled,
+        terminalTextShadowOffsetX,
+        terminalTextShadowOffsetY,
+        terminalTextShadowBlur,
+        terminalTextShadowColor,
         startTerminalThemePreview,
-        stopTerminalThemePreview, 
+        stopTerminalThemePreview,
         // Visibility control
         isStyleCustomizerVisible,
         toggleStyleCustomizer,

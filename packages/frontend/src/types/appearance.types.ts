@@ -17,6 +17,18 @@ export interface AppearanceSettings {
   terminalBackgroundOverlayOpacity?: number; // 终端背景蒙版透明度 (0-1)
   terminal_custom_html?: string | null; // 终端自定义 HTML
   remoteHtmlPresetsUrl?: string | null; // 远程 HTML 主题仓库链接
+
+  // 文字描边
+  terminalTextStrokeEnabled?: boolean;
+  terminalTextStrokeWidth?: number;
+  terminalTextStrokeColor?: string;
+
+  // 文字阴影
+  terminalTextShadowEnabled?: boolean;
+  terminalTextShadowOffsetX?: number;
+  terminalTextShadowOffsetY?: number;
+  terminalTextShadowBlur?: number;
+  terminalTextShadowColor?: string;
 }
  
 // 前端用于更新外观设置的数据结构 (对应 API 请求体)

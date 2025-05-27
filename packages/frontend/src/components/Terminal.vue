@@ -51,6 +51,15 @@ const {
   isTerminalBackgroundEnabled,
   currentTerminalBackgroundOverlayOpacity, // 获取蒙版透明度
   terminalCustomHTML, // 用于自定义终端背景 HTML
+  // --- 文字描边和阴影状态 ---
+  terminalTextStrokeEnabled,
+  terminalTextStrokeWidth,
+  terminalTextStrokeColor,
+  terminalTextShadowEnabled,
+  terminalTextShadowOffsetX,
+  terminalTextShadowOffsetY,
+  terminalTextShadowBlur,
+  terminalTextShadowColor,
 } = storeToRefs(appearanceStore);
  
 // --- Settings Store ---
@@ -610,8 +619,57 @@ const clear = () => {
 };
 
 defineExpose({ write, findNext, findPrevious, clearSearch, clear }); // 暴露 clear 方法
- 
- 
+
+
+// --- 文字描边和阴影 ---
+const applyTerminalTextStyles = () => {
+  if (terminalRef.value && terminal?.element) {
+    const hostElement = terminalRef.value; // .terminal-inner-container
+
+    // 清理类名
+    hostElement.classList.remove('has-text-stroke', 'has-text-shadow');
+
+    // 文字描边
+    if (terminalTextStrokeEnabled.value) {
+      hostElement.classList.add('has-text-stroke');
+      hostElement.style.setProperty('--terminal-stroke-width', `${terminalTextStrokeWidth.value}px`);
+      hostElement.style.setProperty('--terminal-stroke-color', terminalTextStrokeColor.value);
+    } else {
+      hostElement.style.removeProperty('--terminal-stroke-width');
+      hostElement.style.removeProperty('--terminal-stroke-color');
+    }
+
+    // 文字阴影
+    if (terminalTextShadowEnabled.value) {
+      hostElement.classList.add('has-text-shadow');
+      const shadowValue = `${terminalTextShadowOffsetX.value}px ${terminalTextShadowOffsetY.value}px ${terminalTextShadowBlur.value}px ${terminalTextShadowColor.value}`;
+      hostElement.style.setProperty('--terminal-shadow', shadowValue);
+    } else {
+      hostElement.style.removeProperty('--terminal-shadow');
+    }
+    // console.log('[Terminal] Applied text styles. Stroke enabled:', terminalTextStrokeEnabled.value, 'Shadow enabled:', terminalTextShadowEnabled.value);
+  }
+};
+
+// 监听文字描边和阴影设置的变化
+watch(
+  [
+    terminalTextStrokeEnabled,
+    terminalTextStrokeWidth,
+    terminalTextStrokeColor,
+    terminalTextShadowEnabled,
+    terminalTextShadowOffsetX,
+    terminalTextShadowOffsetY,
+    terminalTextShadowBlur,
+    terminalTextShadowColor,
+  ],
+  () => {
+    // console.log('[Terminal] Text style settings changed, applying new styles.');
+    applyTerminalTextStyles();
+  },
+  { deep: true, immediate: true } // immediate: true 确保挂载时应用初始设置
+);
+
 // --- 应用终端背景 ---
 const applyTerminalBackground = () => {
     // 背景应用到 terminalOuterWrapperRef
@@ -749,6 +807,25 @@ watch(terminalCustomHTML, (newHtmlContent) => {
   height: 100%;
   position: relative; /* 使 z-index 生效 */
   z-index: 2; /* 在蒙版之上 */
+}
+
+/* 文字描边和阴影样式 */
+.terminal-inner-container.has-text-stroke :deep(.xterm-rows span),
+.terminal-inner-container.has-text-stroke :deep(.xterm-rows div > span), /* 更具体地针对嵌套 span */
+.terminal-inner-container.has-text-stroke :deep(.xterm-rows div) { /* 针对直接包含文本的 div */
+  -webkit-text-stroke-width: var(--terminal-stroke-width);
+  -webkit-text-stroke-color: var(--terminal-stroke-color);
+  text-stroke-width: var(--terminal-stroke-width);
+  text-stroke-color: var(--terminal-stroke-color);
+  /* 确保描边在填充之下，这样填充色仍然可见 */
+  paint-order: stroke fill;
+  -webkit-paint-order: stroke fill; /* 兼容 WebKit */
+}
+
+.terminal-inner-container.has-text-shadow :deep(.xterm-rows span),
+.terminal-inner-container.has-text-shadow :deep(.xterm-rows div > span),
+.terminal-inner-container.has-text-shadow :deep(.xterm-rows div) {
+  text-shadow: var(--terminal-shadow);
 }
 
 /* 当最外层容器有背景图时，强制内部 xterm 视口和屏幕背景透明 */

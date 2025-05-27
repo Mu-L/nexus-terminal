@@ -15,6 +15,11 @@ router.use(isAuthenticated);
 router.get('/', settingsController.getAllSettings); // GET /api/v1/settings
 router.put('/', settingsController.updateSettings); // PUT /api/v1/settings
 
+// +++ 外观设置路由 +++
+// GET /api/v1/settings/appearance - 获取外观设置
+router.get('/appearance', settingsController.getAppearanceSettings);
+// PUT /api/v1/settings/appearance - 更新外观设置
+router.put('/appearance', settingsController.updateAppearanceSettings);
 // +++ 焦点切换顺序路由 +++
 // GET /api/v1/settings/focus-switcher-sequence - 获取焦点切换顺序
 router.get('/focus-switcher-sequence', settingsController.getFocusSwitcherSequence);

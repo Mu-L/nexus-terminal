@@ -5,12 +5,50 @@ import { NotificationService } from '../services/notification.service';
 import { ipBlacklistService } from '../services/ip-blacklist.service';
 import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; 
 import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; 
+import { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';
+import { getAppearanceSettings, updateAppearanceSettings as updateAppearanceSettingsInRepo } from '../repositories/appearance.repository';
 import i18next from '../i18n'; 
 
 const auditLogService = new AuditLogService();
 const notificationService = new NotificationService(); 
 
 export const settingsController = {
+/**
+   * 获取外观设置
+   */
+  async getAppearanceSettings(req: Request, res: Response): Promise<void> {
+    try {
+      const settings = await getAppearanceSettings();
+      res.json(settings);
+    } catch (error: any) {
+      console.error('获取外观设置时出错:', error);
+      res.status(500).json({ message: '获取外观设置失败', error: error.message });
+    }
+  },
+/**
+   * 更新外观设置
+   */
+  async updateAppearanceSettings(req: Request, res: Response): Promise<void> {
+    try {
+      const settingsDto: UpdateAppearanceDto = req.body;
+      // 可在此处添加 DTO 验证逻辑
+      if (typeof settingsDto !== 'object' || settingsDto === null) {
+        res.status(400).json({ message: '无效的请求体，应为 JSON 对象' });
+        return;
+      }
+
+      const result = await updateAppearanceSettingsInRepo(settingsDto);
+      if (result) {
+        res.status(200).json({ message: '外观设置已成功更新' });
+      } else {
+        // 如果仓库层返回 false，可能表示没有实际更改或更新失败
+        res.status(200).json({ message: '外观设置未发生更改或更新失败' });
+      }
+    } catch (error: any) {
+      console.error('更新外观设置时出错:', error);
+      res.status(500).json({ message: '更新外观设置失败', error: error.message });
+    }
+  },
   /**
    * 获取所有设置项
    */

@@ -28,10 +28,28 @@ const {
   activeTerminalThemeId,
   currentTerminalFontFamily,
   currentTerminalFontSize,
+  terminalTextStrokeEnabled,
+  terminalTextStrokeWidth,
+  terminalTextStrokeColor,
+  terminalTextShadowEnabled,
+  terminalTextShadowOffsetX,
+  terminalTextShadowOffsetY,
+  terminalTextShadowBlur,
+  terminalTextShadowColor,
 } = storeToRefs(appearanceStore);
 
 const editableTerminalFontFamily = ref('');
 const editableTerminalFontSize = ref(14);
+
+const editableTerminalTextStrokeEnabled = ref(false);
+const editableTerminalTextStrokeWidth = ref(1);
+const editableTerminalTextStrokeColor = ref('#000000');
+
+const editableTerminalTextShadowEnabled = ref(false);
+const editableTerminalTextShadowOffsetX = ref(0);
+const editableTerminalTextShadowOffsetY = ref(0);
+const editableTerminalTextShadowBlur = ref(0);
+const editableTerminalTextShadowColor = ref('rgba(0,0,0,0.5)');
 const themeSearchTerm = ref('');
 const saveThemeError = ref<string | null>(null);
 const editableTerminalThemeString = ref('');
@@ -56,11 +74,21 @@ brightBlue: #5555ff
 brightMagenta: #ff55ff
 brightCyan: #55ffff
 brightWhite: #ffffff`;
-// Theme preview refs
 
 const initializeEditableState = () => {
   editableTerminalFontFamily.value = currentTerminalFontFamily.value;
   editableTerminalFontSize.value = currentTerminalFontSize.value;
+
+  editableTerminalTextStrokeEnabled.value = terminalTextStrokeEnabled.value;
+  editableTerminalTextStrokeWidth.value = terminalTextStrokeWidth.value;
+  editableTerminalTextStrokeColor.value = terminalTextStrokeColor.value;
+
+  editableTerminalTextShadowEnabled.value = terminalTextShadowEnabled.value;
+  editableTerminalTextShadowOffsetX.value = terminalTextShadowOffsetX.value;
+  editableTerminalTextShadowOffsetY.value = terminalTextShadowOffsetY.value;
+  editableTerminalTextShadowBlur.value = terminalTextShadowBlur.value;
+  editableTerminalTextShadowColor.value = terminalTextShadowColor.value;
+
   saveThemeError.value = null;
   terminalThemeParseError.value = null;
 };
@@ -79,13 +107,27 @@ watch(currentTerminalFontSize, (newValue) => {
 });
 
 // Initialize on mount and when relevant props change
-watch(() => [currentTerminalFontFamily.value, currentTerminalFontSize.value], () => {
-    // Re-initialize only if not in the middle of editing a theme,
-    // as editing a theme might involve temporary font changes or different contexts.
+watch(
+  () => [
+    currentTerminalFontFamily.value,
+    currentTerminalFontSize.value,
+    terminalTextStrokeEnabled.value,
+    terminalTextStrokeWidth.value,
+    terminalTextStrokeColor.value,
+    terminalTextShadowEnabled.value,
+    terminalTextShadowOffsetX.value,
+    terminalTextShadowOffsetY.value,
+    terminalTextShadowBlur.value,
+    terminalTextShadowColor.value,
+  ],
+  () => {
+    // Re-initialize only if not in the middle of editing a theme
     if (!props.isEditingTheme) {
-        initializeEditableState();
+      initializeEditableState();
     }
-}, { immediate: true });
+  },
+  { immediate: true, deep: true }
+);
 
 
 // Methods
@@ -111,6 +153,32 @@ const handleSaveTerminalFontSize = async () => {
   } catch (error: any) {
     console.error("保存终端字体大小失败:", error);
     notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalFontSizeSaveFailed', { message: error.message }) });
+  }
+};
+
+const handleSaveTerminalTextStroke = async () => {
+  try {
+    await appearanceStore.setTerminalTextStrokeEnabled(editableTerminalTextStrokeEnabled.value);
+    await appearanceStore.setTerminalTextStrokeWidth(Number(editableTerminalTextStrokeWidth.value));
+    await appearanceStore.setTerminalTextStrokeColor(editableTerminalTextStrokeColor.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.textStrokeSettingsSaved') });
+  } catch (error: any) {
+    console.error("保存文字描边设置失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.textStrokeSettingsSaveFailed', { message: error.message }) });
+  }
+};
+
+const handleSaveTerminalTextShadow = async () => {
+  try {
+    await appearanceStore.setTerminalTextShadowEnabled(editableTerminalTextShadowEnabled.value);
+    await appearanceStore.setTerminalTextShadowOffsetX(Number(editableTerminalTextShadowOffsetX.value));
+    await appearanceStore.setTerminalTextShadowOffsetY(Number(editableTerminalTextShadowOffsetY.value));
+    await appearanceStore.setTerminalTextShadowBlur(Number(editableTerminalTextShadowBlur.value));
+    await appearanceStore.setTerminalTextShadowColor(editableTerminalTextShadowColor.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.textShadowSettingsSaved') });
+  } catch (error: any) {
+    console.error("保存文字阴影设置失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.textShadowSettingsSaveFailed', { message: error.message }) });
   }
 };
 
@@ -425,7 +493,69 @@ watch(() => props.isEditingTheme, (isEditing) => {
         <button @click="handleSaveTerminalFontSize" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap justify-self-start mt-1 md:mt-0">{{ t('common.save') }}</button>
     </div>
 
-    <hr class="my-4 md:my-6"> 
+    <!-- 文字描边设置 -->
+    <hr class="my-4 md:my-6">
+    <h4 class="mt-6 mb-3 text-base font-semibold text-foreground">{{ t('styleCustomizer.textStrokeSettings') }}</h4>
+    <div class="space-y-3 mb-3">
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="terminalTextStrokeEnabled" v-model="editableTerminalTextStrokeEnabled" class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer">
+        <label for="terminalTextStrokeEnabled" class="text-foreground text-sm font-medium cursor-pointer">{{ t('styleCustomizer.enableTextStroke') }}</label>
+      </div>
+
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextStrokeWidth" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textStrokeWidth') }}:</label>
+          <input type="number" id="terminalTextStrokeWidth" v-model.number="editableTerminalTextStrokeWidth" min="0" step="0.1" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextStrokeColor" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textStrokeColor') }}:</label>
+          <div class="flex items-center gap-2">
+            <input type="color" id="terminalTextStrokeColor" v-model="editableTerminalTextStrokeColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
+            <input type="text" :value="editableTerminalTextStrokeColor" @input="editableTerminalTextStrokeColor = ($event.target as HTMLInputElement).value" class="flex-grow min-w-[80px] bg-header border border-border px-[0.7rem] py-2 rounded text-sm text-foreground box-border">
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-start mt-2">
+        <button @click="handleSaveTerminalTextStroke" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap">{{ t('common.save') }}</button>
+      </div>
+    </div>
+
+    <!-- 文字阴影设置 -->
+    <hr class="my-4 md:my-6">
+    <h4 class="mt-6 mb-3 text-base font-semibold text-foreground">{{ t('styleCustomizer.textShadowSettings') }}</h4>
+    <div class="space-y-3 mb-3">
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="terminalTextShadowEnabled" v-model="editableTerminalTextShadowEnabled" class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer">
+        <label for="terminalTextShadowEnabled" class="text-foreground text-sm font-medium cursor-pointer">{{ t('styleCustomizer.enableTextShadow') }}</label>
+      </div>
+
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextShadowOffsetX" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textShadowOffsetX') }}:</label>
+          <input type="number" id="terminalTextShadowOffsetX" v-model.number="editableTerminalTextShadowOffsetX" step="0.1" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextShadowOffsetY" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textShadowOffsetY') }}:</label>
+          <input type="number" id="terminalTextShadowOffsetY" v-model.number="editableTerminalTextShadowOffsetY" step="0.1" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextShadowBlur" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textShadowBlur') }}:</label>
+          <input type="number" id="terminalTextShadowBlur" v-model.number="editableTerminalTextShadowBlur" min="0" step="0.1" class="border border-border px-[0.7rem] py-2 rounded text-sm bg-background text-foreground max-w-[100px] justify-self-start box-border">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
+          <label for="terminalTextShadowColor" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textShadowColor') }}:</label>
+          <div class="flex items-center gap-2">
+            <input type="color" id="terminalTextShadowColor" v-model="editableTerminalTextShadowColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
+            <input type="text" :value="editableTerminalTextShadowColor" @input="editableTerminalTextShadowColor = ($event.target as HTMLInputElement).value" class="flex-grow min-w-[80px] bg-header border border-border px-[0.7rem] py-2 rounded text-sm text-foreground box-border">
+          </div>
+        </div>
+      </div>
+       <div class="flex justify-start mt-2">
+        <button @click="handleSaveTerminalTextShadow" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap">{{ t('common.save') }}</button>
+      </div>
+    </div>
+
+    <hr class="my-4 md:my-6">
 
     <h4 class="mt-6 mb-2 text-base font-semibold text-foreground">{{ t('styleCustomizer.terminalThemeSelection') }}</h4>
      

@@ -49,7 +49,6 @@ const sourceConnectionId = computed(() => { // +++ 获取并转换源服务器 I
   return null;
 });
 
-// +++ 新增：用于菜单位置调整的 ref +++
 const contextMenuRef = ref<HTMLDivElement | null>(null);
 const computedRenderPosition = ref({ x: props.position.x, y: props.position.y });
 

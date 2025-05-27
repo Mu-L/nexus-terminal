@@ -1334,7 +1334,24 @@
     "noMatchingRemotePresetsFound": "一致するリモートテーマが見つかりませんでした",
     "editAsNewTooltip": "新しいカスタムテーマとして編集",
     "presetTag": "プリセット",
-    "customTag": "カスタム"
+    "customTag": "カスタム",
+    "customHtmlResetSuccess": "カスタム HTML がリセットされました。",
+    "textStrokeSettingsSaved": "文字の縁取り設定が保存されました。",
+    "textStrokeSettingsSaveFailed": "文字の縁取り設定の保存に失敗しました: {message}",
+    "textShadowSettingsSaved": "文字の影設定が保存されました。",
+    "textShadowSettingsSaveFailed": "文字の影設定の保存に失敗しました: {message}",
+    "textStrokeSettings": "文字の縁取り設定",
+    "enableTextStroke": "文字の縁取りを有効にする",
+    "textStrokeWidth": "縁取りの太さ (px)",
+    "textStrokeColor": "縁取りの色",
+    "saveStrokeSettings": "縁取り設定を保存",
+    "textShadowSettings": "文字の影設定",
+    "enableTextShadow": "文字の影を有効にする",
+    "textShadowOffsetX": "影の X オフセット (px)",
+    "textShadowOffsetY": "影の Y オフセット (px)",
+    "textShadowBlur": "影のぼかし半径 (px)",
+    "textShadowColor": "影の色",
+    "saveShadowSettings": "影の設定を保存"
 
       },
       "tags": {

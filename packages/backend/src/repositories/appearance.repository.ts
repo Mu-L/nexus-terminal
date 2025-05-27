@@ -20,6 +20,14 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
     let latestUpdatedAt = 0;
     let terminalBackgroundEnabledFound = false; // 标记是否在数据库中找到该设置
     let terminalBackgroundOverlayOpacityFound = false; // 标记是否找到蒙版透明度设置
+let terminalTextStrokeEnabledFound = false;
+    let terminalTextStrokeWidthFound = false;
+    let terminalTextStrokeColorFound = false;
+    let terminalTextShadowEnabledFound = false;
+    let terminalTextShadowOffsetXFound = false;
+    let terminalTextShadowOffsetYFound = false;
+    let terminalTextShadowBlurFound = false;
+    let terminalTextShadowColorFound = false;
  
     for (const row of rows) {
         // 更新 latestUpdatedAt
@@ -67,6 +75,38 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
             case 'remote_html_presets_url':
                 settings.remoteHtmlPresetsUrl = row.value || null; // 如果为空字符串，则视为 null
                 break;
+case 'terminalTextStrokeEnabled':
+                settings.terminalTextStrokeEnabled = row.value === 'true';
+                terminalTextStrokeEnabledFound = true;
+                break;
+            case 'terminalTextStrokeWidth':
+                settings.terminalTextStrokeWidth = parseFloat(row.value);
+                terminalTextStrokeWidthFound = true;
+                break;
+            case 'terminalTextStrokeColor':
+                settings.terminalTextStrokeColor = row.value;
+                terminalTextStrokeColorFound = true;
+                break;
+            case 'terminalTextShadowEnabled':
+                settings.terminalTextShadowEnabled = row.value === 'true';
+                terminalTextShadowEnabledFound = true;
+                break;
+            case 'terminalTextShadowOffsetX':
+                settings.terminalTextShadowOffsetX = parseFloat(row.value);
+                terminalTextShadowOffsetXFound = true;
+                break;
+            case 'terminalTextShadowOffsetY':
+                settings.terminalTextShadowOffsetY = parseFloat(row.value);
+                terminalTextShadowOffsetYFound = true;
+                break;
+            case 'terminalTextShadowBlur':
+                settings.terminalTextShadowBlur = parseFloat(row.value);
+                terminalTextShadowBlurFound = true;
+                break;
+            case 'terminalTextShadowColor':
+                settings.terminalTextShadowColor = row.value;
+                terminalTextShadowColorFound = true;
+                break;
         }
     }
  
@@ -90,6 +130,30 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
             : defaults.terminalBackgroundOverlayOpacity, // 否则使用默认值
        terminal_custom_html: settings.terminal_custom_html ?? defaults.terminal_custom_html,
        remoteHtmlPresetsUrl: settings.remoteHtmlPresetsUrl ?? defaults.remoteHtmlPresetsUrl,
+        terminalTextStrokeEnabled: terminalTextStrokeEnabledFound
+            ? settings.terminalTextStrokeEnabled
+            : defaults.terminalTextStrokeEnabled,
+        terminalTextStrokeWidth: terminalTextStrokeWidthFound
+            ? settings.terminalTextStrokeWidth
+            : defaults.terminalTextStrokeWidth,
+        terminalTextStrokeColor: terminalTextStrokeColorFound
+            ? settings.terminalTextStrokeColor
+            : defaults.terminalTextStrokeColor,
+        terminalTextShadowEnabled: terminalTextShadowEnabledFound
+            ? settings.terminalTextShadowEnabled
+            : defaults.terminalTextShadowEnabled,
+        terminalTextShadowOffsetX: terminalTextShadowOffsetXFound
+            ? settings.terminalTextShadowOffsetX
+            : defaults.terminalTextShadowOffsetX,
+        terminalTextShadowOffsetY: terminalTextShadowOffsetYFound
+            ? settings.terminalTextShadowOffsetY
+            : defaults.terminalTextShadowOffsetY,
+        terminalTextShadowBlur: terminalTextShadowBlurFound
+            ? settings.terminalTextShadowBlur
+            : defaults.terminalTextShadowBlur,
+        terminalTextShadowColor: terminalTextShadowColorFound
+            ? settings.terminalTextShadowColor
+            : defaults.terminalTextShadowColor,
        updatedAt: latestUpdatedAt || defaults.updatedAt, // 使用最新的更新时间，否则使用默认时间戳
   };
 };
@@ -110,6 +174,17 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         terminalBackgroundOverlayOpacity: 0.5, // 默认蒙版透明度
        terminal_custom_html: '', // 默认自定义 HTML 为空字符串
        remoteHtmlPresetsUrl: null, // 默认远程 HTML 预设 URL 为 null
+        // 终端文本描边设置默认值
+        terminalTextStrokeEnabled: false,
+        terminalTextStrokeWidth: 1,
+        terminalTextStrokeColor: '#000000',
+
+        // 终端文本阴影设置默认值
+        terminalTextShadowEnabled: false,
+        terminalTextShadowOffsetX: 2,
+        terminalTextShadowOffsetY: 2,
+        terminalTextShadowBlur: 0,
+        terminalTextShadowColor: '#000000',
        updatedAt: Date.now(), // 提供默认时间戳
   };
 };
@@ -139,6 +214,14 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity },
         { key: 'terminal_custom_html', value: defaults.terminal_custom_html },
         { key: 'remoteHtmlPresetsUrl', value: defaults.remoteHtmlPresetsUrl },
+        { key: 'terminalTextStrokeEnabled', value: defaults.terminalTextStrokeEnabled },
+        { key: 'terminalTextStrokeWidth', value: defaults.terminalTextStrokeWidth },
+        { key: 'terminalTextStrokeColor', value: defaults.terminalTextStrokeColor },
+        { key: 'terminalTextShadowEnabled', value: defaults.terminalTextShadowEnabled },
+        { key: 'terminalTextShadowOffsetX', value: defaults.terminalTextShadowOffsetX },
+        { key: 'terminalTextShadowOffsetY', value: defaults.terminalTextShadowOffsetY },
+        { key: 'terminalTextShadowBlur', value: defaults.terminalTextShadowBlur },
+        { key: 'terminalTextShadowColor', value: defaults.terminalTextShadowColor },
     ];
  
     try {
