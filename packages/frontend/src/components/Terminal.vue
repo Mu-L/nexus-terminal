@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, nextTick, watchEffect } from 'vue';
 import { Terminal, ITerminalAddon, IDisposable } from 'xterm';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useAppearanceStore } from '../stores/appearance.store';
@@ -60,7 +60,10 @@ const {
   terminalTextShadowOffsetY,
   terminalTextShadowBlur,
   terminalTextShadowColor,
+  initialAppearanceDataLoaded, 
 } = storeToRefs(appearanceStore);
+ 
+const isTerminalDomReady = ref(false); 
  
 // --- Settings Store ---
 const settingsStore = useSettingsStore(); // +++ 实例化设置 store +++
@@ -255,7 +258,10 @@ onMounted(() => {
 
     // 将终端附加到 DOM
     terminal.open(terminalRef.value);
-
+    // terminal.open() 同步执行完毕后，可以认为 Xterm 已尝试附加到 DOM
+    isTerminalDomReady.value = true; // +++ 直接在此处设置 DOM 准备就绪状态 +++
+    console.log(`[Terminal ${props.sessionId}] Xterm open() called, considering DOM ready for initial style checks.`);
+ 
     // 适应容器大小
     fitAddon.fit();
     emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: { cols: terminal.cols, rows: terminal.rows } }); // 触发初始 resize 事件
@@ -663,11 +669,27 @@ watch(
   ],
   () => {
     // console.log('[Terminal] Text style settings changed, applying new styles.');
-    applyTerminalTextStyles();
+    // 这个 watch 现在主要负责响应运行时的更改
+    // 初始加载由下面的 watchEffect 处理
+    if (isTerminalDomReady.value && initialAppearanceDataLoaded.value) {
+      nextTick(() => {
+        applyTerminalTextStyles();
+      });
+    }
   },
-  { deep: true, immediate: true } // immediate: true 确保挂载时应用初始设置
+  { deep: true }
 );
-
+ 
+// watchEffect 用于处理初始样式应用 +++
+watchEffect(() => {
+  if (isTerminalDomReady.value && initialAppearanceDataLoaded.value && terminalRef.value && terminal?.element) {
+    console.log(`[Terminal ${props.sessionId}] Initial style application: DOM ready and appearance data loaded. Applying text styles.`);
+    nextTick(() => {
+      applyTerminalTextStyles();
+    });
+  }
+});
+ 
 // --- 应用终端背景 ---
 const applyTerminalBackground = () => {
     // 背景应用到 terminalOuterWrapperRef

@@ -28,8 +28,9 @@ export const useAppearanceStore = defineStore('appearance', () => {
 
     // Appearance Settings State
     const appearanceSettings = ref<Partial<AppearanceSettings>>({}); // 从 API 获取的原始设置
+    const initialAppearanceDataLoaded = ref(false); // 跟踪初始数据是否加载完成
     const allTerminalThemes = ref<TerminalTheme[]>([]); // 重命名: 存储从后端获取的所有主题
- 
+  
     // HTML Presets State
     const localHtmlPresets = ref<Array<{ name: string, type: 'preset' | 'custom' }>>([]); // Updated type
     const remoteHtmlPresets = ref<Array<{ name: string, downloadUrl?: string }>>([]);
@@ -189,6 +190,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
             ]);
             appearanceSettings.value = settingsResponse.data;
             allTerminalThemes.value = themesResponse.data; // 更新 allTerminalThemes
+            initialAppearanceDataLoaded.value = true; // +++ 设置为 true 表示数据加载成功
  
             // Initialize remoteHtmlPresetsRepositoryUrl from loaded settings
             // Assuming backend returns it as part of AppearanceSettings
@@ -206,6 +208,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
             // 出错时应用默认值
             appearanceSettings.value = {}; // 清空可能不完整的设置
             allTerminalThemes.value = []; // 清空 allTerminalThemes
+            initialAppearanceDataLoaded.value = false; // +++ 设置为 false 表示数据加载失败
             applyUiTheme(defaultUiTheme);
             applyPageBackground(); // 应用默认背景（可能为空）
         } finally {
@@ -872,6 +875,7 @@ export const useAppearanceStore = defineStore('appearance', () => {
     return {
         isLoading,
         error,
+        initialAppearanceDataLoaded,
         // State refs (原始数据)
         appearanceSettings,
         allTerminalThemes, // 导出重命名后的 ref
