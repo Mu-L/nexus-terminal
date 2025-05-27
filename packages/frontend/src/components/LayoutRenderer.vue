@@ -617,17 +617,26 @@ onMounted(() => {
   /* Ensure handle lines remain hidden */
   /* background-color: transparent !important; */
 /* } */
+.splitpanes.default-theme .splitpanes__splitter {
+  background-image: none !important; /* Ensure no background image in normal state */
+}
 .splitpanes.default-theme .splitpanes__splitter:hover { /* Apply hover style to the pseudo-element */
-  background-color: var(--primary-color-light); /* Highlight on hover */
-    border: none !important; /* Ensure no extra borders */
+  background-color: transparent !important; /* Make splitter transparent on hover */
+  background-image: none !important; /* Ensure no background image on hover */
   /* Ensure it still occupies space and has cursor */
   position: relative;
   box-sizing: border-box;
-  transition: background-color 0.1s ease-in-out;
+  /* transition: background-color 0.1s ease-in-out; */ /* Transition handled by ::before */
 }
 
+.splitpanes.default-theme .splitpanes__splitter:hover::before {
+  background-color: var(--primary-color-light) !important; /* Highlight on hover */
+}
 .splitpanes__splitter:before {
-  /* Use background color as the visible line */
+  content: ""; /* Ensure content for pseudo-element */
+  display: block; /* Ensure it takes space */
+  width: 100%; /* Fill splitter width */
+  height: 100%; /* Fill splitter height */
   background-color: var(--border-color); /* Set background to border color */
   border: none !important; /* Ensure no extra borders */
   /* Ensure it still occupies space and has cursor */
@@ -635,6 +644,12 @@ onMounted(() => {
   box-sizing: border-box;
   transition: background-color 0.1s ease-in-out;
 }
+
+/* Ensure ::after pseudo-element doesn't interfere */
+.splitpanes.default-theme .splitpanes__splitter::after {
+  display: none !important;
+}
+
 /* Vertical splitter width */
 .splitpanes--vertical > .splitpanes__splitter {
   border-color: var(--border-color) !important;
