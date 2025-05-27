@@ -635,7 +635,7 @@ const filteredRemoteHtmlPresets = computed(() => {
         </div>
         <div class="flex justify-end gap-2">
           <button @click="showPresetEditor = false" class="px-4 py-2 text-sm border border-border rounded bg-header hover:bg-border transition">{{ t('common.cancel') }}</button>
-          <button @click="handleSaveLocalPreset" class="px-4 py-2 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 transition">{{ t('common.save') }}</button>
+          <button @click="handleSaveLocalPreset" class="px-4 py-2 text-sm rounded bg-primary text-white hover:bg-primary/90 transition">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
