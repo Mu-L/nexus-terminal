@@ -57,11 +57,16 @@
         <div class="status-item grid grid-cols-[40px_1fr] items-center gap-3">
           <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.cpuLabel') }}</label>
           <div class="value-wrapper flex items-center gap-2">
-            <div class="progress-bar-container bg-header rounded h-3 overflow-hidden flex-grow"> <!-- 减小高度 -->
-              <div class="progress-bar bg-blue-500 h-full" :class="{ 'transition-width duration-300 ease-in-out': !isSwitchingSession }" :style="{ width: `${displayCpuPercent}%` }"></div>
-            </div>
+            <el-progress
+              :percentage="displayCpuPercent"
+              :stroke-width="16"
+              color="#3b82f6"
+              :show-text="true"
+              :text-inside="true"
+              :format="formatPercentageText"
+              class="themed-progress flex-grow"
+            />
             <!-- 移除 w-12 和 text-right 以实现左对齐 -->
-            <span class="font-mono text-left text-xs">{{ currentServerStatus.cpuPercent?.toFixed(1) ?? t('statusMonitor.notAvailable') }}%</span>
           </div>
         </div>
 
@@ -70,9 +75,15 @@
         <div class="status-item grid grid-cols-[40px_1fr] items-center gap-3">
           <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.memoryLabel') }}</label>
           <div class="value-wrapper flex items-center gap-2">
-            <div class="progress-bar-container bg-header rounded h-3 overflow-hidden flex-grow">
-              <div class="progress-bar bg-green-500 h-full" :class="{ 'transition-width duration-300 ease-in-out': !isSwitchingSession }" :style="{ width: `${displayMemPercent}%` }"></div>
-            </div>
+            <el-progress
+              :percentage="displayMemPercent"
+              :stroke-width="16"
+              color="#22c55e"
+              :show-text="true"
+              :text-inside="true"
+              :format="formatPercentageText"
+              class="themed-progress flex-grow"
+            />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ memDisplay }}</span>
           </div>
         </div>
@@ -82,12 +93,15 @@
          <div class="status-item grid grid-cols-[40px_1fr] items-center gap-3">
           <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.swapLabel') }}</label>
           <div class="value-wrapper flex items-center gap-2">
-            <div class="progress-bar-container bg-header rounded h-3 overflow-hidden flex-grow">
-              <!-- swap颜色 -->
-              <div class="progress-bar h-full"
-                   :class="[{ 'transition-width duration-300 ease-in-out': !isSwitchingSession }, (currentServerStatus?.swapPercent ?? 0) > 0 ? 'bg-yellow-500' : 'bg-gray-500']"
-                   :style="{ width: `${displaySwapPercent}%` }"></div>
-            </div>
+            <el-progress
+              :percentage="displaySwapPercent"
+              :stroke-width="16"
+              :color="(currentServerStatus?.swapPercent ?? 0) > 0 ? '#eab308' : '#6b7280'"
+              :show-text="true"
+              :text-inside="true"
+              :format="formatPercentageText"
+              class="themed-progress flex-grow"
+            />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ swapDisplay }}</span>
           </div>
         </div>
@@ -97,9 +111,15 @@
         <div class="status-item grid grid-cols-[40px_1fr] items-center gap-3">
           <label class="font-semibold text-text-secondary text-left whitespace-nowrap">{{ t('statusMonitor.diskLabel') }}</label>
           <div class="value-wrapper flex items-center gap-2">
-            <div class="progress-bar-container bg-header rounded h-3 overflow-hidden flex-grow">
-              <div class="progress-bar bg-purple-500 h-full" :class="{ 'transition-width duration-300 ease-in-out': !isSwitchingSession }" :style="{ width: `${displayDiskPercent}%` }"></div>
-            </div>
+            <el-progress
+              :percentage="displayDiskPercent"
+              :stroke-width="16"
+              color="#a855f7"
+              :show-text="true"
+              :text-inside="true"
+              :format="formatPercentageText"
+              class="themed-progress flex-grow"
+            />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ diskDisplay }}</span>
           </div>
         </div>
@@ -118,6 +138,7 @@
             <span class="rate up inline-flex items-center gap-1 text-orange-500 text-xs whitespace-nowrap">
                <i class="fas fa-arrow-up w-3 text-center"></i> <!-- Font Awesome 图标 -->
                <span class="font-mono">{{ formatBytesPerSecond(currentServerStatus?.netTxRate) }}</span>
+
             </span>
           </div>
 
@@ -130,7 +151,9 @@
 
 
 <script setup lang="ts">
-import { ref, computed, watch, type PropType, nextTick } from 'vue'; // 添加 PropType 和 nextTick
+
+import { ref, computed, watch, type PropType, nextTick } from 'vue'; 
+import { ElProgress } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import StatusCharts from './StatusCharts.vue';
 import { useSessionStore } from '../stores/session.store'; // 注入 sessionStore
@@ -147,6 +170,8 @@ const uiNotificationsStore = useUiNotificationsStore(); // + 实例化通知 sto
 const { sessions } = storeToRefs(sessionStore); // 获取响应式的 sessions
 const { statusMonitorShowIpBoolean } = storeToRefs(settingsStore); //  获取 IP 显示设置
 const isSwitchingSession = ref(false);
+
+const formatPercentageText = (percentage: number): string => `${Math.round(percentage)}%`;
 
 interface ServerStatus {
   cpuPercent?: number;
@@ -273,15 +298,13 @@ const formatMemorySize = (mb?: number): string => {
 const memDisplay = computed(() => {
     const data = currentServerStatus.value; // 使用 currentServerStatus
     if (!data || data.memUsed === undefined || data.memTotal === undefined) return t('statusMonitor.notAvailable');
-    const percent = data.memPercent !== undefined ? `(${(data.memPercent).toFixed(1)}%)` : ''; // 百分比保留 1 位小数
-    return `${formatMemorySize(data.memUsed)} / ${formatMemorySize(data.memTotal)} ${percent}`;
+    return `${formatMemorySize(data.memUsed)} / ${formatMemorySize(data.memTotal)}`;
 });
 
 const diskDisplay = computed(() => {
     const data = currentServerStatus.value; // 使用 currentServerStatus
     if (!data || data.diskUsed === undefined || data.diskTotal === undefined) return t('statusMonitor.notAvailable');
-    const percent = data.diskPercent !== undefined ? `(${(data.diskPercent).toFixed(1)}%)` : ''; // 百分比保留 1 位小数
-    return `${formatKbToGb(data.diskUsed)} / ${formatKbToGb(data.diskTotal)} ${percent}`;
+    return `${formatKbToGb(data.diskUsed)} / ${formatKbToGb(data.diskTotal)}`;
 });
 
 const swapDisplay = computed(() => {
@@ -295,8 +318,7 @@ const swapDisplay = computed(() => {
         return t('statusMonitor.swapNotAvailable'); // 或更具体的消息
     }
 
-    const percent = `(${(percentVal).toFixed(1)}%)`; // 百分比保留 1 位小数
-    return `${formatMemorySize(used)} / ${formatMemorySize(total)} ${percent}`;
+    return `${formatMemorySize(used)} / ${formatMemorySize(total)}`;
 });
 
 const sessionIpAddress = computed(() => {
@@ -317,12 +339,24 @@ const copyIpToClipboard = async (ipAddress: string | null) => {
   if (!ipAddress) return;
   try {
     await navigator.clipboard.writeText(ipAddress);
-    uiNotificationsStore.showSuccess(t('common.copied', '已复制!')); // + 使用通知 store 显示消息
+    uiNotificationsStore.showSuccess(t('common.copied', '已复制!')); 
   } catch (err) {
     console.error('Failed to copy IP address: ', err);
-    uiNotificationsStore.showError(t('statusMonitor.copyIpError', '复制 IP 失败')); // + 可选：显示错误通知
-    // 可以在这里添加一个错误提示，如果需要的话
+    uiNotificationsStore.showError(t('statusMonitor.copyIpError', '复制 IP 失败'));
   }
 };
 
 </script>
+
+<style scoped>
+::v-deep(.el-progress-bar__outer) {
+  background-color: var(--header-bg-color) !important; 
+}
+::v-deep(.el-progress-bar__inner) {
+  transition: width 0.3s ease-in-out;
+}
+::v-deep(.el-progress-bar__innerText) {
+  font-size: 10px; 
+}
+
+</style>
