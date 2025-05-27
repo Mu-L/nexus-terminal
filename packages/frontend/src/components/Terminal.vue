@@ -163,7 +163,6 @@ const handleContextMenuPaste = async (event: MouseEvent) => {
     if (text && terminal) {
       const processedText = text.replace(/\r\n?/g, '\n');
       emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: processedText });
-      console.log('[Terminal] Pasted via Right Click');
     }
   } catch (err) {
     console.error('[Terminal] Failed to paste via Right Click:', err);
@@ -478,7 +477,6 @@ onMounted(() => {
                     if (text) {
                         const processedText = text.replace(/\r\n?/g, '\n');
                         emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: processedText });
-                        console.log('[Terminal] Pasted via Ctrl+Shift+V');
                     }
                 } catch (err) {
                     console.error('[Terminal] Failed to paste via Ctrl+Shift+V:', err);
