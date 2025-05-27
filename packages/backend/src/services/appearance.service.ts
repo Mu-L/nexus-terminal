@@ -100,7 +100,19 @@ export const updateSettings = async (settingsDto: UpdateAppearanceDto): Promise<
     settingsDto.terminalBackgroundOverlayOpacity = opacity; // 确保类型正确
   }
 
-  // TODO: 如果实现了背景图片上传，这里需要处理文件路径或 URL 的验证/保存逻辑
+
+
+  // 验证 terminal_custom_html (如果提供了)
+  if (settingsDto.hasOwnProperty('terminal_custom_html')) {
+    if (settingsDto.terminal_custom_html === null || settingsDto.terminal_custom_html === undefined || typeof settingsDto.terminal_custom_html === 'string') {
+      // 允许为空字符串、null 或 undefined (将被视为空)
+      if (typeof settingsDto.terminal_custom_html === 'string' && settingsDto.terminal_custom_html.length > 10240) { // 10KB 限制
+        throw new Error('自定义终端 HTML 过长，最多允许 10240 个字符。');
+      }
+    } else {
+      throw new Error('无效的自定义终端 HTML 类型，应为字符串。');
+    }
+  }
 
   return appearanceRepository.updateAppearanceSettings(settingsDto);
 };

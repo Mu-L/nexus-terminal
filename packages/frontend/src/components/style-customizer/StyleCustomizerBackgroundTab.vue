@@ -12,10 +12,12 @@ const {
   terminalBackgroundImage,
   isTerminalBackgroundEnabled,
   currentTerminalBackgroundOverlayOpacity,
+  terminalCustomHTML, 
 } = storeToRefs(appearanceStore);
 
 const localTerminalBackgroundEnabled = ref(true);
 const editableTerminalBackgroundOverlayOpacity = ref(0.5);
+const localTerminalCustomHTML = ref(''); 
 
 const terminalBgFileInput = ref<HTMLInputElement | null>(null);
 const uploadError = ref<string | null>(null);
@@ -23,6 +25,7 @@ const uploadError = ref<string | null>(null);
 const initializeEditableState = () => {
   localTerminalBackgroundEnabled.value = isTerminalBackgroundEnabled.value;
   editableTerminalBackgroundOverlayOpacity.value = currentTerminalBackgroundOverlayOpacity.value;
+  localTerminalCustomHTML.value = terminalCustomHTML.value || ''; 
   uploadError.value = null;
 };
 
@@ -37,6 +40,13 @@ watch(isTerminalBackgroundEnabled, (newValue) => {
 watch(currentTerminalBackgroundOverlayOpacity, (newValue) => {
   if (editableTerminalBackgroundOverlayOpacity.value !== newValue) {
     editableTerminalBackgroundOverlayOpacity.value = newValue;
+  }
+});
+
+
+watch(terminalCustomHTML, (newValue) => {
+  if (localTerminalCustomHTML.value !== (newValue || '')) {
+    localTerminalCustomHTML.value = newValue || '';
   }
 });
 
@@ -101,6 +111,17 @@ const handleSaveTerminalBackgroundOverlayOpacity = async () => {
   } catch (error: any) {
     console.error("保存终端背景蒙版透明度失败:", error);
     notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.terminalBgOverlayOpacitySaveFailed', { message: error.message }) });
+  }
+};
+
+
+const handleSaveCustomHTML = async () => {
+  try {
+    await appearanceStore.setTerminalCustomHTML(localTerminalCustomHTML.value);
+    notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.customTerminalHTMLSaved') });
+  } catch (error: any) {
+    console.error("保存自定义终端 HTML 失败:", error);
+    notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.customTerminalHTMLSaveFailed', { message: error.message }) });
   }
 };
 
@@ -171,6 +192,26 @@ const handleSaveTerminalBackgroundOverlayOpacity = async () => {
             <button @click="handleSaveTerminalBackgroundOverlayOpacity" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap">{{ t('common.save') }}</button>
         </div>
      </div>
+
+     <!-- 自定义终端背景 HTML -->
+     <div class="mt-4 pt-4 border-t border-border/50">
+        <label for="terminalCustomHTML" class="block text-sm font-medium text-foreground mb-1">{{ t('styleCustomizer.customTerminalHTML', '自定义终端背景 HTML') }}</label>
+        <textarea
+          id="terminalCustomHTML"
+          v-model="localTerminalCustomHTML"
+          rows="10"
+          class="w-full p-2 border border-border rounded bg-input text-foreground focus:ring-primary focus:border-primary"
+          :placeholder="t('styleCustomizer.customTerminalHTMLPlaceholder', '例如：<h1>Hello</h1>')"
+        ></textarea>
+        <div class="mt-2 flex justify-end">
+          <button
+            @click="handleSaveCustomHTML"
+            class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap"
+          >
+            {{ t('common.save') }}
+          </button>
+        </div>
+      </div>
     </div>
     <div v-else class="p-4 text-center text-text-secondary italic border border-dashed border-border/50 rounded-md">
       {{ t('styleCustomizer.terminalBgDisabled', '终端背景功能已禁用。') }}

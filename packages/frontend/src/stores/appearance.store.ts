@@ -134,6 +134,9 @@ export const useAppearanceStore = defineStore('appearance', () => {
         return typeof opacity === 'number' && opacity >= 0 && opacity <= 1 ? opacity : 0.5; // 默认 0.5
     });
 
+    // 获取终端自定义 CSS
+    const terminalCustomHTML = computed(() => appearanceSettings.value.terminal_custom_html ?? null);
+
     // --- Actions ---
 
     /**
@@ -305,6 +308,22 @@ export const useAppearanceStore = defineStore('appearance', () => {
      */
     async function setTerminalBackgroundOverlayOpacity(opacity: number) {
         await updateAppearanceSettings({ terminalBackgroundOverlayOpacity: opacity });
+    }
+
+    /**
+     * 设置终端自定义 HTML
+     * @param html HTML 字符串，或 null 清除
+     */
+    async function setTerminalCustomHTML(html: string | null) {
+        try {
+            await updateAppearanceSettings({ terminal_custom_html: html });
+            // console.log('[AppearanceStore] Terminal custom HTML updated successfully.');
+            // 可以在此调用 uiNotifications.store 来显示成功消息
+        } catch (err: any) {
+            console.error('设置终端自定义 HTML 失败:', err);
+            // 可以在此调用 uiNotifications.store 来显示失败消息
+            throw new Error(err.response?.data?.message || err.message || '设置终端自定义 HTML 失败');
+        }
     }
 
     // --- 终端主题列表管理 Actions ---
@@ -675,11 +694,13 @@ export const useAppearanceStore = defineStore('appearance', () => {
         exportTerminalTheme,
         uploadPageBackground,
         uploadTerminalBackground,
-        setTerminalBackgroundOverlayOpacity, 
+        setTerminalBackgroundOverlayOpacity,
+        setTerminalCustomHTML, // 设置终端自定义 HTML
         removePageBackground,
         removeTerminalBackground,
         loadTerminalThemeData, 
         isTerminalBackgroundEnabled,
+        terminalCustomHTML, // 获取终端自定义 HTML
         startTerminalThemePreview,
         stopTerminalThemePreview, 
         // Visibility control

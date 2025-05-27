@@ -29,6 +29,7 @@ const terminalOuterWrapperRef = ref<HTMLElement | null>(null); // 最外层容�
 let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let searchAddon: SearchAddon | null = null; // *** 添加 searchAddon 变量 ***
+const customHtmlLayerRef = ref<HTMLElement | null>(null); // Ref for the custom HTML layer
 let resizeObserver: ResizeObserver | null = null;
 let observedElement: HTMLElement | null = null; // +++ Store the observed element +++
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
@@ -49,6 +50,7 @@ const {
   currentTerminalFontSize,
   isTerminalBackgroundEnabled,
   currentTerminalBackgroundOverlayOpacity, // 获取蒙版透明度
+  terminalCustomHTML, // 用于自定义终端背景 HTML
 } = storeToRefs(appearanceStore);
  
 // --- Settings Store ---
@@ -614,7 +616,28 @@ defineExpose({ write, findNext, findPrevious, clearSearch, clear }); // 暴露 c
 const applyTerminalBackground = () => {
     // 背景应用到 terminalOuterWrapperRef
     if (terminalOuterWrapperRef.value) {
-        if (!isTerminalBackgroundEnabled.value) {
+        if (isTerminalBackgroundEnabled.value) {
+            // 只要启用了背景功能，就应该让 xterm 透明以显示下方内容
+            nextTick(() => {
+                if (terminalOuterWrapperRef.value) {
+                    terminalOuterWrapperRef.value.classList.add('has-terminal-background');
+                    if (terminalBackgroundImage.value) {
+                        const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
+                        const imagePath = terminalBackgroundImage.value;
+                        const fullImageUrl = `${backendUrl}${imagePath}`;
+                        terminalOuterWrapperRef.value.style.backgroundImage = `url(${fullImageUrl})`;
+                        terminalOuterWrapperRef.value.style.backgroundSize = 'cover';
+                        terminalOuterWrapperRef.value.style.backgroundPosition = 'center';
+                        terminalOuterWrapperRef.value.style.backgroundRepeat = 'no-repeat';
+                        console.log(`[Terminal ${props.sessionId}] 应用终端背景图片: ${terminalBackgroundImage.value}`);
+                    } else {
+                        terminalOuterWrapperRef.value.style.backgroundImage = 'none';
+                        console.log(`[Terminal ${props.sessionId}] 终端背景功能已启用，但无背景图片，xterm 应透明。`);
+                    }
+                }
+            });
+        } else {
+            // 背景功能禁用
             nextTick(() => {
                  if (terminalOuterWrapperRef.value) {
                     terminalOuterWrapperRef.value.style.backgroundImage = 'none';
@@ -622,34 +645,64 @@ const applyTerminalBackground = () => {
                  }
             });
             console.log(`[Terminal ${props.sessionId}] 终端背景已禁用，移除背景。`);
-            return;
-        }
- 
-        if (terminalBackgroundImage.value) {
-            const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
-            const imagePath = terminalBackgroundImage.value;
-            const fullImageUrl = `${backendUrl}${imagePath}`;
-            nextTick(() => {
-                if (terminalOuterWrapperRef.value) {
-                    terminalOuterWrapperRef.value.style.backgroundImage = `url(${fullImageUrl})`;
-                    terminalOuterWrapperRef.value.style.backgroundSize = 'cover';
-                    terminalOuterWrapperRef.value.style.backgroundPosition = 'center';
-                    terminalOuterWrapperRef.value.style.backgroundRepeat = 'no-repeat';
-                    terminalOuterWrapperRef.value.classList.add('has-terminal-background');
-                }
-            });
-            console.log(`[Terminal ${props.sessionId}] 应用终端背景图片: ${terminalBackgroundImage.value}`);
-        } else {
-            nextTick(() => {
-                 if (terminalOuterWrapperRef.value) {
-                    terminalOuterWrapperRef.value.style.backgroundImage = 'none';
-                    terminalOuterWrapperRef.value.classList.remove('has-terminal-background');
-                 }
-            });
-             console.log(`[Terminal ${props.sessionId}] 移除终端背景图片。`);
         }
     }
 };
+
+// Function to execute scripts within an element
+const executeScriptsInElement = (container: HTMLElement) => {
+  if (!container) return;
+  console.log('[Terminal] Attempting to execute scripts in custom HTML container:', container);
+
+  const scripts = Array.from(container.getElementsByTagName('script'));
+  console.log(`[Terminal] Found ${scripts.length} script(s) in custom HTML.`);
+
+  scripts.forEach((oldScript, index) => {
+    console.log(`[Terminal] Processing script #${index + 1}:`, oldScript.outerHTML.substring(0, 100) + '...');
+    const newScript = document.createElement('script');
+
+    // Copy attributes (type, src, async, defer, etc.)
+    Array.from(oldScript.attributes).forEach(attr => {
+      newScript.setAttribute(attr.name, attr.value);
+      console.log(`[Terminal] Script #${index + 1}: Copied attribute ${attr.name}="${attr.value}"`);
+    });
+
+    // Copy content for inline scripts
+    if (oldScript.textContent) {
+      newScript.textContent = oldScript.textContent;
+      console.log(`[Terminal] Script #${index + 1}: Copied inline content.`);
+    }
+
+    if (oldScript.parentNode) {
+      oldScript.parentNode.insertBefore(newScript, oldScript.nextSibling); // Insert new after old
+      oldScript.parentNode.removeChild(oldScript); // Then remove old
+      console.log('[Terminal] Script #${index + 1} re-inserted and old one removed.');
+    } else {
+      container.appendChild(newScript);
+      console.warn('[Terminal] Script #${index + 1} had no parent, appended to container directly.');
+    }
+  });
+  console.log('[Terminal] Finished processing scripts in custom HTML.');
+};
+
+// Watch for changes in terminalCustomHTML and execute scripts
+watch(terminalCustomHTML, (newHtmlContent) => {
+  // Always operate within nextTick to ensure v-html has updated the DOM
+  nextTick(() => {
+    const container = customHtmlLayerRef.value;
+    if (container) {
+      if (newHtmlContent) {
+        console.log('[Terminal] terminalCustomHTML changed, processing new HTML content.');
+        executeScriptsInElement(container);
+      } else {
+        console.log('[Terminal] terminalCustomHTML cleared.');
+      }
+    }
+  });
+}, { immediate: true }); 
+                         
+                         
+                       
 
 </script>
 
@@ -657,9 +710,16 @@ const applyTerminalBackground = () => {
   <div ref="terminalOuterWrapperRef" class="terminal-outer-wrapper">
     <!-- 蒙版层 -->
     <div
-      v-if="isTerminalBackgroundEnabled && terminalBackgroundImage"
+      v-if="isTerminalBackgroundEnabled"
       class="terminal-background-overlay"
       :style="{ backgroundColor: `rgba(0, 0, 0, ${currentTerminalBackgroundOverlayOpacity})` }"
+    ></div>
+    <div
+      ref="customHtmlLayerRef"
+      v-if="isTerminalBackgroundEnabled && terminalCustomHTML"
+      class="terminal-custom-html-layer"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;"
+      v-html="terminalCustomHTML"
     ></div>
     <!-- xterm 实际挂载点 -->
     <div ref="terminalRef" class="terminal-inner-container"></div>

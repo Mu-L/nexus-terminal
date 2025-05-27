@@ -61,6 +61,9 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
             case 'editorFontFamily':
                 settings.editorFontFamily = row.value || null; // 如果为空字符串，则视为 null
                 break;
+           case 'terminal_custom_html':
+               settings.terminal_custom_html = row.value;
+               break;
         }
     }
  
@@ -75,15 +78,16 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
         editorFontFamily: settings.editorFontFamily ?? defaults.editorFontFamily,
         terminalBackgroundImage: settings.terminalBackgroundImage ?? defaults.terminalBackgroundImage,
         pageBackgroundImage: settings.pageBackgroundImage ?? defaults.pageBackgroundImage,
-        // 修改：只有当数据库中未找到记录时才使用默认值
+        // 只有当数据库中未找到记录时才使用默认值
         terminalBackgroundEnabled: terminalBackgroundEnabledFound
             ? settings.terminalBackgroundEnabled // 使用数据库找到的值 (true 或 false)
             : defaults.terminalBackgroundEnabled, // 否则使用默认值 (true)
         terminalBackgroundOverlayOpacity: terminalBackgroundOverlayOpacityFound
             ? settings.terminalBackgroundOverlayOpacity // 使用数据库找到的值
             : defaults.terminalBackgroundOverlayOpacity, // 否则使用默认值
-        updatedAt: latestUpdatedAt || defaults.updatedAt, // 使用最新的更新时间，否则使用默认时间戳
-    };
+       terminal_custom_html: settings.terminal_custom_html ?? defaults.terminal_custom_html,
+       updatedAt: latestUpdatedAt || defaults.updatedAt, // 使用最新的更新时间，否则使用默认时间戳
+   };
 };
  
  
@@ -100,8 +104,9 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         pageBackgroundImage: undefined,
         terminalBackgroundEnabled: true, // 默认启用
         terminalBackgroundOverlayOpacity: 0.5, // 默认蒙版透明度
-        updatedAt: Date.now(), // 提供默认时间戳
-    };
+       terminal_custom_html: '', // 默认自定义 HTML 为空字符串
+       updatedAt: Date.now(), // 提供默认时间戳
+   };
 };
  
  
@@ -126,7 +131,8 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'pageBackgroundImage', value: defaults.pageBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled },
-        { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity }, 
+        { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity },
+        { key: 'terminal_custom_html', value: defaults.terminal_custom_html },
     ];
  
     try {
