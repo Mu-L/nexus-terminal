@@ -64,7 +64,7 @@
               :show-text="true"
               :text-inside="true"
               :format="formatPercentageText"
-              class="themed-progress flex-grow"
+              class="themed-progress flex-grow" :class="{ 'no-transition': isSwitchingSession }"
             />
             <!-- 移除 w-12 和 text-right 以实现左对齐 -->
           </div>
@@ -82,7 +82,7 @@
               :show-text="true"
               :text-inside="true"
               :format="formatPercentageText"
-              class="themed-progress flex-grow"
+              class="themed-progress flex-grow" :class="{ 'no-transition': isSwitchingSession }"
             />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ memDisplay }}</span>
           </div>
@@ -100,7 +100,7 @@
               :show-text="true"
               :text-inside="true"
               :format="formatPercentageText"
-              class="themed-progress flex-grow"
+              class="themed-progress flex-grow" :class="{ 'no-transition': isSwitchingSession }"
             />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ swapDisplay }}</span>
           </div>
@@ -118,7 +118,7 @@
               :show-text="true"
               :text-inside="true"
               :format="formatPercentageText"
-              class="themed-progress flex-grow"
+              class="themed-progress flex-grow" :class="{ 'no-transition': isSwitchingSession }"
             />
             <span class="mem-disk-details font-mono text-xs whitespace-nowrap text-left">{{ diskDisplay }}</span>
           </div>
@@ -352,8 +352,11 @@ const copyIpToClipboard = async (ipAddress: string | null) => {
 ::v-deep(.el-progress-bar__outer) {
   background-color: var(--header-bg-color) !important; 
 }
-::v-deep(.el-progress-bar__inner) {
+::v-deep(.themed-progress .el-progress-bar__inner) {
   transition: width 0.3s ease-in-out;
+}
+::v-deep(.themed-progress.no-transition .el-progress-bar__inner) {
+  transition: none !important;
 }
 ::v-deep(.el-progress-bar__innerText) {
   font-size: 10px; 
