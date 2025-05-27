@@ -161,8 +161,8 @@ const handleContextMenuPaste = async (event: MouseEvent) => {
   try {
     const text = await navigator.clipboard.readText();
     if (text && terminal) {
-      // 将粘贴的文本发送到后端
-      emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
+      const processedText = text.replace(/\r\n?/g, '\n');
+      emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: processedText });
       console.log('[Terminal] Pasted via Right Click');
     }
   } catch (err) {
@@ -476,8 +476,8 @@ onMounted(() => {
                 try {
                     const text = await navigator.clipboard.readText();
                     if (text) {
-                        // 将粘贴的文本发送到后端，模拟用户输入
-                        emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: text });
+                        const processedText = text.replace(/\r\n?/g, '\n');
+                        emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: processedText });
                         console.log('[Terminal] Pasted via Ctrl+Shift+V');
                     }
                 } catch (err) {
