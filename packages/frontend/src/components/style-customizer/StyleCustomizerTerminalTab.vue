@@ -57,10 +57,6 @@ brightMagenta: #ff55ff
 brightCyan: #55ffff
 brightWhite: #ffffff`;
 // Theme preview refs
-const originalModalRootBackgroundColor = ref<string | null>(null);
-const originalModalContentOpacity = ref<string | null>(null);
-const originalModalRootTransition = ref<string | null>(null);
-const originalModalContentTransition = ref<string | null>(null);
 
 const initializeEditableState = () => {
   editableTerminalFontFamily.value = currentTerminalFontFamily.value;
@@ -341,73 +337,6 @@ const handleFocusAndSelect = (event: FocusEvent) => {
   }
 };
 
-const handlePreviewButtonMouseDown = async (event: MouseEvent, themeToPreview: TerminalTheme) => {
-  event.preventDefault();
-  if (props.modalRootRef && themeToPreview._id) {
-    const modalContentElement = props.modalRootRef.firstElementChild as HTMLElement;
-    try {
-      const themeData = await appearanceStore.loadTerminalThemeData(themeToPreview._id);
-      if (!themeData) {
-        console.error('Preview failed: Could not load theme data for', themeToPreview.name);
-        return;
-      }
-      appearanceStore.startTerminalThemePreview(themeData);
-
-      if (originalModalRootBackgroundColor.value === null && modalContentElement) {
-        originalModalRootBackgroundColor.value = window.getComputedStyle(props.modalRootRef).backgroundColor;
-        originalModalRootTransition.value = props.modalRootRef.style.transition;
-        originalModalContentOpacity.value = window.getComputedStyle(modalContentElement).opacity;
-        originalModalContentTransition.value = modalContentElement.style.transition;
-      }
-
-      props.modalRootRef.style.transition = 'background-color 0.05s ease-out, opacity 0.05s ease-out';
-      props.modalRootRef.style.backgroundColor = 'transparent';
-      if (modalContentElement) {
-        modalContentElement.style.transition = 'opacity 0.05s ease-out';
-        modalContentElement.style.opacity = '0';
-      }
-
-      const restoreOnMouseUp = () => {
-        appearanceStore.stopTerminalThemePreview();
-        if (props.modalRootRef) {
-          props.modalRootRef.style.backgroundColor = originalModalRootBackgroundColor.value || '';
-          props.modalRootRef.style.transition = originalModalRootTransition.value || '';
-        }
-        if (modalContentElement) {
-          modalContentElement.style.opacity = originalModalContentOpacity.value || '1';
-          modalContentElement.style.transition = originalModalContentTransition.value || '';
-        }
-        originalModalRootBackgroundColor.value = null;
-        originalModalContentOpacity.value = null;
-        originalModalRootTransition.value = null;
-        originalModalContentTransition.value = null;
-        document.removeEventListener('mouseup', restoreOnMouseUp);
-        const currentTargetButton = event.currentTarget as HTMLElement | null;
-        if (currentTargetButton) {
-            currentTargetButton.removeEventListener('mouseleave', restoreOnMouseUp);
-        }
-      };
-      document.addEventListener('mouseup', restoreOnMouseUp, { once: true });
-      const currentTargetButton = event.currentTarget as HTMLElement | null;
-      if (currentTargetButton) {
-          currentTargetButton.addEventListener('mouseleave', restoreOnMouseUp, { once: true });
-      }
-    } catch (error) {
-      console.error('Error during theme preview:', error);
-      appearanceStore.stopTerminalThemePreview();
-      if (props.modalRootRef && modalContentElement) {
-          props.modalRootRef.style.backgroundColor = originalModalRootBackgroundColor.value || '';
-          props.modalRootRef.style.transition = originalModalRootTransition.value || '';
-          modalContentElement.style.opacity = originalModalContentOpacity.value || '1';
-          modalContentElement.style.transition = originalModalContentTransition.value || '';
-          originalModalRootBackgroundColor.value = null;
-          originalModalContentOpacity.value = null;
-          originalModalRootTransition.value = null;
-          originalModalContentTransition.value = null;
-      }
-    }
-  }
-};
 
 // Computed Properties
 const activeThemeName = computed(() => {
@@ -542,15 +471,6 @@ watch(() => props.isEditingTheme, (isEditing) => {
                       ]"
                   >
                       {{ t('styleCustomizer.applyButton', 'Apply') }}
-                 </button>
-                 <button
-                     @mousedown="(event) => handlePreviewButtonMouseDown(event, theme)"
-                     :class="[
-                       'px-3 py-1.5 text-xs md:text-sm border rounded transition-colors duration-200 ease-in-out whitespace-nowrap',
-                       theme._id === activeTerminalThemeId?.toString() ? 'text-button-text border-white/30 bg-white/10 hover:bg-white/20 hover:border-white/50' : 'border-border bg-header text-foreground hover:bg-border hover:border-text-secondary'
-                     ]"
-                 >
-                      {{ t('styleCustomizer.previewButton', 'Preview') }}
                  </button>
                 <button @click="handleEditTheme(theme)" :title="theme.isPreset ? t('styleCustomizer.editAsCopy', 'Edit as Copy') : t('common.edit')"
                    :class="[

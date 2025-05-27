@@ -189,3 +189,166 @@ export const removeTerminalBackgroundController = async (req: Request, res: Resp
         res.status(500).json({ message: '移除终端背景失败', error: error.message });
     }
 };
+
+// --- HTML 预设主题控制器方法 ---
+
+// GET /api/v1/appearance/html-presets/local
+export const listLocalHtmlPresetsController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // 现在获取所有主题，包括预设和自定义，它们将带有 type 属性
+        const allThemes = await appearanceService.listAllHtmlThemes();
+        res.status(200).json(allThemes); // 直接返回带有 type 的列表
+    } catch (error: any) {
+        res.status(500).json({ message: '获取 HTML 主题列表失败', error: error.message });
+    }
+};
+
+// GET /api/v1/appearance/html-presets/local/:themeName
+export const getLocalHtmlPresetContentController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const themeName = req.params.themeName;
+        let content: string | null = null;
+        let found = false;
+
+        // 1. 尝试作为用户自定义主题获取
+        try {
+            content = await appearanceService.getUserCustomHtmlThemeContent(themeName);
+            found = true;
+        } catch (customError: any) {
+            if (!customError.message.includes('未找到')) {
+                // 如果不是 "未找到" 错误，则直接抛出
+                throw customError;
+            }
+            // 如果是 "未找到"，则继续尝试预设主题
+        }
+
+        // 2. 如果用户自定义主题未找到，尝试作为预设主题获取
+        if (!found) {
+            try {
+                content = await appearanceService.getPresetHtmlThemeContent(themeName);
+                found = true;
+            } catch (presetError: any) {
+                if (!presetError.message.includes('未找到')) {
+                    throw presetError;
+                }
+                // 如果预设也未找到，此时才真正是 404
+            }
+        }
+
+        if (found && content !== null) {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.status(200).send(content);
+        } else {
+            res.status(404).json({ message: `主题 '${themeName}' 未找到` });
+        }
+    } catch (error: any) {
+        // 通用错误处理
+        res.status(500).json({ message: `获取主题 '${req.params.themeName}' 内容失败`, error: error.message });
+    }
+};
+
+// POST /api/v1/appearance/html-presets/local
+export const createLocalHtmlPresetController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { name, content } = req.body;
+        if (!name || !content) {
+            res.status(400).json({ message: '主题名称和内容不能为空' });
+            return;
+        }
+        // "本地创建" 现在总是创建用户自定义主题
+        await appearanceService.createUserCustomHtmlTheme(name, content);
+        res.status(201).json({ message: '用户自定义 HTML 主题创建成功' });
+    } catch (error: any) {
+        res.status(500).json({ message: '创建用户自定义 HTML 主题失败', error: error.message });
+    }
+};
+
+// PUT /api/v1/appearance/html-presets/local/:themeName
+export const updateLocalHtmlPresetController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const themeName = req.params.themeName;
+        const { content } = req.body;
+        if (content === undefined) {
+            res.status(400).json({ message: '主题内容不能为空' });
+            return;
+        }
+        // "本地更新" 现在总是更新用户自定义主题
+        await appearanceService.updateUserCustomHtmlTheme(themeName, content);
+        res.status(200).json({ message: '用户自定义 HTML 主题更新成功' });
+    } catch (error: any) {
+        if (error.message.includes('未找到')) {
+            res.status(404).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: '更新用户自定义 HTML 主题失败', error: error.message });
+        }
+    }
+};
+
+// DELETE /api/v1/appearance/html-presets/local/:themeName
+export const deleteLocalHtmlPresetController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const themeName = req.params.themeName;
+        // "本地删除" 现在总是删除用户自定义主题
+        await appearanceService.deleteUserCustomHtmlTheme(themeName);
+        res.status(200).json({ message: '用户自定义 HTML 主题删除成功' });
+    } catch (error: any) {
+        if (error.message.includes('未找到')) {
+            res.status(404).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: '删除用户自定义 HTML 主题失败', error: error.message });
+        }
+    }
+};
+
+// GET /api/v1/appearance/html-presets/remote/repository-url
+export const getRemoteHtmlPresetsRepositoryUrlController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const url = await appearanceService.getRemoteHtmlPresetsRepositoryUrl();
+        res.status(200).json({ url });
+    } catch (error: any) {
+        res.status(500).json({ message: '获取远程 HTML 主题仓库链接失败', error: error.message });
+    }
+};
+
+// PUT /api/v1/appearance/html-presets/remote/repository-url
+export const updateRemoteHtmlPresetsRepositoryUrlController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { url } = req.body;
+        // 注意：允许 url 为 null 或空字符串以清除设置
+        if (url === undefined) {
+            res.status(400).json({ message: 'URL 不能为空或 undefined' });
+            return;
+        }
+        await appearanceService.updateRemoteHtmlPresetsRepositoryUrl(url);
+        res.status(200).json({ message: '远程 HTML 主题仓库链接更新成功' });
+    } catch (error: any) {
+        res.status(500).json({ message: '更新远程 HTML 主题仓库链接失败', error: error.message });
+    }
+};
+
+// GET /api/v1/appearance/html-presets/remote/list
+export const listRemoteHtmlPresetsController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const repoUrl = req.query.repoUrl as string | undefined;
+        const presets = await appearanceService.listRemoteHtmlPresets(repoUrl);
+        res.status(200).json(presets);
+    } catch (error: any) {
+        res.status(500).json({ message: '获取远程 HTML 主题列表失败', error: error.message });
+    }
+};
+
+// GET /api/v1/appearance/html-presets/remote/content
+export const getRemoteHtmlPresetContentController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const fileUrl = req.query.fileUrl as string;
+        if (!fileUrl) {
+            res.status(400).json({ message: 'fileUrl 查询参数不能为空' });
+            return;
+        }
+        const content = await appearanceService.getRemoteHtmlPresetContent(fileUrl);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.status(200).send(content);
+    } catch (error: any) {
+        res.status(500).json({ message: '获取远程 HTML 主题内容失败', error: error.message });
+    }
+};

@@ -29,7 +29,15 @@ export const useAppearanceStore = defineStore('appearance', () => {
     // Appearance Settings State
     const appearanceSettings = ref<Partial<AppearanceSettings>>({}); // 从 API 获取的原始设置
     const allTerminalThemes = ref<TerminalTheme[]>([]); // 重命名: 存储从后端获取的所有主题
-
+ 
+    // HTML Presets State
+    const localHtmlPresets = ref<Array<{ name: string, type: 'preset' | 'custom' }>>([]); // Updated type
+    const remoteHtmlPresets = ref<Array<{ name: string, downloadUrl?: string }>>([]);
+    const remoteHtmlPresetsRepositoryUrl = ref<string | null>(null);
+    const activeHtmlPresetTab = ref<'local' | 'remote'>('local');
+    const isLoadingHtmlPresets = ref(false);
+    const htmlPresetError = ref<string | null>(null);
+ 
     // State for theme preview
     const isPreviewingTerminalTheme = ref(false);
     const previewTerminalThemeData = ref<ITheme | null>(null);
@@ -134,6 +142,9 @@ export const useAppearanceStore = defineStore('appearance', () => {
         return typeof opacity === 'number' && opacity >= 0 && opacity <= 1 ? opacity : 0.5; // 默认 0.5
     });
 
+    // 获取终端自定义 CSS
+    const terminalCustomHTML = computed(() => appearanceSettings.value.terminal_custom_html ?? null);
+
     // --- Actions ---
 
     /**
@@ -150,7 +161,11 @@ export const useAppearanceStore = defineStore('appearance', () => {
             ]);
             appearanceSettings.value = settingsResponse.data;
             allTerminalThemes.value = themesResponse.data; // 更新 allTerminalThemes
-
+ 
+            // Initialize remoteHtmlPresetsRepositoryUrl from loaded settings
+            // Assuming backend returns it as part of AppearanceSettings
+            remoteHtmlPresetsRepositoryUrl.value = appearanceSettings.value.remoteHtmlPresetsUrl || null;
+ 
             // 应用加载的 UI 主题
             applyUiTheme(currentUiTheme.value);
             // 应用背景
@@ -305,6 +320,22 @@ export const useAppearanceStore = defineStore('appearance', () => {
      */
     async function setTerminalBackgroundOverlayOpacity(opacity: number) {
         await updateAppearanceSettings({ terminalBackgroundOverlayOpacity: opacity });
+    }
+
+    /**
+     * 设置终端自定义 HTML
+     * @param html HTML 字符串，或 null 清除
+     */
+    async function setTerminalCustomHTML(html: string | null) {
+        try {
+            await updateAppearanceSettings({ terminal_custom_html: html });
+            // console.log('[AppearanceStore] Terminal custom HTML updated successfully.');
+            // 可以在此调用 uiNotifications.store 来显示成功消息
+        } catch (err: any) {
+            console.error('设置终端自定义 HTML 失败:', err);
+            // 可以在此调用 uiNotifications.store 来显示失败消息
+            throw new Error(err.response?.data?.message || err.message || '设置终端自定义 HTML 失败');
+        }
     }
 
     // --- 终端主题列表管理 Actions ---
@@ -550,7 +581,146 @@ export const useAppearanceStore = defineStore('appearance', () => {
         isPreviewingTerminalTheme.value = false;
         console.log('[AppearanceStore] Stopped terminal theme preview.');
     }
+ 
+    // --- HTML Preset Actions ---
+    async function fetchLocalHtmlPresets() {
+        isLoadingHtmlPresets.value = true;
+        htmlPresetError.value = null;
+        try {
+            // Updated to expect type information from the backend
+            const response = await apiClient.get<Array<{ name: string, type: 'preset' | 'custom' }>>('/appearance/html-presets/local');
+            localHtmlPresets.value = response.data;
+        } catch (err: any) {
+            console.error('获取本地 HTML 主题列表失败:', err);
+            htmlPresetError.value = err.response?.data?.message || err.message || '获取本地 HTML 主题列表失败';
+            localHtmlPresets.value = [];
+        } finally {
+            isLoadingHtmlPresets.value = false;
+        }
+    }
+ 
+    async function getLocalHtmlPresetContent(name: string): Promise<string> {
+        try {
+            const response = await apiClient.get<string>(`/appearance/html-presets/local/${name}`, { transformResponse: (res) => res }); // Expecting plain text
+            return response.data;
+        } catch (err: any) {
+            console.error(`获取本地 HTML 主题 '${name}' 内容失败:`, err);
+            throw new Error(err.response?.data?.message || err.message || `获取主题 '${name}' 内容失败`);
+        }
+    }
+ 
+    async function createLocalHtmlPreset(name: string, content: string) {
+        try {
+            await apiClient.post('/appearance/html-presets/local', { name, content });
+            await fetchLocalHtmlPresets(); // Refresh list
+        } catch (err: any) {
+            console.error('创建本地 HTML 主题失败:', err);
+            throw new Error(err.response?.data?.message || err.message || '创建本地 HTML 主题失败');
+        }
+    }
+ 
+    async function updateLocalHtmlPreset(name: string, content: string) {
+        try {
+            await apiClient.put(`/appearance/html-presets/local/${name}`, { content });
+            // Optionally refresh list or update item if content is stored locally too
+        } catch (err: any) {
+            console.error(`更新本地 HTML 主题 '${name}' 失败:`, err);
+            throw new Error(err.response?.data?.message || err.message || `更新主题 '${name}' 失败`);
+        }
+    }
+ 
+    async function deleteLocalHtmlPreset(name: string) {
+        try {
+            await apiClient.delete(`/appearance/html-presets/local/${name}`);
+            await fetchLocalHtmlPresets(); // Refresh list
+        } catch (err: any) {
+            console.error(`删除本地 HTML 主题 '${name}' 失败:`, err);
+            throw new Error(err.response?.data?.message || err.message || `删除主题 '${name}' 失败`);
+        }
+    }
+ 
+    async function fetchRemoteHtmlPresetsRepositoryUrl() {
+        isLoadingHtmlPresets.value = true; // Use main loading or a specific one
+        htmlPresetError.value = null;
+        try {
+            const response = await apiClient.get<{ url: string | null }>('/appearance/html-presets/remote/repository-url');
+            remoteHtmlPresetsRepositoryUrl.value = response.data.url;
+            // Also update in appearanceSettings to persist if this API also saves
+            if (appearanceSettings.value && response.data.url !== undefined) {
+                 // This assumes the backend GET doesn't modify, so we only update local store state from GET
+                 // If this GET /is/ meant to also fetch latest from settings and that's the source of truth,
+                 // then updateAppearanceSettings might not be needed here.
+                 // The plan says "或直接从 settings.value 读取并更新到 remoteHtmlPresetsRepositoryUrl state"
+                 // and for update: "成功后更新 store state".
+                 // So this action fetches and updates the store's reactive ref.
+            }
+        } catch (err: any) {
+            console.error('获取远程 HTML 主题仓库链接失败:', err);
+            htmlPresetError.value = err.response?.data?.message || err.message || '获取远程仓库链接失败';
+        } finally {
+            isLoadingHtmlPresets.value = false;
+        }
+    }
+ 
+    async function updateRemoteHtmlPresetsRepositoryUrl(url: string) {
+        try {
+            await apiClient.put('/appearance/html-presets/remote/repository-url', { url });
+            remoteHtmlPresetsRepositoryUrl.value = url; // Update local state on success
+             // Persist this change in the main appearance settings object as well if needed
+            await updateAppearanceSettings({ remoteHtmlPresetsUrl: url });
+        } catch (err: any) {
+            console.error('更新远程 HTML 主题仓库链接失败:', err);
+            throw new Error(err.response?.data?.message || err.message || '更新远程仓库链接失败');
+        }
+    }
+ 
+    async function fetchRemoteHtmlPresets(repoUrlParam?: string) {
+        isLoadingHtmlPresets.value = true;
+        htmlPresetError.value = null;
+        const urlToFetch = repoUrlParam || remoteHtmlPresetsRepositoryUrl.value;
+        if (!urlToFetch) {
+            htmlPresetError.value = '远程仓库链接未设置';
+            isLoadingHtmlPresets.value = false;
+            remoteHtmlPresets.value = [];
+            return;
+        }
+        try {
+            // The API is GET /api/v1/appearance/html-presets/remote/list
+            // It might take repoUrl as a query param if not using the saved one.
+            // The plan states: `repoUrl` (可选, 如果不提供则使用已保存的链接)
+            // So, if repoUrlParam is provided, it should be sent.
+            const params: { repoUrl?: string } = {};
+            if (repoUrlParam) { // Only send if explicitly passed to this action
+                params.repoUrl = repoUrlParam;
+            }
 
+            const response = await apiClient.get<Array<{ name: string, downloadUrl?: string }>>('/appearance/html-presets/remote/list', { params });
+            remoteHtmlPresets.value = response.data;
+        } catch (err: any) {
+            console.error('获取远程 HTML 主题列表失败:', err);
+            htmlPresetError.value = err.response?.data?.message || err.message || '获取远程主题列表失败';
+            remoteHtmlPresets.value = [];
+        } finally {
+            isLoadingHtmlPresets.value = false;
+        }
+    }
+ 
+    async function getRemoteHtmlPresetContent(fileUrl: string): Promise<string> {
+        try {
+            // Expecting plain text response
+            const response = await apiClient.get<string>(`/appearance/html-presets/remote/content`, { params: { fileUrl }, transformResponse: (res) => res });
+            return response.data;
+        } catch (err: any) {
+            console.error(`获取远程 HTML 主题内容 (URL: ${fileUrl}) 失败:`, err);
+            throw new Error(err.response?.data?.message || err.message || '获取远程主题内容失败');
+        }
+    }
+ 
+    async function applyHtmlPreset(htmlContent: string) {
+        // This action internally calls setTerminalCustomHTML
+        await setTerminalCustomHTML(htmlContent);
+    }
+ 
     // --- Helper Functions ---
     /**
      * 将 UI 主题 (CSS 变量) 应用到文档根元素。
@@ -675,15 +845,35 @@ export const useAppearanceStore = defineStore('appearance', () => {
         exportTerminalTheme,
         uploadPageBackground,
         uploadTerminalBackground,
-        setTerminalBackgroundOverlayOpacity, 
+        setTerminalBackgroundOverlayOpacity,
+        setTerminalCustomHTML, // 设置终端自定义 HTML
         removePageBackground,
         removeTerminalBackground,
         loadTerminalThemeData, 
         isTerminalBackgroundEnabled,
+        terminalCustomHTML, // 获取终端自定义 HTML
         startTerminalThemePreview,
         stopTerminalThemePreview, 
         // Visibility control
         isStyleCustomizerVisible,
         toggleStyleCustomizer,
+ 
+        // HTML Presets State & Actions
+        localHtmlPresets,
+        remoteHtmlPresets,
+        remoteHtmlPresetsRepositoryUrl,
+        activeHtmlPresetTab,
+        isLoadingHtmlPresets,
+        htmlPresetError,
+        fetchLocalHtmlPresets,
+        getLocalHtmlPresetContent,
+        createLocalHtmlPreset,
+        updateLocalHtmlPreset,
+        deleteLocalHtmlPreset,
+        fetchRemoteHtmlPresetsRepositoryUrl,
+        updateRemoteHtmlPresetsRepositoryUrl,
+        fetchRemoteHtmlPresets,
+        getRemoteHtmlPresetContent,
+        applyHtmlPreset,
     };
 });
