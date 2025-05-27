@@ -136,7 +136,7 @@ onMounted(() => {
 
 <template>
   <div ref="modalRootRef" class="fixed inset-0 z-[1000]" @click.self="closeCustomizer">
-    <div ref="dialogContentRef" class="bg-background text-foreground rounded-lg shadow-lg w-full h-full md:w-[90%] md:max-w-[800px] md:h-[85vh] md:max-h-[700px] flex flex-col overflow-hidden">
+    <div ref="dialogContentRef" class="bg-background text-foreground rounded-lg shadow-[0px_0px_15px_rgb(0_0_0_/_0.15)] w-full h-full md:w-[90%] md:max-w-[800px] md:h-[85vh] md:max-h-[700px] flex flex-col overflow-hidden">
       <header ref="headerRef" class="flex justify-between items-center px-4 py-3 border-b border-border bg-header flex-shrink-0">
         <h2 class="m-0 text-lg md:text-xl text-foreground">{{ t('styleCustomizer.title') }}</h2>
         <button @click="closeCustomizer" class="bg-transparent border-none text-2xl md:text-3xl leading-none cursor-pointer text-text-secondary px-2 py-1 rounded hover:text-foreground hover:bg-black/10">&times;</button>

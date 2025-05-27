@@ -64,6 +64,9 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
            case 'terminal_custom_html':
                settings.terminal_custom_html = row.value;
                break;
+            case 'remote_html_presets_url':
+                settings.remoteHtmlPresetsUrl = row.value || null; // 如果为空字符串，则视为 null
+                break;
         }
     }
  
@@ -86,8 +89,9 @@ const mapRowsToAppearanceSettings = (rows: DbAppearanceSettingsRow[]): Appearanc
             ? settings.terminalBackgroundOverlayOpacity // 使用数据库找到的值
             : defaults.terminalBackgroundOverlayOpacity, // 否则使用默认值
        terminal_custom_html: settings.terminal_custom_html ?? defaults.terminal_custom_html,
+       remoteHtmlPresetsUrl: settings.remoteHtmlPresetsUrl ?? defaults.remoteHtmlPresetsUrl,
        updatedAt: latestUpdatedAt || defaults.updatedAt, // 使用最新的更新时间，否则使用默认时间戳
-   };
+  };
 };
  
  
@@ -105,8 +109,9 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         terminalBackgroundEnabled: true, // 默认启用
         terminalBackgroundOverlayOpacity: 0.5, // 默认蒙版透明度
        terminal_custom_html: '', // 默认自定义 HTML 为空字符串
+       remoteHtmlPresetsUrl: null, // 默认远程 HTML 预设 URL 为 null
        updatedAt: Date.now(), // 提供默认时间戳
-   };
+  };
 };
  
  
@@ -133,6 +138,7 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalBackgroundEnabled', value: defaults.terminalBackgroundEnabled },
         { key: 'terminalBackgroundOverlayOpacity', value: defaults.terminalBackgroundOverlayOpacity },
         { key: 'terminal_custom_html', value: defaults.terminal_custom_html },
+        { key: 'remoteHtmlPresetsUrl', value: defaults.remoteHtmlPresetsUrl },
     ];
  
     try {
@@ -262,13 +268,21 @@ const updateAppearanceSettingsInternal = async (db: sqlite3.Database, settingsDt
   let changesMade = false;
 
   try {
-      for (const key of Object.keys(settingsDto) as Array<keyof UpdateAppearanceDto>) {
-          const value = settingsDto[key];
+      for (const dtoKey of Object.keys(settingsDto) as Array<keyof UpdateAppearanceDto>) {
+          const value = settingsDto[dtoKey];
           let dbValue: string;
+          let dbKey = dtoKey as string; // Default to DTO key
+
+          // 将 DTO 键名映射到数据库键名
+          if (dtoKey === 'remoteHtmlPresetsUrl') {
+              dbKey = 'remote_html_presets_url';
+          }
+          // 如果将来还有其他 DTO 键名与数据库键名不一致的情况，在此添加映射
+          // 例如: else if (dtoKey === 'someOtherDtoKey') { dbKey = 'some_other_db_key'; }
 
           // 将值转换为字符串以存储到数据库，处理 null/undefined
           if (value === null || value === undefined) {
-               dbValue = key === 'activeTerminalThemeId' ? 'null' : ''; // 主题 ID 特殊存储为 'null'
+               dbValue = dtoKey === 'activeTerminalThemeId' ? 'null' : ''; // 主题 ID 特殊存储为 'null'
           } else if (typeof value === 'object') {
                dbValue = JSON.stringify(value);
           } else if (typeof value === 'boolean') { // 处理布尔值
@@ -277,23 +291,23 @@ const updateAppearanceSettingsInternal = async (db: sqlite3.Database, settingsDt
                dbValue = String(value);
           }
 
-          // 对 activeTerminalThemeId 的特殊处理：存储 'null' 字符串或数字字符串
-          if (key === 'activeTerminalThemeId') {
+          // 对 activeTerminalThemeId 的特殊处理：存储 'null' 字符串或数字字符串 (基于 dtoKey 判断)
+          if (dtoKey === 'activeTerminalThemeId') {
               dbValue = value === null ? 'null' : String(value);
           }
 
 
-          // 保存前验证 active_terminal_theme_id 类型
-          if (key === 'activeTerminalThemeId' && value !== null && typeof value !== 'number') {
+          // 保存前验证 active_terminal_theme_id 类型 (基于 dtoKey 判断)
+          if (dtoKey === 'activeTerminalThemeId' && value !== null && typeof value !== 'number') {
                console.error(`[AppearanceRepo] 更新 activeTerminalThemeId 时收到无效类型值: ${value} (类型: ${typeof value})，应为数字或 null。跳过此字段。`);
                continue; // 跳过此键
           }
 
-          // 对每个键值对执行 INSERT OR REPLACE
-          console.log(`[AppearanceRepo LOG] 准备更新/插入键: '${key}', 值: '${dbValue}'`); // 添加保存日志
-          const result = await runDb(db, sqlReplace, [key, dbValue, nowSeconds]);
+          // 对每个键值对执行 INSERT OR REPLACE，使用映射后的 dbKey
+          console.log(`[AppearanceRepo LOG] 准备更新/插入数据库键: '${dbKey}', 值: '${dbValue}' (来自 DTO 键: '${dtoKey}')`);
+          const result = await runDb(db, sqlReplace, [dbKey, dbValue, nowSeconds]);
           if (result.changes > 0) {
-              console.log(`[AppearanceRepo LOG] 键 '${key}' 更新成功。`); // 添加成功日志
+              console.log(`[AppearanceRepo LOG] 数据库键 '${dbKey}' 更新成功。`); // 添加成功日志
               changesMade = true;
           }
       }

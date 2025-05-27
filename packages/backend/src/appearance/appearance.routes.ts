@@ -36,4 +36,22 @@ router.delete('/background/page', appearanceController.removePageBackgroundContr
 // DELETE /api/v1/appearance/background/terminal - 删除终端背景图片
 router.delete('/background/terminal', appearanceController.removeTerminalBackgroundController);
 
+// HTML 预设主题相关路由 /api/v1/appearance/html-presets
+const htmlPresetsRouter = express.Router();
+
+// 本地 HTML 主题接口 /api/v1/appearance/html-presets/local
+htmlPresetsRouter.get('/local', appearanceController.listLocalHtmlPresetsController);
+htmlPresetsRouter.get('/local/:themeName', appearanceController.getLocalHtmlPresetContentController);
+htmlPresetsRouter.post('/local', appearanceController.createLocalHtmlPresetController);
+htmlPresetsRouter.put('/local/:themeName', appearanceController.updateLocalHtmlPresetController);
+htmlPresetsRouter.delete('/local/:themeName', appearanceController.deleteLocalHtmlPresetController);
+
+// 远程 GitHub HTML 主题接口 /api/v1/appearance/html-presets/remote
+htmlPresetsRouter.get('/remote/repository-url', appearanceController.getRemoteHtmlPresetsRepositoryUrlController);
+htmlPresetsRouter.put('/remote/repository-url', appearanceController.updateRemoteHtmlPresetsRepositoryUrlController);
+htmlPresetsRouter.get('/remote/list', appearanceController.listRemoteHtmlPresetsController);
+htmlPresetsRouter.get('/remote/content', appearanceController.getRemoteHtmlPresetContentController);
+
+router.use('/html-presets', htmlPresetsRouter);
+
 export default router;
