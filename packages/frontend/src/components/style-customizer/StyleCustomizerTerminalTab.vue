@@ -510,7 +510,7 @@ watch(() => props.isEditingTheme, (isEditing) => {
         <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
           <label for="terminalTextStrokeColor" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textStrokeColor') }}:</label>
           <div class="flex items-center gap-2">
-            <input type="color" id="terminalTextStrokeColor" v-model="editableTerminalTextStrokeColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
+            <input type="color" id="terminalTextStrokeColor" v-model.lazy="editableTerminalTextStrokeColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
             <input type="text" :value="editableTerminalTextStrokeColor" @input="editableTerminalTextStrokeColor = ($event.target as HTMLInputElement).value" class="flex-grow min-w-[80px] bg-header border border-border px-[0.7rem] py-2 rounded text-sm text-foreground box-border">
           </div>
         </div>
@@ -545,7 +545,7 @@ watch(() => props.isEditingTheme, (isEditing) => {
         <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-2">
           <label for="terminalTextShadowColor" class="text-left text-foreground text-sm font-medium">{{ t('styleCustomizer.textShadowColor') }}:</label>
           <div class="flex items-center gap-2">
-            <input type="color" id="terminalTextShadowColor" v-model="editableTerminalTextShadowColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
+            <input type="color" id="terminalTextShadowColor" v-model.lazy="editableTerminalTextShadowColor" class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0">
             <input type="text" :value="editableTerminalTextShadowColor" @input="editableTerminalTextShadowColor = ($event.target as HTMLInputElement).value" class="flex-grow min-w-[80px] bg-header border border-border px-[0.7rem] py-2 rounded text-sm text-foreground box-border">
           </div>
         </div>
@@ -637,7 +637,7 @@ watch(() => props.isEditingTheme, (isEditing) => {
           v-if="typeof value === 'string' && value.startsWith('#')"
           type="color"
           :id="`xterm-${key}`"
-          v-model="(editingTheme.themeData as any)[key]"
+          v-model.lazy="(editingTheme.themeData as any)[key]"
           class="p-0.5 h-[34px] min-w-[40px] max-w-[50px] rounded border border-border flex-shrink-0 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
         <input
