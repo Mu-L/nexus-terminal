@@ -34,6 +34,9 @@ let resizeObserver: ResizeObserver | null = null;
 let observedElement: HTMLElement | null = null; // +++ Store the observed element +++
 let debounceTimer: number | null = null; // 用于防抖的计时器 ID
 let selectionListenerDisposable: IDisposable | null = null; // +++ 提升声明并添加类型 +++
+let lastResizeObserverWidth = 0;
+let lastResizeObserverHeight = 0;
+const RESIZE_THRESHOLD = 0.5; // px
 
 
 const { isMobile } = useDeviceDetection(); // 设备检测
@@ -116,6 +119,19 @@ const fitAndEmitResizeNow = (term: Terminal) => {
             const dimensions = { cols: term.cols, rows: term.rows };
             console.log(`[Terminal ${props.sessionId}] Immediate resize emit:`, dimensions);
             emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
+
+
+            
+            // --- 稳定 customHtmlLayerRef 的尺寸 (确保在 DOM 更新后) ---
+            nextTick(() => {
+                if (customHtmlLayerRef.value && terminalRef.value) {
+                    const newWidth = terminalRef.value.offsetWidth;
+                    const newHeight = terminalRef.value.offsetHeight;
+                    customHtmlLayerRef.value.style.width = `${newWidth}px`;
+                    customHtmlLayerRef.value.style.height = `${newHeight}px`;
+                    console.log(`[Terminal ${props.sessionId}] customHtmlLayerRef stabilized (in nextTick) after immediate fit to: ${newWidth}x${newHeight}`);
+                }
+            });
 
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
             nextTick(() => {
@@ -276,21 +292,62 @@ onMounted(() => {
     if (terminalRef.value) {
         observedElement = terminalRef.value;
         resizeObserver = new ResizeObserver((entries) => {
-            // Only process if the terminal is active
-            if (!props.isActive || !terminal) return;
+            if (!props.isActive || !terminal || !terminalRef.value) return;
 
             const entry = entries[0];
-            const { height, width } = entry.contentRect; // 获取宽度和高度
-            // console.log(`[Terminal ${props.sessionId}] ResizeObserver triggered. Size: ${width}x${height}, isActive: ${props.isActive}`);
-            if (height > 0 && width > 0) { // 确保宽度和高度都有效
+            const { height: rectHeight, width: rectWidth } = entry.contentRect;
+            const offsetW = terminalRef.value.offsetWidth;
+            const offsetH = terminalRef.value.offsetHeight;
+
+            // --- 阈值判断逻辑 ---
+            const widthChangedSignificantly = Math.abs(rectWidth - lastResizeObserverWidth) >= RESIZE_THRESHOLD;
+            const heightChangedSignificantly = Math.abs(rectHeight - lastResizeObserverHeight) >= RESIZE_THRESHOLD;
+
+            if (!widthChangedSignificantly && !heightChangedSignificantly) {
+              console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Size change below threshold (${RESIZE_THRESHOLD}px). rectWidth: ${rectWidth.toFixed(2)}, rectHeight: ${rectHeight.toFixed(2)}, lastWidth: ${lastResizeObserverWidth.toFixed(2)}, lastHeight: ${lastResizeObserverHeight.toFixed(2)}. Skipping fit.`);
+              return;
+            }
+            
+            console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Size change AT or ABOVE threshold (${RESIZE_THRESHOLD}px). rectWidth: ${rectWidth.toFixed(2)}, rectHeight: ${rectHeight.toFixed(2)}, lastWidth: ${lastResizeObserverWidth.toFixed(2)}, lastHeight: ${lastResizeObserverHeight.toFixed(2)}. Proceeding with fit.`);
+            
+            const roundedWidth = Math.round(rectWidth);
+            const roundedHeight = Math.round(rectHeight);
+
+            // 更新 lastResizeObserverWidth/Height 为取整后的值
+            lastResizeObserverWidth = roundedWidth;
+            lastResizeObserverHeight = roundedHeight;
+            // --- 阈值判断逻辑结束 ---
+
+            console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Triggered. Observed contentRect: ${rectWidth.toFixed(2)}w x ${rectHeight.toFixed(2)}h (rounded to ${roundedWidth}x${roundedHeight}). terminalRef offset: ${offsetW}w x ${offsetH}h.`);
+            if (entry.target && terminalRef.value) {
+              const targetBoundingClientRect = entry.target.getBoundingClientRect();
+              const terminalRefBoundingClientRect = terminalRef.value.getBoundingClientRect();
+              console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] target.getBoundingClientRect(): ${targetBoundingClientRect.width.toFixed(2)}w x ${targetBoundingClientRect.height.toFixed(2)}h, top: ${targetBoundingClientRect.top.toFixed(2)}, left: ${targetBoundingClientRect.left.toFixed(2)}`);
+              console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] terminalRef.getBoundingClientRect(): ${terminalRefBoundingClientRect.width.toFixed(2)}w x ${terminalRefBoundingClientRect.height.toFixed(2)}h, top: ${terminalRefBoundingClientRect.top.toFixed(2)}, left: ${terminalRefBoundingClientRect.left.toFixed(2)}`);
+            }
+
+            if (rectHeight > 0 && rectWidth > 0) {
                 try {
-                  // *** 恢复：立即调用 fit() 来适应前端容器 ***
+                  // console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Before fitAddon.fit(). Current xterm_cols: ${terminal.cols}, xterm_rows: ${terminal.rows}`);
                   fitAddon?.fit();
-                  // 触发防抖的 resize 发送，通知后端潜在的尺寸变化
-                  debouncedEmitResize(terminal);
+                  // console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] After fitAddon.fit(). New xterm_cols: ${terminal.cols}, xterm_rows: ${terminal.rows}`);
+                  
+                  // --- 稳定 customHtmlLayerRef 的尺寸 (确保在DOM更新后) ---
+                  nextTick(() => {
+                    if (customHtmlLayerRef.value) {
+                        customHtmlLayerRef.value.style.width = `${roundedWidth}px`;
+                        customHtmlLayerRef.value.style.height = `${roundedHeight}px`;
+                        console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] customHtmlLayerRef stabilized (in nextTick) after ResizeObserver fit to: ${roundedWidth}x${roundedHeight}`);
+                    }
+                  });
+                  // --- 稳定 customHtmlLayerRef 尺寸结束 ---
+
+                  debouncedEmitResize(terminal); // This will log the cols/rows after debouncing
                  } catch (e) {
-                    console.warn("Fit addon resize failed (observer):", e);
+                    console.warn(`[TerminalResizeObserver sessionId=${props.sessionId}] Fit addon or debouncedEmitResize failed:`, e);
                  }
+            } else {
+              console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Skipped fit/emit due to zero height/width in contentRect. Rect: ${rectWidth.toFixed(2)}w x ${rectHeight.toFixed(2)}h`);
             }
         });
         // Observe only if initially active (or becomes active later)
@@ -299,6 +356,7 @@ onMounted(() => {
             console.log(`[Terminal ${props.sessionId}] Initial observe.`);
         }
     }
+
 
     // 监听 isActive prop 的变化
     watch(() => props.isActive, (newValue, oldValue) => {
@@ -379,7 +437,6 @@ onMounted(() => {
             if (newSelection && newSelection !== currentSelection) {
                 currentSelection = newSelection;
                 navigator.clipboard.writeText(newSelection).then(() => {
-                    // console.log('[Terminal] 文本已自动复制到剪贴板:', newSelection); // 可选：成功日志
                 }).catch(err => {
                     console.error('[Terminal] 自动复制到剪贴板失败:', err);
                     // 可以在这里向用户显示一个短暂的错误提示
@@ -757,27 +814,32 @@ const executeScriptsInElement = (container: HTMLElement) => {
       console.log('[Terminal] Script #${index + 1} re-inserted and old one removed.');
     } else {
       container.appendChild(newScript);
-      console.warn('[Terminal] Script #${index + 1} had no parent, appended to container directly.');
     }
   });
-  console.log('[Terminal] Finished processing scripts in custom HTML.');
 };
 
 // Watch for changes in terminalCustomHTML and execute scripts
-watch(terminalCustomHTML, (newHtmlContent) => {
-  // Always operate within nextTick to ensure v-html has updated the DOM
+watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
+  console.log(`[TerminalCustomHTML Watch sessionId=${props.sessionId}] Triggered. New HTML defined: ${!!newHtmlContent}, Old HTML defined: ${!!oldHtmlContent}. New === Old: ${newHtmlContent === oldHtmlContent}`);
+  // 仅当实际 HTML 字符串内容发生变化时才继续。
+  if (newHtmlContent === oldHtmlContent && oldHtmlContent !== undefined) { // Ensure initial undefined oldHtmlContent still proceeds if newHtmlContent exists
+    console.log(`[TerminalCustomHTML Watch sessionId=${props.sessionId}] HTML content is same as old and old was defined. Skipping script execution.`);
+    return;
+  }
+
+  // 始终在 nextTick 中操作，以确保 v-html 已更新 DOM
   nextTick(() => {
     const container = customHtmlLayerRef.value;
     if (container) {
       if (newHtmlContent) {
-        console.log('[Terminal] terminalCustomHTML changed, processing new HTML content.');
+        // console.log('[Terminal] terminalCustomHTML 内容已更改，正在为脚本处理新的 HTML 内容。'); // 保留原始的简单日志（注释掉）
         executeScriptsInElement(container);
       } else {
-        console.log('[Terminal] terminalCustomHTML cleared.');
+        // console.log('[Terminal] terminalCustomHTML 内容已清除，脚本将不被处理。'); // 保留原始的简单日志（注释掉）
       }
     }
   });
-}, { immediate: true }); 
+}, { immediate: true });
                          
                          
                        
