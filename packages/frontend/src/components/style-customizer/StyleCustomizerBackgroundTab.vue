@@ -60,6 +60,9 @@ const localRemoteHtmlPresetsRepositoryUrl = ref('');
 const localHtmlSearchTerm = ref('');
 const remoteHtmlSearchTerm = ref('');
 
+const localSpecificLoading = ref(false);
+const remoteSpecificLoading = ref(false);
+
 
 const initializeEditableState = () => {
   localTerminalBackgroundEnabled.value = isTerminalBackgroundEnabled.value;
@@ -72,7 +75,13 @@ const initializeEditableState = () => {
 
 onMounted(async () => {
   initializeEditableState();
-  await fetchLocalHtmlPresets();
+  localSpecificLoading.value = true;
+  try {
+    await fetchLocalHtmlPresets();
+  } finally {
+    localSpecificLoading.value = false;
+  }
+
   // Fetch remote URL if not already set, or always? Per plan, store initializes it.
   // If store's remoteHtmlPresetsRepositoryUrl is null, then fetch it.
   if (!remoteHtmlPresetsRepositoryUrl.value) {
@@ -80,7 +89,12 @@ onMounted(async () => {
   }
   // If a URL exists, fetch remote presets
   if (remoteHtmlPresetsRepositoryUrl.value) {
-    await fetchRemoteHtmlPresets();
+    remoteSpecificLoading.value = true;
+    try {
+      await fetchRemoteHtmlPresets();
+    } finally {
+      remoteSpecificLoading.value = false;
+    }
   }
 });
 
@@ -299,9 +313,22 @@ const handleSaveRemoteRepositoryUrl = async () => {
     await updateRemoteHtmlPresetsRepositoryUrl(localRemoteHtmlPresetsRepositoryUrl.value);
     notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.remoteUrlSaved') });
     // Optionally fetch presets immediately after saving new URL
-    await fetchRemoteHtmlPresets(localRemoteHtmlPresetsRepositoryUrl.value);
+    if (localRemoteHtmlPresetsRepositoryUrl.value) {
+      remoteSpecificLoading.value = true;
+      try {
+        await fetchRemoteHtmlPresets(localRemoteHtmlPresetsRepositoryUrl.value);
+      } finally {
+        remoteSpecificLoading.value = false;
+      }
+    } else {
+      // If URL is cleared, ensure remote presets are cleared and loading indicator is off.
+      // The store's fetchRemoteHtmlPresets might handle clearing presets if URL is empty.
+      if (remoteHtmlPresets.value?.length) remoteHtmlPresets.value = [];
+      remoteSpecificLoading.value = false;
+    }
   } catch (error: any) {
     notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.remoteUrlSaveFailed', { message: error.message }) });
+    remoteSpecificLoading.value = false; // Ensure loading indicator is off on error
   }
 };
 
@@ -310,6 +337,7 @@ const handleLoadRemotePresets = async () => {
     notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.errorSetRemoteUrlFirst') });
     return;
   }
+  remoteSpecificLoading.value = true;
   try {
     await fetchRemoteHtmlPresets();
      if (!htmlPresetError.value) {
@@ -317,6 +345,8 @@ const handleLoadRemotePresets = async () => {
     }
   } catch (error: any) { // This catch might not be needed if store handles errors
     notificationsStore.addNotification({ type: 'error', message: t('styleCustomizer.remotePresetsLoadFailed', { message: error.message }) });
+  } finally {
+    remoteSpecificLoading.value = false;
   }
 };
 
@@ -481,7 +511,7 @@ const filteredRemoteHtmlPresets = computed(() => {
         </button>
       </div>
 
-      <div v-if="isLoadingHtmlPresets" class="text-center p-4 text-text-secondary">
+      <div v-if="localSpecificLoading" class="text-center p-4 text-text-secondary">
         {{ t('common.loading') }}
       </div>
       <ul v-else-if="filteredLocalHtmlPresets.length > 0" class="list-none p-0 mt-4 max-h-[200px] md:max-h-[280px] overflow-y-auto border border-border rounded bg-background">
@@ -561,9 +591,9 @@ const filteredRemoteHtmlPresets = computed(() => {
           <button @click="handleSaveRemoteRepositoryUrl" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap flex-shrink-0">
             {{ t('common.save') }}
           </button>
-          <button @click="handleLoadRemotePresets" :disabled="!remoteHtmlPresetsRepositoryUrl || isLoadingHtmlPresets" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-50 flex-shrink-0">
-            {{ isLoadingHtmlPresets && currentActiveTab === 'remote' ? t('common.loading') : t('styleCustomizer.loadRemoteThemes') }}
-          </button>
+          <button @click="handleLoadRemotePresets" :disabled="!remoteHtmlPresetsRepositoryUrl || remoteSpecificLoading" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-50 flex-shrink-0">
+           {{ remoteSpecificLoading ? t('common.loading') : t('styleCustomizer.loadRemoteThemes') }}
+         </button>
         </div>
       </div>
 
@@ -577,7 +607,7 @@ const filteredRemoteHtmlPresets = computed(() => {
         />
       </div>
 
-      <div v-if="isLoadingHtmlPresets && currentActiveTab === 'remote'" class="text-center p-4 text-text-secondary">
+      <div v-if="remoteSpecificLoading && currentActiveTab === 'remote'" class="text-center p-4 text-text-secondary">
         {{ t('common.loading') }}
       </div>
       <div v-else-if="htmlPresetError && currentActiveTab === 'remote'" class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800" role="alert">
