@@ -360,6 +360,6 @@ const copyIpToClipboard = async (ipAddress: string | null) => {
 }
 ::v-deep(.el-progress-bar__innerText) {
   font-size: 10px; 
+  transform: translateY(-2px);
 }
-
 </style>
