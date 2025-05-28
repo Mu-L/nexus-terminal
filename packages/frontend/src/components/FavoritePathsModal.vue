@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useFavoritePathsStore, type FavoritePathItem } from '../stores/favoritePaths.store';
 import { useSessionStore } from '../stores/session.store';
 import AddEditFavoritePathForm from './AddEditFavoritePathForm.vue';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 
 const PADDING = 8; // px
 
@@ -23,6 +24,7 @@ const emit = defineEmits(['close', 'navigateToPath']);
 const { t } = useI18n();
 const favoritePathsStore = useFavoritePathsStore();
 const sessionStore = useSessionStore();
+const emitWorkspaceEvent = useWorkspaceEventEmitter();
 
 const searchTerm = ref('');
 const showAddEditModal = ref(false);
@@ -87,6 +89,11 @@ const handleDelete = async (pathItem: FavoritePathItem) => {
       console.error('Failed to delete favorite path from modal:', error);
     }
   }
+};
+
+const handleSendToTerminal = (pathItem: FavoritePathItem) => {
+  emitWorkspaceEvent('favoritePath:sendToActiveTerminal', { path: pathItem.path });
+  closeModal(); // Optionally close modal after sending
 };
 
 const closeModal = () => {
@@ -255,6 +262,12 @@ onBeforeUnmount(() => {
               </p>
             </div>
             <div class="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+              <button
+                @click.stop="handleSendToTerminal(favPath)"
+                class="p-1.5 rounded text-text-secondary hover:text-primary hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                :title="t('favoritePaths.sendToTerminal', 'Send to Terminal')">
+                <i class="fas fa-terminal text-xs"></i>
+              </button>
               <button
                 @click.stop="openEditModal(favPath)"
                 class="p-1.5 rounded text-text-secondary hover:text-primary hover:bg-black/10 dark:hover:bg-white/10 transition-colors"

@@ -4,12 +4,13 @@ import { Terminal, ITerminalAddon, IDisposable } from 'xterm';
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useAppearanceStore } from '../stores/appearance.store';
 import { useSettingsStore } from '../stores/settings.store';
+import { useSessionStore } from '../stores/session.store'; 
 import { storeToRefs } from 'pinia';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon, type ISearchOptions } from '@xterm/addon-search';
 import 'xterm/css/xterm.css';
-import { useWorkspaceEventEmitter } from '../composables/workspaceEvents'; 
+import { useWorkspaceEventEmitter, useWorkspaceEventSubscriber, useWorkspaceEventOff } from '../composables/workspaceEvents'; // +++ Import subscriber and off
 
 
 // 定义 props 和 emits
@@ -23,6 +24,8 @@ const props = defineProps<{
 
 
 const emitWorkspaceEvent = useWorkspaceEventEmitter(); // +++ 获取事件发射器 +++
+const subscribeToWorkspaceEvent = useWorkspaceEventSubscriber(); // +++ 获取事件订阅器 +++
+const unsubscribeFromWorkspaceEvent = useWorkspaceEventOff(); // +++ 获取事件取消订阅器 +++
 
 const terminalRef = ref<HTMLElement | null>(null); // xterm 挂载点的引用 (内部容器)
 const terminalOuterWrapperRef = ref<HTMLElement | null>(null); // 最外层容器的引用，用于背景图
@@ -65,6 +68,7 @@ const isTerminalDomReady = ref(false);
  
 // --- Settings Store ---
 const settingsStore = useSettingsStore(); // +++ 实例化设置 store +++
+const sessionStore = useSessionStore(); // +++ 实例化会话 store +++
 const {
   autoCopyOnSelectBoolean,
   terminalScrollbackLimitNumber, 
@@ -569,6 +573,17 @@ onMounted(() => {
       terminalRef.value.addEventListener('touchend', handleTouchEnd, { passive: false });
       terminalRef.value.addEventListener('touchcancel', handleTouchEnd, { passive: false }); // Also handle cancel
     }
+
+    // Listen for favorite path to send to terminal
+    subscribeToWorkspaceEvent('favoritePath:sendToActiveTerminal', ({ path }) => {
+      if (terminal && props.isActive && sessionStore.activeSessionId === props.sessionId) {
+        // Ensure path is quoted to handle spaces or special characters
+        const command = `cd "${path.replace(/"/g, '\\"')}"\n`; // Escape existing quotes in path
+        emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: command });
+        terminal.focus(); // Focus terminal after sending command
+      }
+    });
+
   }
 });
 
@@ -611,10 +626,10 @@ onBeforeUnmount(() => {
         terminalRef.value.removeEventListener('touchend', handleTouchEnd);
         terminalRef.value.removeEventListener('touchcancel', handleTouchEnd);
     }
-  
-    // terminalRef 是内部容器，不需要特别处理
-    // if (terminalRef.value) {
-    // }
+
+    unsubscribeFromWorkspaceEvent('favoritePath:sendToActiveTerminal');
+
+
   });
 // 暴露 write 方法给父组件 (可选)
 const write = (data: string | Uint8Array) => {

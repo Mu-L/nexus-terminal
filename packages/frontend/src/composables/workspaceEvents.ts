@@ -51,6 +51,7 @@ export type WorkspaceEventPayloads = {
 
   // Suspended SSH Session Events
   'suspendedSession:actionCompleted': void; // Emitted when a resume/remove action is completed
+  'favoritePath:sendToActiveTerminal': { path: string }; // Event to send a path to the active terminal
 };
 
 // 创建 mitt 事件发射器实例
