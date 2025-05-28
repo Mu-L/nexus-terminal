@@ -360,8 +360,7 @@ const copyIpToClipboard = async (ipAddress: string | null) => {
 }
 ::v-deep(.el-progress-bar__innerText) {
   font-size: 10px;
-  position: relative; /* 使用相对定位进行微调 */
-  top: -0.5px;          /* 将文本向上移动2像素 */
-  /* 保留 Element Plus 默认的文本对齐方式，使其跟随进度 */
+  position: relative;
+  top: -0.5px;       
 }
 </style>
