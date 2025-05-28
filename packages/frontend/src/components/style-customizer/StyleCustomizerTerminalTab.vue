@@ -182,6 +182,16 @@ const handleSaveTerminalTextShadow = async () => {
   }
 };
 
+const toggleTextStrokeAndSave = async () => {
+  editableTerminalTextStrokeEnabled.value = !editableTerminalTextStrokeEnabled.value;
+  await handleSaveTerminalTextStroke();
+};
+
+const toggleTextShadowAndSave = async () => {
+  editableTerminalTextShadowEnabled.value = !editableTerminalTextShadowEnabled.value;
+  await handleSaveTerminalTextShadow();
+};
+
 const handleApplyTheme = async (theme: TerminalTheme) => {
   if (!theme._id) return;
   const themeIdNum = parseInt(theme._id, 10);
@@ -497,9 +507,27 @@ watch(() => props.isEditingTheme, (isEditing) => {
     <hr class="my-4 md:my-6">
     <h4 class="mt-6 mb-3 text-base font-semibold text-foreground">{{ t('styleCustomizer.textStrokeSettings') }}</h4>
     <div class="space-y-3 mb-3">
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="terminalTextStrokeEnabled" v-model="editableTerminalTextStrokeEnabled" class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer">
-        <label for="terminalTextStrokeEnabled" class="text-foreground text-sm font-medium cursor-pointer">{{ t('styleCustomizer.enableTextStroke') }}</label>
+      <div class="flex items-center justify-between">
+        <label for="terminalTextStrokeEnabledSwitch" class="text-foreground text-sm font-medium">{{ t('styleCustomizer.enableTextStroke') }}</label>
+        <button
+          type="button"
+          id="terminalTextStrokeEnabledSwitch"
+          @click="toggleTextStrokeAndSave"
+          :class="[
+            'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
+            editableTerminalTextStrokeEnabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+          ]"
+          role="switch"
+          :aria-checked="editableTerminalTextStrokeEnabled"
+        >
+          <span
+            aria-hidden="true"
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200',
+              editableTerminalTextStrokeEnabled ? 'translate-x-5' : 'translate-x-0'
+            ]"
+          ></span>
+        </button>
       </div>
 
       <div class="space-y-3">
@@ -524,9 +552,27 @@ watch(() => props.isEditingTheme, (isEditing) => {
     <hr class="my-4 md:my-6">
     <h4 class="mt-6 mb-3 text-base font-semibold text-foreground">{{ t('styleCustomizer.textShadowSettings') }}</h4>
     <div class="space-y-3 mb-3">
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="terminalTextShadowEnabled" v-model="editableTerminalTextShadowEnabled" class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer">
-        <label for="terminalTextShadowEnabled" class="text-foreground text-sm font-medium cursor-pointer">{{ t('styleCustomizer.enableTextShadow') }}</label>
+      <div class="flex items-center justify-between">
+        <label for="terminalTextShadowEnabledSwitch" class="text-foreground text-sm font-medium">{{ t('styleCustomizer.enableTextShadow') }}</label>
+        <button
+          type="button"
+          id="terminalTextShadowEnabledSwitch"
+          @click="toggleTextShadowAndSave"
+          :class="[
+            'relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
+            editableTerminalTextShadowEnabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+          ]"
+          role="switch"
+          :aria-checked="editableTerminalTextShadowEnabled"
+        >
+          <span
+            aria-hidden="true"
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200',
+              editableTerminalTextShadowEnabled ? 'translate-x-5' : 'translate-x-0'
+            ]"
+          ></span>
+        </button>
       </div>
 
       <div class="space-y-3">
