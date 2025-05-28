@@ -98,12 +98,9 @@ const debouncedEmitResize = debounce((term: Terminal) => {
         // *** 尝试在发送 resize 后强制刷新终端显示 ***
         try {
             term.refresh(0, term.rows - 1); // Refresh entire viewport
-            console.log(`[Terminal ${props.sessionId}] Terminal refreshed after debounced resize.`);
         } catch (e) {
             console.warn(`[Terminal ${props.sessionId}] Terminal refresh failed:`, e);
         }
-    } else {
-        console.log(`[Terminal ${props.sessionId}] Debounced resize skipped (inactive).`);
     }
 }, 150); // 150ms 防抖延迟
 
@@ -116,9 +113,13 @@ const fitAndEmitResizeNow = (term: Terminal) => {
         if (terminalRef.value.offsetHeight > 0 && terminalRef.value.offsetWidth > 0) {
             fitAddon?.fit();
             const dimensions = { cols: term.cols, rows: term.rows };
-            console.log(`[Terminal ${props.sessionId}] Immediate resize emit:`, dimensions);
             emitWorkspaceEvent('terminal:resize', { sessionId: props.sessionId, dims: dimensions });
-
+            // 发出稳定尺寸事件
+            if (terminalRef.value) {
+              const stableWidth = terminalRef.value.offsetWidth;
+              const stableHeight = terminalRef.value.offsetHeight;
+              emitWorkspaceEvent('terminal:stabilizedResize', { sessionId: props.sessionId, width: stableWidth, height: stableHeight });
+            }
 
             
             // 使用 nextTick 确保 fit() 的效果已反映，再触发 resize
@@ -316,16 +317,12 @@ onMounted(() => {
 
             if (rectHeight > 0 && rectWidth > 0) {
                 try {
-                  // console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Before fitAddon.fit(). Current xterm_cols: ${terminal.cols}, xterm_rows: ${terminal.rows}`);
                   fitAddon?.fit();
-                  // console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] After fitAddon.fit(). New xterm_cols: ${terminal.cols}, xterm_rows: ${terminal.rows}`);
-                  
                   debouncedEmitResize(terminal); // This will log the cols/rows after debouncing
+                  emitWorkspaceEvent('terminal:stabilizedResize', { sessionId: props.sessionId, width: roundedWidth, height: roundedHeight });
                  } catch (e) {
                     console.warn(`[TerminalResizeObserver sessionId=${props.sessionId}] Fit addon or debouncedEmitResize failed:`, e);
                  }
-            } else {
-              console.log(`[TerminalResizeObserver sessionId=${props.sessionId}] Skipped fit/emit due to zero height/width in contentRect. Rect: ${rectWidth.toFixed(2)}w x ${rectHeight.toFixed(2)}h`);
             }
         });
         // Observe only if initially active (or becomes active later)

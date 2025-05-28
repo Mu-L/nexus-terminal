@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ConnectionInfo } from '../stores/connections.store';
-import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted, nextTick, type CSSProperties } from 'vue'; // Added nextTick and CSSProperties
+import { computed, defineAsyncComponent, type PropType, type Component, ref, watch, onMounted, onBeforeUnmount, nextTick, type CSSProperties } from 'vue'; // Added onBeforeUnmount, nextTick and CSSProperties
 import { useI18n } from 'vue-i18n';
-
+import { useWorkspaceEventSubscriber, useWorkspaceEventOff } from '../composables/workspaceEvents';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { Splitpanes, Pane } from 'splitpanes';
 import { useLayoutStore, type LayoutNode, type PaneName } from '../stores/layout.store';
@@ -49,12 +49,13 @@ const props = defineProps({
 
 
 
-// --- Setup ---
 const layoutStore = useLayoutStore();
 const sessionStore = useSessionStore();
-const fileEditorStore = useFileEditorStore(); // <-- Initialize FileEditorStore
-const settingsStore = useSettingsStore(); // +++ Initialize SettingsStore +++
-const { t } = useI18n(); // <-- Get translation function
+const fileEditorStore = useFileEditorStore(); 
+const settingsStore = useSettingsStore(); 
+const { t } = useI18n();
+const subscribeToWorkspaceEvent = useWorkspaceEventSubscriber();
+const unsubscribeFromWorkspaceEvent = useWorkspaceEventOff();
 
 // +++ Appearance Store Refs +++
 const appearanceStore = useAppearanceStore();
@@ -366,6 +367,14 @@ const getIconClasses = (paneName: PaneName): string[] => {
 
 // --- Sidebar Resize Logic ---
 onMounted(() => {
+  const handleStabilizedTerminalResize = ({ sessionId, width, height }: { sessionId: string; width: number; height: number }) => {
+    if (props.layoutNode.component === 'terminal' && sessionId === props.activeSessionId && customHtmlLayerRef.value) {
+      customHtmlLayerRef.value.style.width = `${width}px`;
+      customHtmlLayerRef.value.style.height = `${height}px`;
+    }
+  };
+  subscribeToWorkspaceEvent('terminal:stabilizedResize', handleStabilizedTerminalResize);
+
 
 
   // Left Sidebar Resize
@@ -463,6 +472,18 @@ watch(terminalCustomHTML, (newHtmlContent, oldHtmlContent) => {
     }
   });
 }, { immediate: true });
+
+
+onBeforeUnmount(() => {
+  const handleStabilizedTerminalResizeHandler = ({ sessionId, width, height }: { sessionId: string; width: number; height: number }) => {
+    if (props.layoutNode.component === 'terminal' && sessionId === props.activeSessionId && customHtmlLayerRef.value) {
+      customHtmlLayerRef.value.style.width = `${width}px`;
+      customHtmlLayerRef.value.style.height = `${height}px`;
+    }
+  };
+  unsubscribeFromWorkspaceEvent('terminal:stabilizedResize', handleStabilizedTerminalResizeHandler); // Use the same handler reference if possible
+});
+
 
 
 </script>
