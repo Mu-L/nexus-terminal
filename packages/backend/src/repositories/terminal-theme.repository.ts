@@ -182,16 +182,37 @@ export const createTheme = async (themeDto: CreateTerminalThemeDto): Promise<Ter
  * @returns Promise<boolean> 是否成功更新
  */
 export const updateTheme = async (id: number, themeDto: UpdateTerminalThemeDto): Promise<boolean> => {
-  const now = Date.now();
-  const themeDataJson = JSON.stringify(themeDto.themeData);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const theme = themeDto.themeData;
+
+  const setClauses = [
+    'name = ?',
+    'foreground = ?', 'background = ?', 'cursor = ?', 'cursor_accent = ?',
+    'selection_background = ?', 'black = ?', 'red = ?', 'green = ?', 'yellow = ?', 'blue = ?',
+    'magenta = ?', 'cyan = ?', 'white = ?', 'bright_black = ?', 'bright_red = ?', 'bright_green = ?',
+    'bright_yellow = ?', 'bright_blue = ?', 'bright_magenta = ?', 'bright_cyan = ?', 'bright_white = ?',
+    'updated_at = ?'
+  ];
+
+  const values = [
+    themeDto.name,
+    theme?.foreground ?? null, theme?.background ?? null, theme?.cursor ?? null, theme?.cursorAccent ?? null,
+    theme?.selectionBackground ?? null, theme?.black ?? null, theme?.red ?? null, theme?.green ?? null, theme?.yellow ?? null, theme?.blue ?? null,
+    theme?.magenta ?? null, theme?.cyan ?? null, theme?.white ?? null, theme?.brightBlack ?? null, theme?.brightRed ?? null, theme?.brightGreen ?? null,
+    theme?.brightYellow ?? null, theme?.brightBlue ?? null, theme?.brightMagenta ?? null, theme?.brightCyan ?? null, theme?.brightWhite ?? null,
+    nowSeconds,
+    id // For WHERE clause
+  ];
+
   const sql = `
     UPDATE terminal_themes
-    SET name = ?, theme_data = ?, updated_at = ?
-    WHERE id = ? AND is_preset = 0
+    SET ${setClauses.join(', ')}
+    WHERE id = ? AND theme_type = 'user'
   `;
+
   try {
     const db = await getDbInstance();
-    const result = await runDb(db, sql, [themeDto.name, themeDataJson, now, id]);
+    const result = await runDb(db, sql, values);
     return result.changes > 0;
   } catch (err: any) {
     console.error(`更新 ID 为 ${id} 的终端主题失败:`, err.message);
