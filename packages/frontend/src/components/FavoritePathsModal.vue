@@ -92,8 +92,19 @@ const handleDelete = async (pathItem: FavoritePathItem) => {
 };
 
 const handleSendToTerminal = (pathItem: FavoritePathItem) => {
-  emitWorkspaceEvent('favoritePath:sendToActiveTerminal', { path: pathItem.path });
-  closeModal(); // Optionally close modal after sending
+  const activeSession = sessionStore.activeSession;
+  if (activeSession && activeSession.terminalManager) {
+    const escapedPath = `"${pathItem.path.replace(/"/g, '\\"')}"`;
+    const command = `cd ${escapedPath}\n`;
+    try {
+      activeSession.terminalManager.sendData(command);
+    } catch (error) {
+      console.error('[FavoritePathsModal] Failed to send command to active terminal:', error);
+    }
+  } else {
+    console.warn('[FavoritePathsModal] No active session with a terminal manager found to send path to.');
+  }
+  closeModal(); 
 };
 
 const closeModal = () => {
@@ -102,8 +113,6 @@ const closeModal = () => {
 
 const updatePosition = () => {
   if (!props.isVisible || !props.triggerElement || !modalContentRef.value) {
-    // If not visible or refs not available, do nothing or hide.
-    // v-if handles DOM presence, so style isn't applied when not isVisible.
     return;
   }
 

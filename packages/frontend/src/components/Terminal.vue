@@ -571,15 +571,6 @@ onMounted(() => {
       terminalRef.value.addEventListener('touchcancel', handleTouchEnd, { passive: false }); // Also handle cancel
     }
 
-    // Listen for favorite path to send to terminal
-    subscribeToWorkspaceEvent('favoritePath:sendToActiveTerminal', ({ path }) => {
-      if (terminal && props.isActive && sessionStore.activeSessionId === props.sessionId) {
-        // Ensure path is quoted to handle spaces or special characters
-        const command = `cd "${path.replace(/"/g, '\\"')}"\n`; // Escape existing quotes in path
-        emitWorkspaceEvent('terminal:input', { sessionId: props.sessionId, data: command });
-        terminal.focus(); // Focus terminal after sending command
-      }
-    });
 
   }
 });
@@ -624,7 +615,6 @@ onBeforeUnmount(() => {
         terminalRef.value.removeEventListener('touchcancel', handleTouchEnd);
     }
 
-    unsubscribeFromWorkspaceEvent('favoritePath:sendToActiveTerminal');
 
 
   });
