@@ -299,7 +299,6 @@ export const getAppearanceSettings = async (): Promise<AppearanceSettings> => {
     const db = await getDbInstance();
     // 从键值表中获取所有行
     const rows = await allDb<DbAppearanceSettingsRow>(db, `SELECT key, value, updated_at FROM ${TABLE_NAME}`);
-    console.log('[AppearanceRepo LOG] 从数据库读取的原始行:', JSON.stringify(rows)); // 添加原始行日志
     const mappedSettings = mapRowsToAppearanceSettings(rows); // 将键值对映射到设置对象
     console.log(`[AppearanceRepo LOG] 映射后的 terminalBackgroundEnabled 值: ${mappedSettings.terminalBackgroundEnabled}`); // 添加映射后值的日志
     return mappedSettings;
