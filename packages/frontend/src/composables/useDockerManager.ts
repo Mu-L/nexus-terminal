@@ -177,7 +177,6 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
             // How to notify UI? Maybe set an error ref? Or rely on status update?
             // For now, just log. UI component could show a generic error or use a notification system.
             // Consider adding a transient commandError ref if needed.
-             alert(`${t('dockerManager.error.commandFailed', { command: payload?.command || '?' })}: ${payload?.message || 'Unknown error'}`);
         });
 
         const unsubRequestUpdate = onMessage('request_docker_status_update', (payload, message) => {
@@ -192,12 +191,10 @@ export function createDockerManager(sessionId: string, wsDeps: DockerManagerDepe
     const sendDockerCommand = (containerId: string, command: 'start' | 'stop' | 'restart' | 'remove') => {
         if (!isConnected.value) {
             console.warn(`[DockerManager ${sessionId}] Cannot send command, WebSocket not connected.`);
-            alert(t('dockerManager.error.sshNotConnected')); // Use generic disconnected message
             return;
         }
         if (!isDockerAvailable.value) {
            console.warn(`[DockerManager ${sessionId}] Cannot send command, remote Docker is not available.`);
-           alert(t('dockerManager.notAvailable'));
            return;
         }
 

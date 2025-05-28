@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { ConnectionInfo } from '../stores/connections.store';
 import { useConfirmDialog } from '../composables/useConfirmDialog';
+import { useAlertDialog } from '../composables/useAlertDialog';
 import { storeToRefs } from 'pinia';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, enUS, ja } from 'date-fns/locale';
@@ -18,6 +19,7 @@ import type { Locale } from 'date-fns';
 
 const { t, locale } = useI18n();
 const { showConfirmDialog } = useConfirmDialog();
+const { showAlertDialog } = useAlertDialog();
 const connectionsStore = useConnectionsStore();
 const sessionStore = useSessionStore();
 const tagsStore = useTagsStore();
@@ -254,7 +256,7 @@ const invertSelection = () => {
 const openBatchEditModal = () => {
   if (selectedConnectionIdsForBatch.value.size === 0) {
     // Optionally, show a notification from uiNotificationsStore using your project's method
-    alert(t('connections.batchEdit.noSelectionForEdit', '请至少选择一个连接进行编辑。')); // Placeholder
+    showAlertDialog({ title: t('common.alert', '提示'), message: t('connections.batchEdit.noSelectionForEdit', '请至少选择一个连接进行编辑。') }); // Placeholder
     return;
   }
   showBatchEditForm.value = true;
@@ -294,14 +296,14 @@ const handleBatchDeleteConnections = async () => {
       await connectionsStore.deleteBatchConnections(idsToDelete);
 
 
-      alert(t('connections.batchEdit.successMessage', '选中的连接已成功删除。'));
+      showAlertDialog({ title: t('common.success', '成功'), message: t('connections.batchEdit.successMessage', '选中的连接已成功删除。') });
 
       selectedConnectionIdsForBatch.value.clear();
 
       await connectionsStore.fetchConnections();
     } catch (error: any) {
       console.error("Batch delete connections error:", error);
-      alert(t('connections.batchEdit.errorMessage', `批量删除连接失败: ${error.message || '未知错误'}`));
+      showAlertDialog({ title: t('common.error'), message: t('connections.batchEdit.errorMessage', `批量删除连接失败: ${error.message || '未知错误'}`) });
     } finally {
       isDeletingSelectedConnections.value = false;
     }

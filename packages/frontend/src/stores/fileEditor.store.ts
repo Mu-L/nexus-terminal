@@ -382,10 +382,6 @@ export const useFileEditorStore = defineStore('fileEditor', () => {
         if (tabToClose.isModified) {
             // 这里可以集成 UI 通知库来提示
             console.warn(`[文件编辑器 Store] 标签页 ${tabId} (${tabToClose.filename}) 已修改但未保存。正在关闭...`);
-            // alert(`文件 ${tabToClose.filename} 已修改但未保存。确定要关闭吗？`); // 简单的 alert 示例
-            // if (!confirm(`文件 ${tabToClose.filename} 已修改但未保存。确定要关闭吗？`)) {
-            //     return; // 用户取消关闭
-            // }
         }
 
         console.log(`[文件编辑器 Store] 关闭标签页: ${tabId}`);

@@ -62,6 +62,7 @@ import { useQuickCommandsStore, type QuickCommandFE } from '../stores/quickComma
 import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
 import TagInput from './TagInput.vue';
 import { useConfirmDialog } from '../composables/useConfirmDialog';
+import { useAlertDialog } from '../composables/useAlertDialog'; // +++ 导入 useAlertDialog +++
 
 const props = defineProps<{
     commandToEdit?: QuickCommandFE | null; // 接收要编辑的指令对象 (should include tagIds)
@@ -71,6 +72,7 @@ const emit = defineEmits(['close']);
 
 const { t } = useI18n();
 const { showConfirmDialog } = useConfirmDialog();
+const { showAlertDialog } = useAlertDialog(); // +++ 获取 showAlertDialog 函数 +++
 const quickCommandsStore = useQuickCommandsStore();
 const quickCommandTagsStore = useQuickCommandTagsStore(); // +++ Instantiate tag store +++
 const isSubmitting = ref(false);
@@ -144,8 +146,7 @@ const handleDeleteTag = async (tagId: number) => {
                  formData.tagIds.splice(index, 1);
             }
         } else {
-            // Optional: Show error notification if deletion fails
-             alert(t('tags.errorDelete', { error: quickCommandTagsStore.error || '未知错误' }));
+             showAlertDialog({ title: t('common.error', '错误'), message: t('tags.errorDelete', { error: quickCommandTagsStore.error || '未知错误' }) });
         }
     }
 };

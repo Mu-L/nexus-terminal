@@ -455,7 +455,6 @@ const handleItemAction = (item: FileListItem) => {
 
         if (!absolutePath) {
             console.error(`[FileManager ${props.sessionId}-${props.instanceId}] sftp:realpath:success for ${itemPath} missing absolutePath. Payload:`, payload);
-            alert(`Failed to resolve symbolic link "${item.filename}": Server did not return a valid path.`);
             return;
         }
          if (!targetType) {
@@ -475,14 +474,12 @@ const handleItemAction = (item: FileListItem) => {
         const resolvedPathInfo = payload.absolutePath ? ` (Resolved path: ${payload.absolutePath})` : '';
 
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Failed to get realpath or target type for symlink '${itemPath}': ${serverErrorMsg}${resolvedPathInfo}`);
-        alert(`Failed to resolve symbolic link "${item.filename}": ${serverErrorMsg}.${resolvedPathInfo} Please ensure the target exists and you have permissions.`);
       }
     });
 
     timeoutId = setTimeout(() => {
       cleanupListeners();
       console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Timeout getting realpath for symlink '${itemPath}' (ID: ${requestId}).`);
-      alert(`Timeout resolving symbolic link "${item.filename}".`);
     }, 10000); // 10 秒超时
     wsSend({ type: 'sftp:realpath', requestId: requestId, payload: { path: itemPath } });
     return; // Handled by async callbacks
@@ -620,13 +617,7 @@ const handleModalConfirm = (value?: string) => {
    case 'newFile':
      if (value) {
        if (manager.fileList.value.some((item: FileListItem) => item.filename === value)) {
-         // alert(t('fileManager.errors.fileExists', { name: value })); // Consider using modal for this error too
          console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] File ${value} already exists. Modal should prevent this.`);
-         // Re-open modal or show error in modal
-         // For now, we rely on modal's internal logic or a notification system
-         // To prevent closing, we can avoid calling handleModalClose here if an error occurs.
-         // However, the current modal design closes on confirm.
-         // A more robust solution would be for the modal to emit 'error' or handle validation internally.
          return; // Prevent closing if error
        }
        manager.createFile(value);
@@ -635,7 +626,6 @@ const handleModalConfirm = (value?: string) => {
    case 'newFolder':
      if (value) {
        if (manager.fileList.value.some((item: FileListItem) => item.filename === value)) {
-         // alert(t('fileManager.errors.folderExists', { name: value }));
          console.warn(`[FileManager ${props.sessionId}-${props.instanceId}] Folder ${value} already exists. Modal should prevent this.`);
          return; // Prevent closing if error
        }
@@ -758,20 +748,17 @@ const triggerFileUpload = () => { fileInputRef.value?.click(); };
 const triggerDownload = (items: FileListItem[]) => { // 修改：接受 FileListItem 数组
     // 恢复使用 props.wsDeps.isConnected
     if (!props.wsDeps.isConnected.value) {
-        alert(t('fileManager.errors.notConnected'));
         return;
     }
     // connectionId 仍然从 props 获取
     const currentConnectionId = props.dbConnectionId;
     if (!currentConnectionId) {
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot download: Missing connection ID.`);
-        alert(t('fileManager.errors.missingConnectionId'));
         return;
     }
     // 修改：简化检查
     if (!currentSftpManager.value) {
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot download: SFTP manager is not available.`);
-        alert(t('fileManager.errors.sftpManagerNotFound'));
         return;
     }
 
@@ -808,18 +795,15 @@ const triggerDownload = (items: FileListItem[]) => { // 修改：接受 FileList
 // +++ 文件夹下载触发器 +++
 const triggerDownloadDirectory = (item: FileListItem) => {
     if (!props.wsDeps.isConnected.value) {
-        alert(t('fileManager.errors.notConnected'));
         return;
     }
     const currentConnectionId = props.dbConnectionId;
     if (!currentConnectionId) {
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot download directory: Missing connection ID.`);
-        alert(t('fileManager.errors.missingConnectionId'));
         return;
     }
     if (!currentSftpManager.value) {
         console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Cannot download directory: SFTP manager is not available.`);
-        alert(t('fileManager.errors.sftpManagerNotFound'));
         return;
     }
 
@@ -878,16 +862,10 @@ const triggerDownloadDirectory = (item: FileListItem) => {
                     } catch (e2) { /* ignore */}
                 }
 
-                if (response.status === 404) {
-                     alert(t('fileManager.errors.downloadDirectoryNotImplemented', 'Directory download feature is not yet implemented on the server.'));
-                } else {
-                    alert(`${t('fileManager.errors.downloadDirectoryFailed', 'Failed to download directory')}: ${errorMsg}`);
-                }
             }
         })
         .catch(error => {
             console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Network error during directory download:`, error);
-            alert(`${t('fileManager.errors.downloadDirectoryFailed', 'Failed to download directory')}: Network error.`);
         });
     
 };

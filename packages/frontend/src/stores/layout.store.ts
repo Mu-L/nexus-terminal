@@ -465,9 +465,6 @@ function ensureNodeIds(node: LayoutNode | null): LayoutNode | null {
       console.log('[Layout Store] Header visibility saved to backend.');
     } catch (error) {
       console.error('[Layout Store] Failed to save header visibility to backend:', error);
-      // 可选：如果保存失败，回滚状态？
-      // isHeaderVisible.value = !newValue;
-      // alert('Failed to save preference.'); // 或者通知用户
     }
   }
 

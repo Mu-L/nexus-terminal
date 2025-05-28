@@ -423,7 +423,6 @@ const handleMenuAction = async (action: 'add' | 'edit' | 'delete' | 'clone') => 
           .catch(error => {
               // 可以在这里处理克隆失败的特定 UI 反馈，如果需要的话
               console.error("Cloning failed in component:", error);
-              // alert(t('connections.errors.cloneFailed', { error: connectionsStore.error || '未知错误' })); // store 中已有错误处理
           });
     }
   }

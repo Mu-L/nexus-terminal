@@ -8,6 +8,7 @@ import { useTagsStore } from '../stores/tags.store';
 import { useSshKeysStore } from '../stores/sshKeys.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useConfirmDialog } from './useConfirmDialog';
+import { useAlertDialog } from './useAlertDialog';
 
 // Define Props interface based on the component's props
 interface AddConnectionFormProps {
@@ -27,6 +28,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
 
   const { t } = useI18n();
   const { showConfirmDialog } = useConfirmDialog();
+  const { showAlertDialog } = useAlertDialog();
   const connectionsStore = useConnectionsStore();
   const proxiesStore = useProxiesStore();
   const tagsStore = useTagsStore();
@@ -807,7 +809,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       if (confirmedDeleteTag) {
           const success = await tagsStore.deleteTag(tagId);
           if (!success) {
-              alert(t('tags.errorDelete', { error: tagsStore.error || '未知错误' }));
+              showAlertDialog({ title: t('common.error', '错误'), message: t('tags.errorDelete', { error: tagsStore.error || '未知错误' }) });
           }
       }
   };

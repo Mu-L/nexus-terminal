@@ -1041,6 +1041,10 @@
       "testMessageUnsaved": "Test triggered for unsaved {channelType} configuration"
     },
   "common": {
+    "ok": "OK",
+    "success": "Success",
+    "error": "Error",
+    "alert": "Alert",
     "apply": "Apply",
     "loading": "Loading...",
     "cancel": "Cancel",

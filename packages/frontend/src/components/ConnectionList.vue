@@ -6,11 +6,13 @@ import { useI18n } from 'vue-i18n';
 import { useConnectionsStore, ConnectionInfo } from '../stores/connections.store';
 import { useTagsStore } from '../stores/tags.store';
 import { useConfirmDialog } from '../composables/useConfirmDialog';
+import { useAlertDialog } from '../composables/useAlertDialog';
 
-const { t } = useI18n(); 
+const { t } = useI18n();
 const router = useRouter();
 const tagsStore = useTagsStore();
 const { showConfirmDialog } = useConfirmDialog();
+const { showAlertDialog } = useAlertDialog();
 
 
 
@@ -132,11 +134,9 @@ const handleDelete = async (conn: ConnectionInfo) => {
     if (confirmed) {
         const success = await connectionsStore.deleteConnection(conn.id);
         if (!success) {
-            // 如果删除失败，显示 store 中的错误信息 (或自定义错误)
-            // 可以考虑使用更友好的提示方式，例如 toast 通知库
-            alert(t('connections.errors.deleteFailed', { error: connectionsStore.error || '未知错误' }));
+
+            showAlertDialog({ title: t('common.error'), message: t('connections.errors.deleteFailed', { error: connectionsStore.error || '未知错误' }) });
         }
-         // 成功时列表会自动更新，无需额外操作
      }
  };
 
@@ -149,9 +149,9 @@ const handleDelete = async (conn: ConnectionInfo) => {
 
      // 显示测试结果
      if (result.success) {
-         alert(t('connections.test.success'));
+         showAlertDialog({ title: t('common.success'), message: t('connections.test.success') });
      } else {
-         alert(t('connections.test.failed', { error: result.message || '未知错误' }));
+         showAlertDialog({ title: t('common.error'), message: t('connections.test.failed', { error: result.message || '未知错误' }) });
      }
  };
 

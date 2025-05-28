@@ -78,6 +78,10 @@
         "clearTerminal": "ターミナルをクリア"
     },
     "common": {
+        "ok": "確認",
+        "success": "成功",
+        "error": "失敗",
+        "alert": "お知らせ",
         "apply": "適用",
         "all": "すべて",
         "cancel": "キャンセル",

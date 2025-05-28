@@ -58,14 +58,12 @@ apiClient.interceptors.response.use(
         case 403: // 禁止访问
           // 可以显示一个权限不足的提示
           console.error('Forbidden access.');
-          // alert('您没有权限执行此操作。'); // 或者使用更友好的通知组件
           break;
         case 404: // 未找到
           console.error('Resource not found.');
           break;
         case 500: // 服务器内部错误
           console.error('Internal server error.');
-          // alert('服务器发生错误，请稍后重试。');
           break;
         // 可以根据需要添加更多错误状态码的处理
         default:
@@ -74,7 +72,6 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // 请求已发出，但没有收到响应 (例如网络问题)
       console.error('Network error or no response received:', error.request);
-      // alert('网络错误，请检查您的连接。');
     } else {
       // 发送请求时出了点问题
       console.error('Error setting up request:', error.message);

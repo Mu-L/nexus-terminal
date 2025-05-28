@@ -1073,6 +1073,10 @@
     "minimize": "最小化",
     "send":"发送",
     "copied": "已复制到剪贴板",
+    "ok":"确认",
+    "success":"成功",
+    "error":"失败",
+    "alert":"提示",
     "updateSuccess":"更新成功"
   },
   "layoutConfigurator": {

@@ -3,10 +3,12 @@ import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import { useProxiesStore, ProxyInfo } from '../stores/proxies.store';
 import { useConfirmDialog } from '../composables/useConfirmDialog';
+import { useAlertDialog } from '../composables/useAlertDialog';
 
 const { t } = useI18n();
 const proxiesStore = useProxiesStore();
 const { showConfirmDialog } = useConfirmDialog();
+const { showAlertDialog } = useAlertDialog();
 const { proxies, isLoading, error } = storeToRefs(proxiesStore);
 
 // 定义组件发出的事件
@@ -21,7 +23,7 @@ const handleDelete = async (proxy: ProxyInfo) => {
     if (confirmed) {
         const success = await proxiesStore.deleteProxy(proxy.id);
         if (!success) {
-            alert(t('proxies.errors.deleteFailed', { error: proxiesStore.error || '未知错误' }));
+            showAlertDialog({ title: t('common.error'), message: t('proxies.errors.deleteFailed', { error: proxiesStore.error || t('common.unknownError') }) });
         }
     }
 };

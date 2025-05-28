@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia';
 import draggable from 'vuedraggable';
 import LayoutNodeEditor from './LayoutNodeEditor.vue';
 import { useConfirmDialog } from '../composables/useConfirmDialog';
+import { useAlertDialog } from '../composables/useAlertDialog';
 
 
 
@@ -27,6 +28,7 @@ const layoutStore = useLayoutStore();
 const settingsStore = useSettingsStore(); // +++ Initialize settings store +++
 const { layoutLockedBoolean } = storeToRefs(settingsStore); // +++ Get reactive state +++
 const { showConfirmDialog } = useConfirmDialog();
+const { showAlertDialog } = useAlertDialog();
 
 // --- State ---
 const localLayoutTree: Ref<LayoutNode | null> = ref(null);
@@ -180,9 +182,6 @@ const handleLayoutLockChange = async () => { // Removed event parameter
     // but the button's appearance relies on layoutLockedBoolean which comes from the store.
   } catch (error) {
     console.error('[LayoutConfigurator] Failed to update layout lock setting:', error);
-    // Optionally show an error message
-    // No UI element state to revert directly here, the button state depends on layoutLockedBoolean
-    alert(t('layoutConfigurator.lockUpdateError', '更新布局锁定状态失败。'));
   }
 };
 
@@ -219,8 +218,6 @@ const saveLayout = async () => { // Make async
     console.log('[LayoutConfigurator] Layout saved successfully, dialog closed.');
   } catch (error) {
       console.error('[LayoutConfigurator] Error saving layout:', error);
-      // Optionally notify the user about the error
-      alert(t('layoutConfigurator.saveError', '保存布局时出错，请稍后再试。')); // Keep default text for now
   }
 };
 
