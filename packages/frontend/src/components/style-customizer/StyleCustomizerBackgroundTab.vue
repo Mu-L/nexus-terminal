@@ -438,7 +438,7 @@ const filteredRemoteHtmlPresets = computed(() => {
              class="absolute inset-0"
              :style="{ backgroundColor: `rgba(0, 0, 0, ${editableTerminalBackgroundOverlayOpacity})` }"
            ></div>
-           <span v-if="!terminalBackgroundImage" class="bg-white/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm relative z-10">{{ t('styleCustomizer.noBackground') }}</span>
+           <span v-if="!terminalBackgroundImage" class="bg-[var(--app-bg-color)]/80 px-3 py-1.5 rounded text-sm font-medium text-foreground shadow-sm relative z-10">{{ t('styleCustomizer.noBackground') }}</span>
        </div>
      <div class="flex gap-2 mb-4 flex-wrap items-center">
         <button @click="handleTriggerTerminalBgUpload" class="px-3 py-1.5 text-sm border border-border rounded bg-header hover:bg-border transition duration-200 ease-in-out whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">{{ t('styleCustomizer.uploadTerminalBg') }}</button>
