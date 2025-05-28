@@ -748,22 +748,16 @@ onBeforeUnmount(() => {
 
 
 <style>
-/* Override splitpanes default theme for VSCode-like dividers */
-/* .splitpanes.default-theme .splitpanes__splitter::before,
-.splitpanes.default-theme .splitpanes__splitter::after { */
-  /* Ensure handle lines remain hidden */
-  /* background-color: transparent !important; */
-/* } */
+
 .splitpanes.default-theme .splitpanes__splitter {
   background-image: none !important; /* Ensure no background image in normal state */
+  z-index: 5; /* Ensure splitter is above terminal content and its overlays */
 }
 .splitpanes.default-theme .splitpanes__splitter:hover { /* Apply hover style to the pseudo-element */
   background-color: transparent !important; /* Make splitter transparent on hover */
   background-image: none !important; /* Ensure no background image on hover */
-  /* Ensure it still occupies space and has cursor */
   position: relative;
   box-sizing: border-box;
-  /* transition: background-color 0.1s ease-in-out; */ /* Transition handled by ::before */
 }
 
 .splitpanes.default-theme .splitpanes__splitter:hover::before {
@@ -791,11 +785,13 @@ onBeforeUnmount(() => {
 .splitpanes--vertical > .splitpanes__splitter {
   border-color: var(--border-color) !important;
   width: 1px !important;
+  z-index: 5 !important; /* Ensure z-index for vertical splitters */
 }
 /* Horizontal splitter height */
 .splitpanes--horizontal > .splitpanes__splitter {
   border-color: var(--border-color) !important;
   height: 1px !important;
+  z-index: 5 !important; /* Ensure z-index for horizontal splitters */
 }
 
 /* --- Styles for Locked Layout --- */
