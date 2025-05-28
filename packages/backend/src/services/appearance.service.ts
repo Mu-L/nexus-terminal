@@ -7,7 +7,7 @@ import axios from 'axios';
 import sanitize from 'sanitize-filename'; // 用于清理文件名
 
 // 预设 HTML 主题的存储路径 (作为只读预设)
-const PRESET_HTML_THEMES_DIR = path.join(__dirname, '../../html-presets/'); // 原 HTML_PRESETS_DIR
+const PRESET_HTML_THEMES_DIR = path.join(__dirname, '../../html-presets/');
 
 const USER_CUSTOM_HTML_THEMES_DIR = path.join(__dirname, '../../data/custom_html_theme/');
 
@@ -656,4 +656,5 @@ export const getRemoteHtmlPresetContent = async (fileUrl: string): Promise<strin
         throw new Error(`请求远程文件内容时出错: ${error.message}`);
     }
 };
+
 

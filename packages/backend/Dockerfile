@@ -16,6 +16,7 @@ RUN npm install
 
 COPY packages/backend/src ./packages/backend/src
 COPY packages/backend/tsconfig.json ./packages/backend/
+COPY packages/backend/html-presets ./packages/backend/html-presets
 
 RUN npm run build --workspace=@nexus-terminal/backend
 
@@ -32,6 +33,7 @@ WORKDIR /app
 COPY --from=builder /app/packages/backend/dist ./dist
 
 COPY --from=builder /app/packages/backend/src/locales ./dist/locales
+COPY --from=builder /app/packages/backend/html-presets ./html-presets # 修改目标路径为 /app/html-presets/
 
 COPY packages/backend/package.json ./package.json
 COPY package-lock.json ./package-lock.json
