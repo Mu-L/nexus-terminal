@@ -5,6 +5,7 @@ import { useFavoritePathsStore, type FavoritePathItem } from '../stores/favorite
 import { useSessionStore } from '../stores/session.store';
 import AddEditFavoritePathForm from './AddEditFavoritePathForm.vue';
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const PADDING = 8; // px
 
@@ -25,6 +26,7 @@ const { t } = useI18n();
 const favoritePathsStore = useFavoritePathsStore();
 const sessionStore = useSessionStore();
 const emitWorkspaceEvent = useWorkspaceEventEmitter();
+const { showConfirmDialog } = useConfirmDialog();
 
 const searchTerm = ref('');
 const showAddEditModal = ref(false);
@@ -82,7 +84,10 @@ const openEditModal = (pathItem: FavoritePathItem) => {
 };
 
 const handleDelete = async (pathItem: FavoritePathItem) => {
-  if (confirm(t('favoritePaths.confirmDelete', { name: pathItem.name || pathItem.path }))) {
+  const confirmed = await showConfirmDialog({
+    message: t('favoritePaths.confirmDelete', { name: pathItem.name || pathItem.path })
+  });
+  if (confirmed) {
     try {
       await favoritePathsStore.deleteFavoritePath(pathItem.id, t);
     } catch (error) {

@@ -233,6 +233,7 @@ import { useQuickCommandsStore, type QuickCommandFE, type QuickCommandSortByType
 import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 import { useI18n } from 'vue-i18n';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 import AddEditQuickCommandForm from '../components/AddEditQuickCommandForm.vue';
 import { useFocusSwitcherStore } from '../stores/focusSwitcher.store'; 
 import { useSettingsStore } from '../stores/settings.store';
@@ -245,6 +246,7 @@ const quickCommandsStore = useQuickCommandsStore();
 const quickCommandTagsStore = useQuickCommandTagsStore(); 
 const uiNotificationsStore = useUiNotificationsStore();
 const { t } = useI18n();
+const { showConfirmDialog } = useConfirmDialog();
 const focusSwitcherStore = useFocusSwitcherStore();
 const settingsStore = useSettingsStore();
 const emitWorkspaceEvent = useWorkspaceEventEmitter();
@@ -510,8 +512,11 @@ const closeForm = () => {
   commandToEdit.value = null;
 };
 
-const confirmDelete = (command: QuickCommandFE) => {
-  if (window.confirm(t('quickCommands.confirmDelete', { name: command.name || command.command }))) {
+const confirmDelete = async (command: QuickCommandFE) => {
+  const confirmed = await showConfirmDialog({
+    message: t('quickCommands.confirmDelete', { name: command.name || command.command })
+  });
+  if (confirmed) {
     quickCommandsStore.deleteQuickCommand(command.id);
   }
 };

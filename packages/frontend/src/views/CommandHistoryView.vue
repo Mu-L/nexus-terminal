@@ -92,8 +92,10 @@ import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 import { useSessionStore } from '../stores/session.store'; 
 import type { SessionState } from '../stores/session/types'; 
 import { useConnectionsStore } from '../stores/connections.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const commandHistoryStore = useCommandHistoryStore();
+const { showConfirmDialog } = useConfirmDialog();
 const uiNotificationsStore = useUiNotificationsStore();
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
@@ -208,8 +210,11 @@ const handleSearchInputBlur = () => {
 };
 
 // 确认清空所有历史记录
-const confirmClearAll = () => {
-  if (window.confirm(t('commandHistory.confirmClear', '确定要清空所有历史记录吗？'))) {
+const confirmClearAll = async () => { // 注意 async
+  const confirmed = await showConfirmDialog({
+    message: t('commandHistory.confirmClear', '确定要清空所有历史记录吗？')
+  });
+  if (confirmed) {
     commandHistoryStore.clearAllHistory();
   }
 };

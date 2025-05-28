@@ -75,8 +75,10 @@ import { useNotificationsStore } from '../stores/notifications.store';
 import { NotificationSetting, NotificationChannelType, NotificationEvent } from '../types/server.types';
 import NotificationSettingForm from './NotificationSettingForm.vue'; 
 import { useI18n } from 'vue-i18n';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const store = useNotificationsStore();
+const { showConfirmDialog } = useConfirmDialog();
 const { t } = useI18n();
 
 const showAddForm = ref(false);
@@ -121,9 +123,14 @@ const editSetting = (setting: NotificationSetting) => {
   showAddForm.value = false; // Ensure add form is hidden
 };
 
-const confirmDelete = (setting: NotificationSetting) => {
-  if (setting.id && confirm(t('settings.notifications.confirmDelete', { name: setting.name }))) {
-    store.deleteSetting(setting.id);
+const confirmDelete = async (setting: NotificationSetting) => {
+  if (setting.id) {
+    const confirmed = await showConfirmDialog({
+      message: t('settings.notifications.confirmDelete', { name: setting.name })
+    });
+    if (confirmed) {
+      store.deleteSetting(setting.id);
+    }
   }
 };
 

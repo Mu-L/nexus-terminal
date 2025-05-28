@@ -46,12 +46,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useCommandHistoryStore, CommandHistoryEntryFE } from '../stores/commandHistory.store';
-import { useUiNotificationsStore } from '../stores/uiNotifications.store'; 
-import { useI18n } from 'vue-i18n'; 
+import { useUiNotificationsStore } from '../stores/uiNotifications.store';
+import { useI18n } from 'vue-i18n';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const commandHistoryStore = useCommandHistoryStore();
-const uiNotificationsStore = useUiNotificationsStore(); 
-const { t } = useI18n(); 
+const uiNotificationsStore = useUiNotificationsStore();
+const { t } = useI18n();
+const { showConfirmDialog } = useConfirmDialog();
 const hoveredItemId = ref<number | null>(null);
 const listContainer = ref<HTMLElement | null>(null);
 
@@ -80,9 +82,11 @@ const updateSearchTerm = (event: Event) => {
 };
 
 // 确认清空所有历史记录
-const confirmClearAll = () => {
-  // 使用浏览器的 confirm 对话框进行确认
-  if (window.confirm(t('commandHistory.confirmClear', '确定要清空所有历史记录吗？'))) {
+const confirmClearAll = async () => { // 注意 async，并替换为实际函数名
+  const confirmed = await showConfirmDialog({
+    message: t('commandHistory.confirmClear', '确定要清空所有历史记录吗？')
+  });
+  if (confirmed) {
     commandHistoryStore.clearAllHistory();
   }
 };

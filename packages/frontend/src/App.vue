@@ -17,6 +17,8 @@ import StyleCustomizer from './components/StyleCustomizer.vue';
 import FocusSwitcherConfigurator from './components/FocusSwitcherConfigurator.vue';
 import RemoteDesktopModal from './components/RemoteDesktopModal.vue';
 import VncModal from './components/VncModal.vue';
+import ConfirmDialog from './components/common/ConfirmDialog.vue';
+import { useDialogStore } from './stores/dialog.store';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
@@ -25,6 +27,8 @@ const appearanceStore = useAppearanceStore();
 const layoutStore = useLayoutStore();
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const sessionStore = useSessionStore(); // +++ 实例化 Session Store +++
+const dialogStore = useDialogStore(); // +++ 实例化 DialogStore +++
+const { state: dialogState } = storeToRefs(dialogStore); 
 const favoritePathsStore = useFavoritePathsStore(); // +++ 实例化 favoritePathsStore +++
 const { isAuthenticated } = storeToRefs(authStore);
 const { showPopupFileEditorBoolean } = storeToRefs(settingsStore);
@@ -346,6 +350,18 @@ const isElementVisibleAndFocusable = (element: HTMLElement): boolean => {
       @close="sessionStore.closeVncModal()"
     />
 
+    <!-- +++ 全局确认对话框 +++ -->
+    <ConfirmDialog
+          :visible="dialogState.visible"
+          :title="dialogState.title"
+          :message="dialogState.message"
+          :confirm-text="dialogState.confirmText"
+          :cancel-text="dialogState.cancelText"
+          :is-loading="dialogState.isLoading"
+          @confirm="dialogStore.handleConfirm"
+          @cancel="dialogStore.handleCancel"
+          @update:visible="(val: boolean) => dialogStore.state.visible = val"
+        />
 
   </div>
 </template>

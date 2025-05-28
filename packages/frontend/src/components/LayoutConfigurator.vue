@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch, type Ref, nextTick } from 'vue'; 
+import { ref, computed, watch, type Ref, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLayoutStore, type LayoutNode, type PaneName } from '../stores/layout.store';
-import { useSettingsStore } from '../stores/settings.store'; 
-import { storeToRefs } from 'pinia'; 
+import { useSettingsStore } from '../stores/settings.store';
+import { storeToRefs } from 'pinia';
 import draggable from 'vuedraggable';
 import LayoutNodeEditor from './LayoutNodeEditor.vue';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 
 
@@ -25,6 +26,7 @@ const { t } = useI18n();
 const layoutStore = useLayoutStore();
 const settingsStore = useSettingsStore(); // +++ Initialize settings store +++
 const { layoutLockedBoolean } = storeToRefs(settingsStore); // +++ Get reactive state +++
+const { showConfirmDialog } = useConfirmDialog();
 
 // --- State ---
 const localLayoutTree: Ref<LayoutNode | null> = ref(null);
@@ -184,10 +186,13 @@ const handleLayoutLockChange = async () => { // Removed event parameter
   }
 };
 
-const closeDialog = () => {
+const closeDialog = async () => {
   // Use the computed property for the check
   if (isModified.value) {
-    if (confirm(t('layoutConfigurator.confirmClose', '有未保存的更改，确定要关闭吗？'))) {
+    const confirmed = await showConfirmDialog({
+      message: t('layoutConfigurator.confirmClose', '有未保存的更改，确定要关闭吗？')
+    });
+    if (confirmed) {
       emit('close');
     }
   } else {
@@ -219,8 +224,11 @@ const saveLayout = async () => { // Make async
   }
 };
 
-const resetToDefault = () => {
-  if (confirm(t('layoutConfigurator.confirmReset', '确定要恢复默认布局和侧栏配置吗？当前更改将丢失。'))) {
+const resetToDefault = async () => {
+  const confirmed = await showConfirmDialog({
+    message: t('layoutConfigurator.confirmReset', '确定要恢复默认布局和侧栏配置吗？当前更改将丢失。')
+  });
+  if (confirmed) {
     // Reset main layout
     const defaultLayout = layoutStore.getSystemDefaultLayout();
     localLayoutTree.value = JSON.parse(JSON.stringify(defaultLayout));
@@ -295,12 +303,15 @@ function findAndRemoveNode(node: LayoutNode | null, parentNodeId: string | undef
 }
 
 // CORRECTED handleNodeRemove
-const handleNodeRemove = (payload: { parentNodeId: string | undefined; nodeIndex: number }) => {
+const handleNodeRemove = async (payload: { parentNodeId: string | undefined; nodeIndex: number }) => {
   console.log('[LayoutConfigurator] Received node remove request:', payload);
   if (payload.parentNodeId === undefined && payload.nodeIndex === 0) {
-     if (confirm(t('layoutConfigurator.confirmClearLayout', '确定要清空整个布局吗？所有面板将返回可用列表。'))) { // Keep default text for now
-       localLayoutTree.value = null;
-     }
+    const confirmed = await showConfirmDialog({
+      message: t('layoutConfigurator.confirmClearLayout', '确定要清空整个布局吗？所有面板将返回可用列表。')
+    });
+    if (confirmed) {
+      localLayoutTree.value = null;
+    }
   } else if (payload.parentNodeId) {
      // Update the local tree; isModified will react automatically
      localLayoutTree.value = findAndRemoveNode(localLayoutTree.value, payload.parentNodeId, payload.nodeIndex);

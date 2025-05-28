@@ -10,13 +10,14 @@ import type { SortField, SortOrder } from '../stores/settings.store';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import type { ConnectionInfo } from '../stores/connections.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 import { storeToRefs } from 'pinia';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, enUS, ja } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 
 const { t, locale } = useI18n();
-const router = useRouter();
+const { showConfirmDialog } = useConfirmDialog();
 const connectionsStore = useConnectionsStore();
 const sessionStore = useSessionStore();
 const tagsStore = useTagsStore();
@@ -282,7 +283,11 @@ const handleBatchDeleteConnections = async () => {
     `您确定要删除选中的 ${selectedConnectionIdsForBatch.value.size} 个连接吗？此操作无法撤销。`
   );
 
-  if (window.confirm(confirmMessage)) {
+
+  const confirmed = await showConfirmDialog({
+    message: confirmMessage
+  });
+  if (confirmed) {
     isDeletingSelectedConnections.value = true;
     try {
       const idsToDelete = Array.from(selectedConnectionIdsForBatch.value);
@@ -293,7 +298,7 @@ const handleBatchDeleteConnections = async () => {
 
       selectedConnectionIdsForBatch.value.clear();
 
-      await connectionsStore.fetchConnections(); 
+      await connectionsStore.fetchConnections();
     } catch (error: any) {
       console.error("Batch delete connections error:", error);
       alert(t('connections.batchEdit.errorMessage', `批量删除连接失败: ${error.message || '未知错误'}`));

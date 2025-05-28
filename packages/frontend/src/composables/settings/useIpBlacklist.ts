@@ -3,11 +3,13 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useSettingsStore } from '../../stores/settings.store';
 import { useAuthStore } from '../../stores/auth.store';
+import { useConfirmDialog } from '../useConfirmDialog';
 
 export function useIpBlacklist() {
     const settingsStore = useSettingsStore();
     const authStore = useAuthStore();
     const { t } = useI18n();
+    const { showConfirmDialog } = useConfirmDialog();
     const { settings, ipBlacklistEnabledBoolean } = storeToRefs(settingsStore);
 
     // --- IP Blacklist Enabled State & Method ---
@@ -110,7 +112,11 @@ export function useIpBlacklist() {
 
     const handleDeleteIp = async (ip: string) => {
         blacklistToDeleteIp.value = ip;
-        if (confirm(t('settings.ipBlacklist.confirmRemoveIp', { ip }))) {
+        const confirmed = await showConfirmDialog({
+            title: '',
+            message: t('settings.ipBlacklist.confirmRemoveIp', { ip }),
+        });
+        if (confirmed) {
             blacklistDeleteLoading.value = true;
             blacklistDeleteError.value = null;
             try {

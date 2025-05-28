@@ -7,6 +7,7 @@ import { useProxiesStore } from '../stores/proxies.store';
 import { useTagsStore } from '../stores/tags.store';
 import { useSshKeysStore } from '../stores/sshKeys.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
+import { useConfirmDialog } from './useConfirmDialog';
 
 // Define Props interface based on the component's props
 interface AddConnectionFormProps {
@@ -25,6 +26,7 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
   const { connectionToEdit } = toRefs(props);
 
   const { t } = useI18n();
+  const { showConfirmDialog } = useConfirmDialog();
   const connectionsStore = useConnectionsStore();
   const proxiesStore = useProxiesStore();
   const tagsStore = useTagsStore();
@@ -767,7 +769,10 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
     if (!isEditMode.value || !connectionToEdit.value) return;
 
     const connectionName = connectionToEdit.value.name || `ID: ${connectionToEdit.value.id}`;
-    if (!confirm(t('connections.prompts.confirmDelete', { name: connectionName }))) {
+    const confirmedDeleteConnection = await showConfirmDialog({
+      message: t('connections.prompts.confirmDelete', { name: connectionName })
+    });
+    if (!confirmedDeleteConnection) {
         return;
     }
 
@@ -796,7 +801,10 @@ export function useAddConnectionForm(props: AddConnectionFormProps, emit: AddCon
       const tagToDelete = tags.value.find(t_ => t_.id === tagId);
       if (!tagToDelete) return;
 
-      if (confirm(t('tags.prompts.confirmDelete', { name: tagToDelete.name }))) {
+      const confirmedDeleteTag = await showConfirmDialog({
+        message: t('tags.prompts.confirmDelete', { name: tagToDelete.name })
+      });
+      if (confirmedDeleteTag) {
           const success = await tagsStore.deleteTag(tagId);
           if (!success) {
               alert(t('tags.errorDelete', { error: tagsStore.error || '未知错误' }));

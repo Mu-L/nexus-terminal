@@ -2,9 +2,11 @@
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import { useProxiesStore, ProxyInfo } from '../stores/proxies.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const { t } = useI18n();
 const proxiesStore = useProxiesStore();
+const { showConfirmDialog } = useConfirmDialog();
 const { proxies, isLoading, error } = storeToRefs(proxiesStore);
 
 // 定义组件发出的事件
@@ -13,7 +15,10 @@ const emit = defineEmits(['edit-proxy']);
 // 处理删除代理的方法
 const handleDelete = async (proxy: ProxyInfo) => {
     const confirmMessage = t('proxies.prompts.confirmDelete', { name: proxy.name });
-    if (window.confirm(confirmMessage)) {
+    const confirmed = await showConfirmDialog({
+      message: confirmMessage
+    });
+    if (confirmed) {
         const success = await proxiesStore.deleteProxy(proxy.id);
         if (!success) {
             alert(t('proxies.errors.deleteFailed', { error: proxiesStore.error || '未知错误' }));

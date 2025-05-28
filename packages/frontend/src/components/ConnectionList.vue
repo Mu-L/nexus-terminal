@@ -3,12 +3,14 @@ import { onMounted, computed, ref, reactive, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useConnectionsStore, ConnectionInfo } from '../stores/connections.store'; 
-import { useTagsStore } from '../stores/tags.store'; 
+import { useConnectionsStore, ConnectionInfo } from '../stores/connections.store';
+import { useTagsStore } from '../stores/tags.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const { t } = useI18n(); 
-const router = useRouter(); 
-const tagsStore = useTagsStore(); 
+const router = useRouter();
+const tagsStore = useTagsStore();
+const { showConfirmDialog } = useConfirmDialog();
 
 
 
@@ -124,7 +126,10 @@ const handleDelete = async (conn: ConnectionInfo) => {
     const connectionsStore = useConnectionsStore();
     // 使用 i18n 获取确认消息
     const confirmMessage = t('connections.prompts.confirmDelete', { name: conn.name });
-    if (window.confirm(confirmMessage)) {
+    const confirmed = await showConfirmDialog({
+      message: confirmMessage
+    });
+    if (confirmed) {
         const success = await connectionsStore.deleteConnection(conn.id);
         if (!success) {
             // 如果删除失败，显示 store 中的错误信息 (或自定义错误)

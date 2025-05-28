@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import { useTagsStore, type TagInfo } from '../stores/tags.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 interface Props {
   tagInfo: TagInfo | null; // 传递整个 TagInfo 对象
@@ -19,6 +20,7 @@ const { t } = useI18n();
 const connectionsStore = useConnectionsStore();
 const tagsStore = useTagsStore(); // 如果需要更新标签信息或调用标签相关的 actions
 const uiNotificationsStore = useUiNotificationsStore();
+const { showConfirmDialog } = useConfirmDialog();
 
 const { connections: allConnections, isLoading: connectionsLoading } = storeToRefs(connectionsStore);
 
@@ -127,7 +129,10 @@ const handleDeleteTag = async () => {
   if (!props.tagInfo) return;
 
   const tagName = props.tagInfo.name;
-  if (confirm(t('tags.prompts.confirmDelete', { name: tagName }))) {
+  const confirmed = await showConfirmDialog({
+    message: t('tags.prompts.confirmDelete', { name: tagName })
+  });
+  if (confirmed) {
     const success = await tagsStore.deleteTag(props.tagInfo.id);
     if (success) {
       uiNotificationsStore.addNotification({ message: t('tags.deleteSuccess', { name: tagName }), type: 'success' }); // 需要新的翻译键

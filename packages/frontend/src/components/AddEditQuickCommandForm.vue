@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 bg-overlay flex justify-center items-center z-[1050]" @click.self="closeForm">
+  <div class="fixed inset-0 bg-overlay flex justify-center items-center z-50" @click.self="closeForm">
     <div class="bg-background text-foreground p-6 rounded-xl border border-border/50 shadow-2xl w-[90%] max-w-lg">
       <h2 class="m-0 mb-6 text-center text-xl font-semibold">{{ isEditing ? t('quickCommands.form.titleEdit', '编辑快捷指令') : t('quickCommands.form.titleAdd', '添加快捷指令') }}</h2>
       <form @submit.prevent="handleSubmit" class="space-y-5">
@@ -60,7 +60,8 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuickCommandsStore, type QuickCommandFE } from '../stores/quickCommands.store';
 import { useQuickCommandTagsStore } from '../stores/quickCommandTags.store'; 
-import TagInput from './TagInput.vue'; 
+import TagInput from './TagInput.vue';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const props = defineProps<{
     commandToEdit?: QuickCommandFE | null; // 接收要编辑的指令对象 (should include tagIds)
@@ -69,6 +70,7 @@ const props = defineProps<{
 const emit = defineEmits(['close']);
 
 const { t } = useI18n();
+const { showConfirmDialog } = useConfirmDialog();
 const quickCommandsStore = useQuickCommandsStore();
 const quickCommandTagsStore = useQuickCommandTagsStore(); // +++ Instantiate tag store +++
 const isSubmitting = ref(false);
@@ -126,8 +128,11 @@ const handleDeleteTag = async (tagId: number) => {
     const tagToDelete = quickCommandTagsStore.tags.find(t => t.id === tagId);
     if (!tagToDelete) return;
 
-    if (confirm(t('tags.prompts.confirmDelete', { name: tagToDelete.name }))) {
-        console.log(`[QuickCmdForm] Calling quickCommandTagsStore.deleteTag...`); 
+    const confirmed = await showConfirmDialog({
+        message: t('tags.prompts.confirmDelete', { name: tagToDelete.name })
+    });
+    if (confirmed) {
+        console.log(`[QuickCmdForm] Calling quickCommandTagsStore.deleteTag...`);
         const success = await quickCommandTagsStore.deleteTag(tagId);
         if (success) {
             // If deletion is successful, TagInput's availableTags will update,
@@ -135,7 +140,7 @@ const handleDeleteTag = async (tagId: number) => {
             // We also need to remove it from the local formData.tagIds if it was selected.
             const index = formData.tagIds.indexOf(tagId);
             if (index > -1) {
-                 console.log(`[QuickCmdForm] Removing deleted tag ID ${tagId} from selection.`); 
+                 console.log(`[QuickCmdForm] Removing deleted tag ID ${tagId} from selection.`);
                  formData.tagIds.splice(index, 1);
             }
         } else {

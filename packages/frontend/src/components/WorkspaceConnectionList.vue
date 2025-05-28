@@ -12,6 +12,8 @@ import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // ++
 import { useSettingsStore } from '../stores/settings.store'; 
 import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 import ManageTagConnectionsModal from './ManageTagConnectionsModal.vue'; 
+import { useConfirmDialog } from '../composables/useConfirmDialog';
+
 
 // 定义事件
 
@@ -25,6 +27,7 @@ const sessionStore = useSessionStore(); // 获取 session store 实例
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const uiNotificationsStore = useUiNotificationsStore(); // +++ 修正实例化大小写 +++
 const settingsStore = useSettingsStore(); // 实例化设置 store
+const { showConfirmDialog } = useConfirmDialog();
 
 const { connections, isLoading: connectionsLoading, error: connectionsError } = storeToRefs(connectionsStore);
 const { tags, isLoading: tagsLoading, error: tagsError } = storeToRefs(tagsStore);
@@ -378,7 +381,7 @@ const closeContextMenu = () => {
 };
 
 // 处理右键菜单操作
-const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // 添加 'clone' 类型
+const handleMenuAction = async (action: 'add' | 'edit' | 'delete' | 'clone') => { // 添加 'clone' 类型
   const conn = contextTargetConnection.value;
   closeContextMenu(); // 先关闭菜单
 
@@ -386,12 +389,15 @@ const handleMenuAction = (action: 'add' | 'edit' | 'delete' | 'clone') => { // �
     console.log('[WorkspaceConnectionList] handleMenuAction called with action: add. Emitting request-add-connection...'); 
     // router.push('/connections/add'); // 改为触发事件
     emitWorkspaceEvent('connection:requestAdd');
-  } else if (conn) {
+  }else if (conn) {
     if (action === 'edit') {
       // router.push(`/connections/edit/${conn.id}`); // 改为触发事件
       emitWorkspaceEvent('connection:requestEdit', { connectionInfo: conn }); // 传递整个连接对象
     } else if (action === 'delete') {
-      if (confirm(t('connections.prompts.confirmDelete', { name: conn.name || conn.host }))) {
+      const confirmed = await showConfirmDialog({
+        message: t('connections.prompts.confirmDelete', { name: conn.name || conn.host })
+      });
+      if (confirmed) {
         connectionsStore.deleteConnection(conn.id);
         // 注意：删除后列表会自动更新，因为 store 是响应式的
       }
@@ -476,7 +482,7 @@ const closeTagContextMenu = () => {
 
 // 处理标签右键菜单操作
 // 修改：允许直接传递 groupData，用于新的行内编辑按钮
-const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConnections', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
+const handleTagMenuAction = async (action: 'connectAll' | 'manageTag' | 'deleteAllConnections', directGroupData?: (typeof filteredAndGroupedConnections.value)[0]) => {
   const group = directGroupData || contextTargetTagGroup.value; // 优先使用直接传递的 groupData
   closeTagContextMenu(); // 先关闭菜单
 
@@ -530,7 +536,10 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConn
       return;
     }
 
-    if (confirm(t('workspaceConnectionList.confirmDeleteAllConnectionsInGroup', { count: group.connections.length, groupName: group.groupName }))) { 
+    const confirmed = await showConfirmDialog({
+      message: t('workspaceConnectionList.confirmDeleteAllConnectionsInGroup', { count: group.connections.length, groupName: group.groupName })
+    });
+    if (confirmed) {
       const connectionIdsToDelete = group.connections.map(conn => conn.id);
       
       const deletePromises = connectionIdsToDelete.map(connId =>
@@ -547,13 +556,13 @@ const handleTagMenuAction = (action: 'connectAll' | 'manageTag' | 'deleteAllConn
 
           if (successfulDeletes > 0) {
             uiNotificationsStore.addNotification({
-              message: t('workspaceConnectionList.allConnectionsInGroupDeletedSuccess', { count: successfulDeletes, groupName: group.groupName }), 
+              message: t('workspaceConnectionList.allConnectionsInGroupDeletedSuccess', { count: successfulDeletes, groupName: group.groupName }),
               type: 'success',
             });
           }
           if (failedDeletes > 0) {
              uiNotificationsStore.addNotification({
-              message: t('workspaceConnectionList.someConnectionsInGroupDeleteFailed', { count: failedDeletes, groupName: group.groupName }), 
+              message: t('workspaceConnectionList.someConnectionsInGroupDeleteFailed', { count: failedDeletes, groupName: group.groupName }),
               type: 'error',
             });
           }

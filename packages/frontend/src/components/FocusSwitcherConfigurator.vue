@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch, reactive, type Ref } from 'vue'; 
+import { ref, computed, watch, reactive, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import draggable from 'vuedraggable';
-import { useFocusSwitcherStore, type FocusableInput, type FocusItemConfig, type FocusSwitcherFullConfig } from '../stores/focusSwitcher.store'; 
+import { useFocusSwitcherStore, type FocusableInput, type FocusItemConfig, type FocusSwitcherFullConfig } from '../stores/focusSwitcher.store';
 import { storeToRefs } from 'pinia';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 // 本地接口，仅用于右侧列表显示
 interface SequenceDisplayItem extends FocusableInput {}
@@ -23,7 +24,8 @@ const emit = defineEmits(['close']);
 // --- Setup ---
 const { t } = useI18n();
 const focusSwitcherStore = useFocusSwitcherStore(); // 实例化 Store
-
+const { showConfirmDialog } = useConfirmDialog();
+ 
 // --- State ---
 const dialogRef = ref<HTMLElement | null>(null);
 const initialDialogState = { width: 900, height: 600 }; // *** 增加初始尺寸 ***
@@ -144,9 +146,12 @@ watch([localSequence, localItemConfigs], () => {
 
 
 // --- Methods ---
-const closeDialog = () => {
+const closeDialog = async () => {
   if (hasChanges.value) {
-    if (confirm(t('focusSwitcher.confirmClose', '有未保存的更改，确定要关闭吗？'))) {
+    const confirmed = await showConfirmDialog({
+      message: t('focusSwitcher.confirmClose', '有未保存的更改，确定要关闭吗？')
+    });
+    if (confirmed) {
       emit('close');
     }
   } else {

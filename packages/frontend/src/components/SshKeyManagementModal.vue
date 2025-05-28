@@ -3,12 +3,14 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSshKeysStore, SshKeyBasicInfo, SshKeyInput } from '../stores/sshKeys.store';
 import { useUiNotificationsStore } from '../stores/uiNotifications.store';
+import { useConfirmDialog } from '../composables/useConfirmDialog';
 
 const emit = defineEmits(['close']);
 
 const { t } = useI18n();
 const sshKeysStore = useSshKeysStore();
 const uiNotificationsStore = useUiNotificationsStore();
+const { showConfirmDialog } = useConfirmDialog();
 
 const keys = computed(() => sshKeysStore.sshKeys);
 const isLoading = computed(() => sshKeysStore.isLoading);
@@ -104,18 +106,20 @@ const handleSubmit = async () => {
 
 // Handle key deletion
 const handleDelete = async (key: SshKeyBasicInfo) => {
-    // Simple confirmation dialog
-    if (confirm(t('sshKeys.modal.confirmDelete', { name: key.name }))) {
-        const success = await sshKeysStore.deleteSshKey(key.id);
-        if (!success) {
-            // Error handled by store
-        }
-         // If the deleted key was being edited, close the form
-         if (keyToEdit.value?.id === key.id) {
-            isAddEditFormVisible.value = false;
-            keyToEdit.value = null;
-        }
+  const confirmed = await showConfirmDialog({
+    message: t('sshKeys.modal.confirmDelete', { name: key.name })
+  });
+  if (confirmed) {
+    const success = await sshKeysStore.deleteSshKey(key.id);
+    if (!success) {
+        // Error handled by store
     }
+     // If the deleted key was being edited, close the form
+     if (keyToEdit.value?.id === key.id) {
+        isAddEditFormVisible.value = false;
+        keyToEdit.value = null;
+    }
+  }
 };
 
 // Cancel add/edit form

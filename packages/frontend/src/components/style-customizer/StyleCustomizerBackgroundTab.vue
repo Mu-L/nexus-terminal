@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { useAppearanceStore } from '../../stores/appearance.store';
 import { useUiNotificationsStore } from '../../stores/uiNotifications.store';
 import { storeToRefs } from 'pinia';
+import { useConfirmDialog } from '../../composables/useConfirmDialog';
+
 
 const { t } = useI18n();
+const { showConfirmDialog } = useConfirmDialog();
 const appearanceStore = useAppearanceStore();
 const notificationsStore = useUiNotificationsStore();
 
@@ -294,9 +297,11 @@ const handleSaveLocalPreset = async () => {
 };
 
 const handleDeleteLocalPreset = async (name: string) => {
-  // name here is the full filename with .html
   const displayName = name.replace(/\.html$/, '');
-  if (confirm(t('styleCustomizer.confirmDeletePreset', { name: displayName }))) {
+  const confirmed = await showConfirmDialog({
+    message: t('styleCustomizer.confirmDeletePreset', { name: displayName })
+  });
+  if (confirmed) {
     try {
       await deleteLocalHtmlPreset(name);
       notificationsStore.addNotification({ type: 'success', message: t('styleCustomizer.localPresetDeleted') });
