@@ -13,6 +13,7 @@ export interface AppearanceSettings {
   activeTerminalThemeId?: number | null; // 修改为数字 ID 或 null
   terminalFontFamily?: string; // 终端字体列表字符串
   terminalFontSize?: number; // 终端字体大小 (px)
+  terminalFontSizeMobile?: number; // 移动端终端字体大小 (px)
   terminalBackgroundImage?: string; // 终端背景图片 URL 或路径
   pageBackgroundImage?: string; // 页面背景图片 URL 或路径
   editorFontSize?: number; // 编辑器字体大小 (px)

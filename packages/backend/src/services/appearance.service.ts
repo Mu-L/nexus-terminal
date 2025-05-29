@@ -94,6 +94,16 @@ export const updateSettings = async (settingsDto: UpdateAppearanceDto): Promise<
       settingsDto.terminalFontSize = size;
   }
 
+  // 验证 terminalFontSizeMobile (如果提供了)
+  if (settingsDto.terminalFontSizeMobile !== undefined && settingsDto.terminalFontSizeMobile !== null) {
+      const size = Number(settingsDto.terminalFontSizeMobile);
+      if (isNaN(size) || size <= 0) {
+          throw new Error(`无效的移动端终端字体大小: ${settingsDto.terminalFontSizeMobile}。必须是一个正数。`);
+      }
+      // 确保类型正确传递给仓库层
+      settingsDto.terminalFontSizeMobile = size;
+  }
+
   // 验证 editorFontSize (如果提供了)
   if (settingsDto.editorFontSize !== undefined && settingsDto.editorFontSize !== null) {
       const size = Number(settingsDto.editorFontSize);

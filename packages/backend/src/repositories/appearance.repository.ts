@@ -49,6 +49,9 @@ let terminalTextStrokeEnabledFound = false;
             case 'terminalFontSize':
                 settings.terminalFontSize = parseInt(row.value, 10);
                 break;
+            case 'terminalFontSizeMobile':
+                settings.terminalFontSizeMobile = parseInt(row.value, 10);
+                break;
             case 'editorFontSize':
                 settings.editorFontSize = parseInt(row.value, 10);
                 break;
@@ -117,6 +120,7 @@ case 'terminalTextStrokeEnabled':
         activeTerminalThemeId: settings.activeTerminalThemeId ?? defaults.activeTerminalThemeId,
         terminalFontFamily: settings.terminalFontFamily ?? defaults.terminalFontFamily,
         terminalFontSize: settings.terminalFontSize ?? defaults.terminalFontSize,
+        terminalFontSizeMobile: settings.terminalFontSizeMobile ?? defaults.terminalFontSizeMobile,
         editorFontSize: settings.editorFontSize ?? defaults.editorFontSize,
         editorFontFamily: settings.editorFontFamily ?? defaults.editorFontFamily,
         terminalBackgroundImage: settings.terminalBackgroundImage ?? defaults.terminalBackgroundImage,
@@ -166,6 +170,7 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         activeTerminalThemeId: null, // 初始默认应为 null
         terminalFontFamily: 'Consolas, "Courier New", monospace, "Microsoft YaHei", "微软雅黑"',
         terminalFontSize: 14,
+        terminalFontSizeMobile: 14, // 移动端默认字体大小
         editorFontSize: 14,
         editorFontFamily: 'Consolas, "Noto Sans SC", "Microsoft YaHei"',
         terminalBackgroundImage: undefined,
@@ -206,6 +211,7 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'activeTerminalThemeId', value: null }, // 以 null 开始
         { key: 'terminalFontFamily', value: defaults.terminalFontFamily },
         { key: 'terminalFontSize', value: defaults.terminalFontSize },
+        { key: 'terminalFontSizeMobile', value: defaults.terminalFontSizeMobile },
         { key: 'editorFontSize', value: defaults.editorFontSize },
         { key: 'editorFontFamily', value: defaults.editorFontFamily },
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
