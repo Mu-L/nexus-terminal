@@ -2,7 +2,7 @@
 import { onMounted, onBeforeUnmount, computed, ref, shallowRef, type PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useLayoutStore } from '../stores/layout.store';
+import { useLayoutStore, type LayoutNode } from '../stores/layout.store'; // +++ Import LayoutNode +++
 import { useDeviceDetection } from '../composables/useDeviceDetection';
 import { useConnectionsStore, type ConnectionInfo } from '../stores/connections.store';
 import AddConnectionFormComponent from '../components/AddConnectionForm.vue';
@@ -62,6 +62,15 @@ const activeEditorTabId = computed(() => {
   }
 });
 
+// +++ Add computed property for mobile terminal layout node +++
+const mobileLayoutNodeForTerminal = computed((): LayoutNode | null => {
+  return {
+    id: 'mobile-main-terminal-pane',
+    type: 'pane' as const,
+    component: 'terminal' as const,
+    size: 100,
+  };
+});
 
 // --- UI 状态 (保持本地) ---
 const showAddEditForm = ref(false);
@@ -358,108 +367,66 @@ const handleSearch = (term: string) => { // +++ 修改 +++
   handleFindNext(); // 保持调用 findNext，内部会处理 isMobile
 };
 
-const handleFindNext = () => { // +++ 修改 +++
-  if (isMobile.value) {
-    if (mobileTerminalRef.value && currentSearchTerm.value) {
-      console.log(`[WorkspaceView Mobile] Calling findNext for term: "${currentSearchTerm.value}"`);
-      const found = mobileTerminalRef.value.findNext(currentSearchTerm.value, { incremental: true });
-      console.log(`[WorkspaceView Mobile] findNext returned: ${found}`);
-      if (!found) {
-        console.log(`[WorkspaceView Mobile] findNext: No more results for "${currentSearchTerm.value}"`);
-      }
-    } else {
-      console.warn(`[WorkspaceView Mobile] Cannot findNext, no mobile terminal ref or search term.`);
+const handleFindNext = () => {
+  const manager = activeSession.value?.terminalManager;
+  if (manager && currentSearchTerm.value) {
+    const mode = isMobile.value ? 'Mobile' : 'Desktop';
+    console.log(`[WorkspaceView ${mode}] Calling findNext for term: "${currentSearchTerm.value}"`);
+    const found = manager.searchNext(currentSearchTerm.value, { incremental: true });
+    console.log(`[WorkspaceView ${mode}] findNext returned: ${found}`);
+    if (!found) {
+      console.log(`[WorkspaceView ${mode}] findNext: No more results for "${currentSearchTerm.value}"`);
     }
   } else {
-    // --- 桌面端逻辑 ---
-    const manager = activeSession.value?.terminalManager;
-    if (manager && currentSearchTerm.value) {
-      console.log(`[WorkspaceView Desktop] Calling findNext for term: "${currentSearchTerm.value}"`);
-      const found = manager.searchNext(currentSearchTerm.value, { incremental: true });
-      console.log(`[WorkspaceView Desktop] findNext returned: ${found}`);
-      if (!found) {
-        console.log(`[WorkspaceView Desktop] findNext: No more results for "${currentSearchTerm.value}"`);
-      }
-    } else {
-       console.warn(`[WorkspaceView Desktop] Cannot findNext, no active session manager or search term.`);
-    }
+    const mode = isMobile.value ? 'Mobile' : 'Desktop';
+    console.warn(`[WorkspaceView ${mode}] Cannot findNext, no active session manager or search term.`);
   }
 };
 
-const handleFindPrevious = () => { // +++ 修改 +++
-  if (isMobile.value) {
-    if (mobileTerminalRef.value && currentSearchTerm.value) {
-      console.log(`[WorkspaceView Mobile] Calling findPrevious for term: "${currentSearchTerm.value}"`);
-      const found = mobileTerminalRef.value.findPrevious(currentSearchTerm.value, { incremental: true });
-      console.log(`[WorkspaceView Mobile] findPrevious returned: ${found}`);
-      if (!found) {
-        console.log(`[WorkspaceView Mobile] findPrevious: No previous results for "${currentSearchTerm.value}"`);
-      }
-    } else {
-      console.warn(`[WorkspaceView Mobile] Cannot findPrevious, no mobile terminal ref or search term.`);
+const handleFindPrevious = () => {
+  const manager = activeSession.value?.terminalManager;
+  if (manager && currentSearchTerm.value) {
+    const mode = isMobile.value ? 'Mobile' : 'Desktop';
+    console.log(`[WorkspaceView ${mode}] Calling findPrevious for term: "${currentSearchTerm.value}"`);
+    const found = manager.searchPrevious(currentSearchTerm.value, { incremental: true });
+    console.log(`[WorkspaceView ${mode}] findPrevious returned: ${found}`);
+    if (!found) {
+      console.log(`[WorkspaceView ${mode}] findPrevious: No previous results for "${currentSearchTerm.value}"`);
     }
   } else {
-    // --- 桌面端逻辑 ---
-    const manager = activeSession.value?.terminalManager;
-    if (manager && currentSearchTerm.value) {
-       console.log(`[WorkspaceView Desktop] Calling findPrevious for term: "${currentSearchTerm.value}"`);
-      const found = manager.searchPrevious(currentSearchTerm.value, { incremental: true });
-      console.log(`[WorkspaceView Desktop] findPrevious returned: ${found}`);
-       if (!found) {
-        console.log(`[WorkspaceView Desktop] findPrevious: No previous results for "${currentSearchTerm.value}"`);
-      }
-    } else {
-       console.warn(`[WorkspaceView Desktop] Cannot findPrevious, no active session manager or search term.`);
-    }
+    const mode = isMobile.value ? 'Mobile' : 'Desktop';
+    console.warn(`[WorkspaceView ${mode}] Cannot findPrevious, no active session manager or search term.`);
   }
 };
 
-const handleCloseSearch = () => { // +++ 修改 +++
+const handleCloseSearch = () => {
   console.log(`[WorkspaceView] Received close-search event.`);
   currentSearchTerm.value = ''; // 清空搜索词
-  if (isMobile.value) {
-    if (mobileTerminalRef.value) {
-      mobileTerminalRef.value.clearSearch();
-      console.log(`[WorkspaceView Mobile] Search cleared.`);
-    } else {
-      console.warn(`[WorkspaceView Mobile] Cannot clear search, no mobile terminal ref.`);
-    }
+  const manager = activeSession.value?.terminalManager;
+  const mode = isMobile.value ? 'Mobile' : 'Desktop';
+  if (manager) {
+    manager.clearTerminalSearch();
+    console.log(`[WorkspaceView ${mode}] Search cleared.`);
   } else {
-    // --- 桌面端逻辑 ---
-    const manager = activeSession.value?.terminalManager;
-    if (manager) {
-      manager.clearTerminalSearch();
-      console.log(`[WorkspaceView Desktop] Search cleared.`);
-    } else {
-       console.warn(`[WorkspaceView Desktop] Cannot clear search, no active session manager.`);
-    }
+    console.warn(`[WorkspaceView ${mode}] Cannot clear search, no active session manager.`);
   }
 };
 
 // +++ 处理清空终端事件 +++
-const handleClearTerminal = () => { // +++ 修改 +++
+const handleClearTerminal = () => {
   const currentSession = activeSession.value;
   if (!currentSession) {
     console.warn('[WorkspaceView] Cannot clear terminal, no active session.');
     return;
   }
   const terminalManager = currentSession.terminalManager as (SshTerminalInstance | undefined);
-  // 调用 Terminal.vue 组件暴露的 clear 方法
-  if (isMobile.value) {
-    if (mobileTerminalRef.value) {
-      mobileTerminalRef.value.clear();
-      console.log(`[WorkspaceView Mobile] Terminal cleared.`);
-    } else {
-      console.warn(`[WorkspaceView Mobile] Cannot clear terminal, no mobile terminal ref.`);
-    }
+  const mode = isMobile.value ? 'Mobile' : 'Desktop';
+
+  if (terminalManager && terminalManager.terminalInstance?.value && typeof terminalManager.terminalInstance.value.clear === 'function') {
+    console.log(`[WorkspaceView ${mode}] Clearing terminal for active session ${currentSession.sessionId}`);
+    terminalManager.terminalInstance.value.clear();
   } else {
-    // --- 桌面端逻辑 ---
-    if (terminalManager && terminalManager.terminalInstance?.value && typeof terminalManager.terminalInstance.value.clear === 'function') {
-      console.log(`[WorkspaceView Desktop] Clearing terminal for active session ${currentSession.sessionId}`);
-      terminalManager.terminalInstance.value.clear();
-    } else {
-      console.warn(`[WorkspaceView Desktop] Cannot clear terminal for session ${currentSession.sessionId}, terminal manager, instance, or clear method not available.`);
-    }
+    console.warn(`[WorkspaceView ${mode}] Cannot clear terminal for session ${currentSession.sessionId}, terminal manager, instance, or clear method not available.`);
   }
 };
 
@@ -763,15 +730,15 @@ const closeFileManagerModal = () => {
     <!-- --- 移动端布局 --- -->
     <template v-else>
       <div class="mobile-content-area">
-        <Terminal
-          v-if="activeSessionId"
-          ref="mobileTerminalRef"
-          :session-id="activeSessionId"
-          :is-active="true"
-          class="mobile-terminal"
-          @data="(data) => handleTerminalInput({ sessionId: activeSessionId!, data })"
-          @resize="(dims) => handleTerminalResize({ sessionId: activeSessionId!, dims })"
-          @ready="(payload) => handleTerminalReady({ ...payload, sessionId: activeSessionId! })"
+        <LayoutRenderer
+          v-if="activeSessionId && mobileLayoutNodeForTerminal"
+          :layout-node="mobileLayoutNodeForTerminal"
+          :active-session-id="activeSessionId"
+          :is-root-renderer="false"
+          :layout-locked="layoutLockedBoolean"
+          class="layout-renderer-wrapper flex-grow overflow-auto"
+          :editor-tabs="editorTabs"
+          :active-editor-tab-id="activeEditorTabId"
         />
         <div v-else class="pane-placeholder">
           {{ t('workspace.noActiveSession', '没有活动的会话') }}
