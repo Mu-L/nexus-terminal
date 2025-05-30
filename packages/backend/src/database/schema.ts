@@ -166,6 +166,7 @@ CREATE TABLE IF NOT EXISTS quick_commands (
     name TEXT NULL, -- 名称可选
     command TEXT NOT NULL, -- 指令必选
     usage_count INTEGER NOT NULL DEFAULT 0, -- 使用频率
+    variables TEXT NULL,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );

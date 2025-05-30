@@ -6,8 +6,8 @@ import { QuickCommandSortBy } from '../services/quick-commands.service';
  * 处理添加新快捷指令的请求
  */
 export const addQuickCommand = async (req: Request, res: Response): Promise<void> => {
-    // 从请求体中解构出 name, command, 以及可选的 tagIds
-    const { name, command, tagIds } = req.body;
+    // 从请求体中解构出 name, command, 以及可选的 tagIds 和 variables
+    const { name, command, tagIds, variables } = req.body;
 
     // --- 基本验证 ---
     if (!command || typeof command !== 'string' || command.trim().length === 0) {
@@ -24,11 +24,16 @@ export const addQuickCommand = async (req: Request, res: Response): Promise<void
         res.status(400).json({ message: 'tagIds 必须是一个数字数组' });
         return;
     }
-    // --- 结束验证 ---
+    // 验证 variables (如果提供的话)
+    if (variables !== undefined && (typeof variables !== 'object' || variables === null || Array.isArray(variables))) {
+        res.status(400).json({ message: 'variables 必须是一个对象' });
+        return;
+    }
+ 
 
     try {
-        // 将 tagIds 传递给 Service 层
-        const newId = await QuickCommandsService.addQuickCommand(name, command, tagIds);
+        // 将 tagIds 和 variables 传递给 Service 层
+        const newId = await QuickCommandsService.addQuickCommand(name, command, tagIds, variables);
         // 尝试获取新创建的带标签的指令信息返回
         const newCommand = await QuickCommandsService.getQuickCommandById(newId);
         if (newCommand) {
@@ -65,8 +70,8 @@ export const getAllQuickCommands = async (req: Request, res: Response): Promise<
  */
 export const updateQuickCommand = async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id, 10);
-    // 从请求体中解构出 name, command, 以及可选的 tagIds
-    const { name, command, tagIds } = req.body;
+    // 从请求体中解构出 name, command, 以及可选的 tagIds 和 variables
+    const { name, command, tagIds, variables } = req.body;
 
     // --- 基本验证 ---
     if (isNaN(id)) {
@@ -87,11 +92,16 @@ export const updateQuickCommand = async (req: Request, res: Response): Promise<v
         res.status(400).json({ message: 'tagIds 必须是一个数字数组' });
         return;
     }
-    // --- 结束验证 ---
+    // 验证 variables (如果提供的话)
+    // undefined 表示不更新 variables, null 或对象表示要更新
+    if (variables !== undefined && variables !== null && (typeof variables !== 'object' || Array.isArray(variables))) {
+        res.status(400).json({ message: 'variables 必须是对象或 null' });
+        return;
+    }
 
     try {
-        // 将 tagIds 传递给 Service 层
-        const success = await QuickCommandsService.updateQuickCommand(id, name, command, tagIds);
+        // 将 tagIds 和 variables 传递给 Service 层
+        const success = await QuickCommandsService.updateQuickCommand(id, name, command, tagIds, variables);
         if (success) {
              // 尝试获取更新后的带标签的指令信息返回
             const updatedCommand = await QuickCommandsService.getQuickCommandById(id);

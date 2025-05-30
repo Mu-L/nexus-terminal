@@ -16,6 +16,7 @@ export interface QuickCommandFE { // Renamed from QuickCommand if necessary
     created_at: number;
     updated_at: number;
     tagIds: number[]; // +++ Add tagIds +++
+    variables?: Record<string, string>; // New: Add variables
 }
 
 // 定义排序类型
@@ -250,10 +251,10 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
         try {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
-                // 确保解析后的数据符合 QuickCommandFE 结构 (特别是 tagIds)
+                // 确保解析后的数据符合 QuickCommandFE 结构 (特别是 tagIds 和 variables)
                 const parsedData = JSON.parse(cachedData) as QuickCommandFE[];
-                // 基本验证，确保 tagIds 是数组
-                if (Array.isArray(parsedData) && parsedData.every(item => Array.isArray(item.tagIds))) {
+                // 基本验证，确保 tagIds 是数组，variables 是对象或undefined
+                if (Array.isArray(parsedData) && parsedData.every(item => Array.isArray(item.tagIds) && (item.variables === undefined || typeof item.variables === 'object'))) {
                     quickCommandsList.value = parsedData;
                     isLoading.value = false;
                 } else {
@@ -276,10 +277,11 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
             console.log(`[QuickCmdStore] Fetching latest commands from server...`);
             // 不再发送 sortBy 参数
             const response = await apiClient.get<QuickCommandFE[]>('/quick-commands');
-            // 确保返回的数据包含 tagIds 数组
+            // 确保返回的数据包含 tagIds 数组和 variables 对象
             const freshData = response.data.map(cmd => ({
                 ...cmd,
-                tagIds: Array.isArray(cmd.tagIds) ? cmd.tagIds : [] // 确保 tagIds 是数组
+                tagIds: Array.isArray(cmd.tagIds) ? cmd.tagIds : [], // 确保 tagIds 是数组
+                variables: typeof cmd.variables === 'object' ? cmd.variables : undefined // 确保 variables 是对象或 undefined
             }));
             const freshDataString = JSON.stringify(freshData);
 
@@ -310,11 +312,11 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
     };
 
 
-    // 添加快捷指令 (发送 tagIds)
-    const addQuickCommand = async (name: string | null, command: string, tagIds?: number[]): Promise<boolean> => {
+    // 添加快捷指令 (发送 tagIds 和 variables)
+    const addQuickCommand = async (name: string | null, command: string, tagIds?: number[], variables?: Record<string, string>): Promise<boolean> => {
         try {
-            // 在请求体中包含 tagIds
-            const response = await apiClient.post<{ message: string, command: QuickCommandFE }>('/quick-commands', { name, command, tagIds });
+            // 在请求体中包含 tagIds 和 variables
+            const response = await apiClient.post<{ message: string, command: QuickCommandFE }>('/quick-commands', { name, command, tagIds, variables });
             // 后端现在返回完整的 command 对象，可以直接使用或触发刷新
             clearQuickCommandsCache(); // 清除缓存
             await fetchQuickCommands(); // 重新获取以确保数据同步
@@ -328,11 +330,11 @@ export const useQuickCommandsStore = defineStore('quickCommands', () => {
         }
     };
 
-    // 更新快捷指令 (发送 tagIds)
-    const updateQuickCommand = async (id: number, name: string | null, command: string, tagIds?: number[]): Promise<boolean> => {
+    // 更新快捷指令 (发送 tagIds 和 variables)
+    const updateQuickCommand = async (id: number, name: string | null, command: string, tagIds?: number[], variables?: Record<string, string>): Promise<boolean> => {
          try {
-            // 在请求体中包含 tagIds (即使是 undefined 也要发送，让后端知道是否要更新)
-            const response = await apiClient.put<{ message: string, command: QuickCommandFE }>(`/quick-commands/${id}`, { name, command, tagIds });
+            // 在请求体中包含 tagIds 和 variables (即使是 undefined 也要发送，让后端知道是否要更新)
+            const response = await apiClient.put<{ message: string, command: QuickCommandFE }>(`/quick-commands/${id}`, { name, command, tagIds, variables });
             // 后端现在返回完整的 command 对象
             clearQuickCommandsCache(); // 清除缓存
             await fetchQuickCommands(); // 重新获取以确保数据同步

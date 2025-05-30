@@ -552,13 +552,47 @@ const copyCommand = async (command: string) => {
 };
 
 // 执行命令
-const executeCommand = (command: QuickCommandFE) => {
-  // 1. 增加使用次数 (后台操作，不阻塞执行)
-  quickCommandsStore.incrementUsage(command.id);
-  // 2. 发出执行事件给父组件
-  emitWorkspaceEvent('terminal:sendCommand', { command: command.command });
-  // Optionally reset selection after execution
-  // selectedIndex.value = -1; // REMOVED: Store handles index
+const executeCommand = (cmd: QuickCommandFE) => {
+  // 1. 增加使用次数
+  quickCommandsStore.incrementUsage(cmd.id);
+
+  let processedCommand = cmd.command;
+  const savedVariables = cmd.variables || {}; // 使用已保存的变量
+
+  // 2. 执行变量替换
+  for (const varName in savedVariables) {
+    const placeholder = new RegExp(`\\$\\{${varName}\\}`, 'g');
+    processedCommand = processedCommand.replace(placeholder, savedVariables[varName]);
+  }
+
+  // 3. 检查未定义变量
+  const variablePlaceholders = cmd.command.match(/\$\{[^\}]+\}/g) || [];
+  const undefinedVariables: string[] = [];
+  variablePlaceholders.forEach(placeholder => {
+    const varName = placeholder.substring(2, placeholder.length - 1);
+    if (!savedVariables.hasOwnProperty(varName)) {
+      undefinedVariables.push(varName);
+    }
+  });
+
+  if (undefinedVariables.length > 0) {
+    uiNotificationsStore.showWarning(
+      t('quickCommands.form.warningUndefinedVariables', { variables: undefinedVariables.join(', ') })
+    );
+  }
+
+  // 4. 获取当前激活的 SSH 会话 ID
+  const activeSessionId = sessionStore.activeSessionId;
+  if (!activeSessionId) {
+    uiNotificationsStore.showError(t('quickCommands.form.errorNoActiveSession', '没有活动的SSH会话可执行指令。'));
+    return;
+  }
+
+  // 5. 触发 quickCommand:executeProcessed 事件
+  emitWorkspaceEvent('quickCommand:executeProcessed', {
+    command: processedCommand,
+    sessionId: activeSessionId
+  });
 };
 
 // +++ 聚焦搜索框的方法 +++

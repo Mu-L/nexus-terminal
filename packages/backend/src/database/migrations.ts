@@ -123,7 +123,6 @@ const definedMigrations: Migration[] = [
         name: 'Add notes column to connections table',
         check: async (db: Database): Promise<boolean> => {
             const notesColumnExists = await columnExists(db, 'connections', 'notes');
-            // Only run if the column does NOT exist
             return !notesColumnExists;
         },
         sql: `
@@ -297,6 +296,17 @@ const definedMigrations: Migration[] = [
             return !jumpChainColumnExists || !proxyTypeColumnExists;
         }
     },
+    {
+        id: 10,
+        name: 'Add variables column to quick_commands table',
+        check: async (db: Database): Promise<boolean> => {
+            const columnAlreadyExists = await columnExists(db, 'quick_commands', 'variables');
+            return !columnAlreadyExists;
+        },
+        sql: `
+            ALTER TABLE quick_commands ADD COLUMN variables TEXT NULL;
+        `
+    }
 ];
 
 /**

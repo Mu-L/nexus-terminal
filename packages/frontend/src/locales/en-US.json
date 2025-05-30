@@ -606,7 +606,8 @@
     "createSuccess": "Tag created successfully.",
     "updateSuccess": "Tag updated successfully.",
     "deleteSuccess": "Tag \"{name}\" deleted successfully.",
-    "deleteFailed": "Failed to delete tag \"{name}\": {error}"
+    "deleteFailed": "Failed to delete tag \"{name}\": {error}",
+    "errorDelete": "Error deleting tag: {error}"
   },
   "settings": {
     "popupFileManager": {
@@ -1041,6 +1042,7 @@
       "testMessageUnsaved": "Test triggered for unsaved {channelType} configuration"
     },
   "common": {
+    "confirm": "Confirm",
     "ok": "OK",
     "success": "Success",
     "error": "Error",
@@ -1293,11 +1295,19 @@
       "name": "Name:",
       "namePlaceholder": "Optional, for quick identification",
       "command": "Command:",
-      "commandPlaceholder": "e.g., ls -alh /home/user",
+      "commandPlaceholder": "e.g.,",
       "errorCommandRequired": "Command cannot be empty",
       "add": "Add",
       "tags": "Tags:",
-      "tagsPlaceholder": "Select or create tags..."
+      "tagsPlaceholder": "Select or create tags...",
+      "variablesTitle": "Variable Management",
+      "noVariables": "No variables yet. Click the button below to add one.",
+      "variableNamePlaceholder": "Variable Name",
+      "variableValuePlaceholder": "Variable Value",
+      "addVariable": "+ Add Variable",
+      "execute": "Execute",
+      "warningUndefinedVariables": "Warning: Undefined variables in command template: {variables}",
+      "errorNoActiveSession": "No active SSH session to execute the command."
     },
     "untagged": "Untagged",
     "tags": {
@@ -1626,3 +1636,4 @@
     "copiedError": "Failed to copy path"
   }
 }
+

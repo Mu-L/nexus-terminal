@@ -606,7 +606,8 @@
     "createSuccess": "标签创建成功。",
     "updateSuccess": "标签更新成功。",
     "deleteSuccess": "标签 \"{name}\" 删除成功。",
-    "deleteFailed": "标签 \"{name}\" 删除失败: {error}"
+    "deleteFailed": "标签 \"{name}\" 删除失败: {error}",
+    "errorDelete": "删除标签时出错: {error}"
   },
   "settings": {
     "popupFileManager": {
@@ -1077,6 +1078,7 @@
     "success":"成功",
     "error":"失败",
     "alert":"提示",
+    "confirm":"确认",
     "updateSuccess":"更新成功"
   },
   "layoutConfigurator": {
@@ -1297,11 +1299,19 @@
       "name": "名称:",
       "namePlaceholder": "可选，用于快速识别",
       "command": "指令:",
-      "commandPlaceholder": "例如：ls -alh /home/user",
+      "commandPlaceholder": "例如：",
       "errorCommandRequired": "指令内容不能为空",
       "add": "添加",
       "tags": "标签:",
-      "tagsPlaceholder": "选择或创建标签..."
+      "tagsPlaceholder": "选择或创建标签...",
+      "variablesTitle": "变量管理",
+      "noVariables": "暂无变量。点击下方按钮添加。",
+      "variableNamePlaceholder": "变量名",
+      "variableValuePlaceholder": "变量值",
+      "addVariable": "+ 添加变量",
+      "execute": "执行",
+      "warningUndefinedVariables": "警告：指令模板中存在未定义的变量: {variables}",
+      "errorNoActiveSession": "没有活动的SSH会话可执行指令。"
     },
     "untagged": "未标记",
     "tags": {

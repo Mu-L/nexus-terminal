@@ -78,6 +78,7 @@
         "clearTerminal": "ターミナルをクリア"
     },
     "common": {
+        "confirm": "確認",
         "ok": "確認",
         "success": "成功",
         "error": "失敗",
@@ -683,12 +684,20 @@
             "tags": "タグ:",
             "tagsPlaceholder": "タグを選択または作成...",
             "command": "コマンド:",
-            "commandPlaceholder": "例：ls -alh /home/user",
+            "commandPlaceholder": "例：",
             "errorCommandRequired": "コマンドは空にできません",
             "name": "名前:",
             "namePlaceholder": "オプション。素早く認識するために使用",
             "titleAdd": "クイックコマンドの追加",
-            "titleEdit": "クイックコマンドの編集"
+            "titleEdit": "クイックコマンドの編集",
+            "variablesTitle": "変数管理",
+            "noVariables": "変数はまだありません。下のボタンをクリックして追加してください。",
+            "variableNamePlaceholder": "変数名",
+            "variableValuePlaceholder": "変数値",
+            "addVariable": "+ 変数を追加",
+            "execute": "実行",
+            "warningUndefinedVariables": "警告：コマンドテンプレートに未定義の変数があります: {variables}",
+            "errorNoActiveSession": "コマンドを実行するためのアクティブなSSHセッションがありません。"
         },
         "untagged": "タグなし",
         "tags": {
@@ -1373,7 +1382,8 @@
         "createSuccess": "タグが正常に作成されました。",
         "updateSuccess": "タグが正常に更新されました。",
         "deleteSuccess": "タグ「{name}」が正常に削除されました。",
-        "deleteFailed": "タグ「{name}」の削除に失敗しました: {error}"
+        "deleteFailed": "タグ「{name}」の削除に失敗しました: {error}",
+        "errorDelete": "タグの削除中にエラーが発生しました: {error}"
       },
       "terminalTabBar": {
           "selectServerTitle": "接続するサーバーを選択",

@@ -174,6 +174,7 @@ onMounted(() => {
   subscribeToWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   subscribeToWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
   subscribeToWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 订阅文件管理器打开请求 +++
+  subscribeToWorkspaceEvents('quickCommand:executeProcessed', handleQuickCommandExecuteProcessed);
 });
 
 onBeforeUnmount(() => {
@@ -218,6 +219,7 @@ onBeforeUnmount(() => {
   unsubscribeFromWorkspaceEvents('session:closeToLeft', (payload) => handleCloseSessionsToLeft(payload.targetSessionId));
   unsubscribeFromWorkspaceEvents('ui:openLayoutConfigurator', handleOpenLayoutConfigurator);
   unsubscribeFromWorkspaceEvents('fileManager:openModalRequest', handleFileManagerOpenRequest); // +++ 取消订阅文件管理器打开请求 +++
+  unsubscribeFromWorkspaceEvents('quickCommand:executeProcessed', handleQuickCommandExecuteProcessed);
 });
 
 const subscribeToWorkspaceEvents = useWorkspaceEventSubscriber(); // +++ 定义订阅和取消订阅函数 +++
@@ -683,6 +685,16 @@ const handleFileManagerOpenRequest = (payload: { sessionId: string }) => {
   console.log(`[WorkspaceView] Opening FileManager modal with props for session ${sessionId}:`, newProps);
 };
 
+// --- 处理 quickCommand:executeProcessed 事件 ---
+const handleQuickCommandExecuteProcessed = (payload: WorkspaceEventPayloads['quickCommand:executeProcessed']) => {
+  const { command, sessionId: targetSessionId } = payload;
+  console.log(`[WorkspaceView] Received quickCommand:executeProcessed event. Command: "${command}", TargetSessionID: ${targetSessionId}`);
+
+  // 使用现有的 handleSendCommand 逻辑来发送指令
+  // handleSendCommand 会处理 sessionId 未定义时使用 activeSessionId 的情况
+  handleSendCommand(command, targetSessionId);
+};
+
 const closeFileManagerModal = () => {
   showFileManagerModal.value = false;
   console.log('[WorkspaceView] FileManager modal hidden (kept alive).');
@@ -902,7 +914,6 @@ const closeFileManagerModal = () => {
   /* 可以添加更多样式，例如背景色、边框等 */
 }
 
-/* Ensure modals are still displayed correctly (they are outside the main flow) */
 
 
 </style>
