@@ -1,6 +1,6 @@
-import * as SshKeyRepository from '../repositories/ssh_key.repository';
+import * as SshKeyRepository from '../ssh_keys/ssh_key.repository';
 import { encrypt, decrypt } from '../utils/crypto';
-import { SshKeyDbRow, CreateSshKeyData, UpdateSshKeyData } from '../repositories/ssh_key.repository';
+import { SshKeyDbRow, CreateSshKeyData, UpdateSshKeyData } from '../ssh_keys/ssh_key.repository';
 
 // 定义 Service 层返回给 Controller 的基本密钥信息 (不含加密内容)
 export interface SshKeyBasicInfo {

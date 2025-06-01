@@ -9,8 +9,8 @@ import { ipBlacklistService } from '../services/ip-blacklist.service';
 import { captchaService } from '../services/captcha.service';
 import { settingsService } from '../services/settings.service';
 import { passkeyService } from '../services/passkey.service'; // +++ Passkey Service
-import { passkeyRepository } from '../repositories/passkey.repository'; // +++ Passkey Repository
-import { userRepository } from '../repositories/user.repository'; // For passkey auth success
+import { passkeyRepository } from '../passkey/passkey.repository'; // +++ Passkey Repository
+import { userRepository } from '../user/user.repository'; // For passkey auth success
 
 const notificationService = new NotificationService();
 const auditLogService = new AuditLogService();

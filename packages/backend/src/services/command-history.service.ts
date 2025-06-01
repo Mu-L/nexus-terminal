@@ -1,5 +1,5 @@
-import * as CommandHistoryRepository from '../repositories/command-history.repository';
-import { CommandHistoryEntry } from '../repositories/command-history.repository';
+import * as CommandHistoryRepository from '../command-history/command-history.repository';
+import { CommandHistoryEntry } from '../command-history/command-history.repository';
 
 /**
  * 添加一条命令历史记录

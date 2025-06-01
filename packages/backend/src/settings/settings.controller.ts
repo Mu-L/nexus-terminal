@@ -6,7 +6,7 @@ import { ipBlacklistService } from '../services/ip-blacklist.service';
 import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; 
 import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; 
 import { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';
-import { getAppearanceSettings, updateAppearanceSettings as updateAppearanceSettingsInRepo } from '../repositories/appearance.repository';
+import { getAppearanceSettings, updateAppearanceSettings as updateAppearanceSettingsInRepo } from '../appearance/appearance.repository';
 import i18next from '../i18n'; 
 
 const auditLogService = new AuditLogService();

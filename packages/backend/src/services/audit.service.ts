@@ -1,4 +1,4 @@
-import { AuditLogRepository } from '../repositories/audit.repository';
+import { AuditLogRepository } from '../audit/audit.repository';
 import { AuditLogActionType, AuditLogEntry } from '../types/audit.types';
 
 export class AuditLogService {

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotificationSettingsRepository } from '../repositories/notification.repository'; // Use repository
+import { NotificationSettingsRepository } from './notification.repository'; // Use repository
 import { NotificationSetting, NotificationChannelType, NotificationChannelConfig, WebhookConfig, EmailConfig, TelegramConfig, NotificationEvent } from '../types/notification.types';
 // import { AuditLogService } from '../services/audit.service'; // Keep for now if other parts use it - Removed as eventService is used
 import { AppEventType, default as eventService } from '../services/event.service'; // Import event service

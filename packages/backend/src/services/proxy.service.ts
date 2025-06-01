@@ -1,4 +1,4 @@
-import * as ProxyRepository from '../repositories/proxy.repository';
+import * as ProxyRepository from '../proxies/proxy.repository';
 import { encrypt, decrypt } from '../utils/crypto';
 
 export interface ProxyData extends ProxyRepository.ProxyData {}

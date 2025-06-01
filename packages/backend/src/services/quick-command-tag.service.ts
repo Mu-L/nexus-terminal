@@ -1,5 +1,5 @@
-import * as QuickCommandTagRepository from '../repositories/quick-command-tag.repository';
-import { QuickCommandTag } from '../repositories/quick-command-tag.repository';
+import * as QuickCommandTagRepository from '../quick-command-tags/quick-command-tag.repository';
+import { QuickCommandTag } from '../quick-command-tags/quick-command-tag.repository';
 
 /**
  * 获取所有快捷指令标签

@@ -1,7 +1,7 @@
 import { getDbInstance, runDb, getDb, allDb } from '../database/connection';
 import { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';
 import { defaultUiTheme } from '../config/default-themes';
-import { findThemeById as findTerminalThemeById } from './terminal-theme.repository';
+import { findThemeById as findTerminalThemeById } from '../terminal-themes/terminal-theme.repository';
 import * as sqlite3 from 'sqlite3'; 
 
 const TABLE_NAME = 'appearance_settings';

@@ -1,8 +1,8 @@
 import { Database } from 'sqlite3';
 import * as schemaSql from './schema';
-import * as appearanceRepository from '../repositories/appearance.repository';
-import * as terminalThemeRepository from '../repositories/terminal-theme.repository';
-import * as settingsRepository from '../repositories/settings.repository'; 
+import * as appearanceRepository from '../appearance/appearance.repository';
+import * as terminalThemeRepository from '../terminal-themes/terminal-theme.repository';
+import * as settingsRepository from '../settings/settings.repository'; 
 import { presetTerminalThemes } from '../config/preset-themes-definition';
 import { runDb } from './connection'; 
 

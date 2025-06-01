@@ -1,5 +1,5 @@
 import eventService, { AppEventType, AppEventPayload } from './event.service';
-import { NotificationSettingsRepository } from '../repositories/notification.repository';
+import { NotificationSettingsRepository } from '../notifications/notification.repository';
 import { NotificationSetting, NotificationEvent, NotificationChannelType, WebhookConfig, EmailConfig, TelegramConfig, NotificationChannelConfig } from '../types/notification.types';
 import i18next, { i18nInitializationPromise } from '../i18n';
 import { EventEmitter } from 'events';

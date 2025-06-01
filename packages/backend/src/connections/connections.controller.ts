@@ -3,7 +3,7 @@ import * as ConnectionService from '../services/connection.service';
 import * as SshService from '../services/ssh.service';
 import * as GuacamoleService from '../services/guacamole.service'; 
 import * as ImportExportService from '../services/import-export.service';
-import * as ConnectionRepository from '../repositories/connection.repository';
+import * as ConnectionRepository from './connection.repository';
 
 
 

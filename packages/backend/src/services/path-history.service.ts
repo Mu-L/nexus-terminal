@@ -1,5 +1,5 @@
-import * as PathHistoryRepository from '../repositories/path-history.repository';
-import { PathHistoryEntry } from '../repositories/path-history.repository';
+import * as PathHistoryRepository from '../path-history/path-history.repository';
+import { PathHistoryEntry } from '../path-history/path-history.repository';
 
 /**
  * 添加一条路径历史记录

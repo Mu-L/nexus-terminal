@@ -1,4 +1,4 @@
-import * as TagRepository from '../repositories/tag.repository';
+import * as TagRepository from '../tags/tag.repository';
 
 // Re-export or define types
 export interface TagData extends TagRepository.TagData {}

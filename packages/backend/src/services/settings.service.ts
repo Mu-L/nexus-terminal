@@ -5,7 +5,7 @@ import {
     setSidebarConfig as setSidebarConfigInRepo,
     getCaptchaConfig as getCaptchaConfigFromRepo,
     setCaptchaConfig as setCaptchaConfigInRepo,
-} from '../repositories/settings.repository';
+} from '../settings/settings.repository';
 import {
     SidebarConfig,
     PaneName,

@@ -1,5 +1,5 @@
-import * as FavoritePathsRepository from '../repositories/favorite-paths.repository';
-import { FavoritePath } from '../repositories/favorite-paths.repository';
+import * as FavoritePathsRepository from '../favorite-paths/favorite-paths.repository';
+import { FavoritePath } from '../favorite-paths/favorite-paths.repository';
 
 // 定义排序类型
 export type FavoritePathSortBy = 'name' | 'last_used_at';

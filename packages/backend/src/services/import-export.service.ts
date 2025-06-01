@@ -1,6 +1,6 @@
 
-import * as ConnectionRepository from '../repositories/connection.repository';
-import * as ProxyRepository from '../repositories/proxy.repository';
+import * as ConnectionRepository from '../connections/connection.repository';
+import * as ProxyRepository from '../proxies/proxy.repository';
 import * as TagService from '../services/tag.service'; 
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
 import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; 

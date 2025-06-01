@@ -1,4 +1,4 @@
-import * as terminalThemeRepository from '../repositories/terminal-theme.repository';
+import * as terminalThemeRepository from '../terminal-themes/terminal-theme.repository';
 import { TerminalTheme, CreateTerminalThemeDto, UpdateTerminalThemeDto } from '../types/terminal-theme.types';
 import type { ITheme } from 'xterm';
 

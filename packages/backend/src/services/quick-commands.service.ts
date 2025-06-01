@@ -1,6 +1,6 @@
-import * as QuickCommandsRepository from '../repositories/quick-commands.repository';
-import { QuickCommandWithTags } from '../repositories/quick-commands.repository'; 
-import * as QuickCommandTagRepository from '../repositories/quick-command-tag.repository'; 
+import * as QuickCommandsRepository from '../quick-commands/quick-commands.repository';
+import { QuickCommandWithTags } from '../quick-commands/quick-commands.repository'; 
+import * as QuickCommandTagRepository from '../quick-command-tags/quick-command-tag.repository'; 
 
 // 定义排序类型
 export type QuickCommandSortBy = 'name' | 'usage_count';

@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { NotificationSettingsRepository } from "../repositories/notification.repository";
+import { NotificationSettingsRepository } from "../notifications/notification.repository";
 import {
   NotificationSetting,
   NotificationEvent,

@@ -2,7 +2,7 @@ import fs from 'fs/promises'; // 使用 promises API
 import path from 'path';
 import * as appearanceRepository from '../repositories/appearance.repository';
 import { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';
-import * as terminalThemeRepository from '../repositories/terminal-theme.repository';
+import * as terminalThemeRepository from '../terminal-themes/terminal-theme.repository';
 import axios from 'axios';
 import sanitize from 'sanitize-filename'; // 用于清理文件名
 

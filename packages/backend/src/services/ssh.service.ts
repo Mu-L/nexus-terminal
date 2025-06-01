@@ -2,8 +2,8 @@ import { Client, ClientChannel, ConnectConfig } from 'ssh2';
 import { SocksClient, SocksClientOptions } from 'socks';
 import http from 'http';
 import net from 'net';
-import * as ConnectionRepository from '../repositories/connection.repository';
-import *   as ProxyRepository from '../repositories/proxy.repository';
+import * as ConnectionRepository from '../connections/connection.repository';
+import *   as ProxyRepository from '../proxies/proxy.repository';
 import { decrypt } from '../utils/crypto';
 import * as SshKeyService from './ssh_key.service';
 
