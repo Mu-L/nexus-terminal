@@ -6,7 +6,7 @@ import { initializeUpgradeHandler } from './websocket/upgrade';
 import { initializeConnectionHandler } from './websocket/connection';
 import { clientStates } from './websocket/state';
 import { sshSuspendService } from './services/ssh-suspend.service';
-import { SftpService } from './services/sftp.service';
+import { SftpService } from './sftp/sftp.service';
 import { cleanupClientConnection } from './websocket/utils';
 
 

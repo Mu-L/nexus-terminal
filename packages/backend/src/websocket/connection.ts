@@ -23,10 +23,10 @@ import {
     ClientState
 } from './types';
 import { SshSuspendService } from '../services/ssh-suspend.service';
-import { SftpService } from '../services/sftp.service';
+import { SftpService } from '../sftp/sftp.service';
 import { cleanupClientConnection } from './utils';
 import { clientStates } from './state';
-import { temporaryLogStorageService } from '../services/temporary-log-storage.service'; 
+import { temporaryLogStorageService } from '../ssh-suspend/temporary-log-storage.service'; 
 
 // Handlers
 import { handleRdpProxyConnection } from './handlers/rdp.handler';

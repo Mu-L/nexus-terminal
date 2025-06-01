@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid'; 
 import { Client, ConnectConfig, SFTPWrapper } from 'ssh2';
 import { InitiateTransferPayload, TransferTask, TransferSubTask } from './transfers.types';
-import { getConnectionWithDecryptedCredentials } from '../services/connection.service';
+import { getConnectionWithDecryptedCredentials } from '../connections/connection.service';
 import type { ConnectionWithTags, DecryptedConnectionCredentials } from '../types/connection.types';
 
 

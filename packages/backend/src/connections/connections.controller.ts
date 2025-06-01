@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as ConnectionService from '../services/connection.service';
+import * as ConnectionService from './connection.service';
 import * as SshService from '../services/ssh.service';
 import * as GuacamoleService from '../services/guacamole.service'; 
 import * as ImportExportService from '../services/import-export.service';

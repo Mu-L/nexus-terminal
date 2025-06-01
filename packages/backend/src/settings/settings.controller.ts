@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { settingsService } from '../services/settings.service';
-import { AuditLogService } from '../services/audit.service';
-import { NotificationService } from '../services/notification.service'; 
-import { ipBlacklistService } from '../services/ip-blacklist.service';
+import { settingsService } from './settings.service';
+import { AuditLogService } from '../audit/audit.service';
+import { NotificationService } from '../notifications/notification.service'; 
+import { ipBlacklistService } from '../auth/ip-blacklist.service';
 import { exportConnectionsAsEncryptedZip } from '../services/import-export.service'; 
 import { UpdateSidebarConfigDto, UpdateCaptchaSettingsDto, CaptchaSettings } from '../types/settings.types'; 
 import { AppearanceSettings, UpdateAppearanceDto } from '../types/appearance.types';

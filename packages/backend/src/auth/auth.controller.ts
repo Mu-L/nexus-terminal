@@ -8,7 +8,7 @@ import { AuditLogService } from '../services/audit.service';
 import { ipBlacklistService } from '../services/ip-blacklist.service';
 import { captchaService } from '../services/captcha.service';
 import { settingsService } from '../services/settings.service';
-import { passkeyService } from '../services/passkey.service'; // +++ Passkey Service
+import { passkeyService } from '../passkey/passkey.service'; // +++ Passkey Service
 import { passkeyRepository } from '../passkey/passkey.repository'; // +++ Passkey Repository
 import { userRepository } from '../user/user.repository'; // For passkey auth success
 

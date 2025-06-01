@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as FavoritePathsService from '../services/favorite-paths.service';
-import { FavoritePathSortBy } from '../services/favorite-paths.service';
+import * as FavoritePathsService from '../favorite-paths/favorite-paths.service';
+import { FavoritePathSortBy } from '../favorite-paths/favorite-paths.service';
 
 /**
  * 处理添加新收藏路径的请求

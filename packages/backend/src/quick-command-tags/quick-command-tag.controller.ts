@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as QuickCommandTagService from '../services/quick-command-tag.service';
+import * as QuickCommandTagService from './quick-command-tag.service';
 
 /**
  * 处理获取所有快捷指令标签的请求

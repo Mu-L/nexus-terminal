@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { DockerService, DockerCommand } from '../services/docker.service';
+import { DockerService, DockerCommand } from './docker.service';
 
 // 由于没有 typedi，我们将手动实例化服务或通过其他方式获取实例
 // 简单起见，这里直接 new 一个实例。在实际项目中，可能需要更复杂的实例管理。

@@ -1,9 +1,9 @@
 import { ClientState } from './types';
-import { SftpService } from '../services/sftp.service';
+import { SftpService } from '../sftp/sftp.service';
 import { StatusMonitorService } from '../services/status-monitor.service';
 import { AuditLogService } from '../services/audit.service';
 import { NotificationService } from '../services/notification.service';
-import { DockerService } from '../services/docker.service';
+import { DockerService } from '../docker/docker.service';
 import { settingsService } from '../services/settings.service'; // 添加导入
 
 // 存储所有活动客户端的状态 (key: sessionId)

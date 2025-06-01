@@ -18,7 +18,7 @@ import type {
   // and for verification.authenticationInfo is AuthenticationInfo.
   // We will rely on TypeScript's inference from the VerifiedRegistrationResponse/VerifiedAuthenticationResponse types.
 } from '@simplewebauthn/server';
-import { passkeyRepository, Passkey, NewPasskey } from '../passkey/passkey.repository';
+import { passkeyRepository, Passkey, NewPasskey } from './passkey.repository';
 import { userRepository, User } from '../user/user.repository';
 import { config } from '../config/app.config';
 

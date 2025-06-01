@@ -4,7 +4,7 @@ import { AuthenticatedWebSocket, ClientState } from '../types';
 import { clientStates, sftpService, statusMonitorService, auditLogService, notificationService } from '../state';
 import * as SshService from '../../services/ssh.service';
 import { cleanupClientConnection } from '../utils';
-import { temporaryLogStorageService } from '../../services/temporary-log-storage.service';
+import { temporaryLogStorageService } from '../../ssh-suspend/temporary-log-storage.service';
 import { startDockerStatusPolling } from './docker.handler';
 import WebSocket from 'ws';
 

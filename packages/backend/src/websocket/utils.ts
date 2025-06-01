@@ -1,5 +1,5 @@
 import { PortInfo, ClientState } from './types';
-import { SftpService } from '../services/sftp.service';
+import { SftpService } from '../sftp/sftp.service';
 import { StatusMonitorService } from '../services/status-monitor.service';
 import { clientStates, sftpService, statusMonitorService } from './state';
 import { sshSuspendService } from '../services/ssh-suspend.service';

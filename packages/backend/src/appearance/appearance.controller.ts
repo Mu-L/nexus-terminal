@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as appearanceService from '../services/appearance.service';
+import * as appearanceService from './appearance.service';
 import { UpdateAppearanceDto } from '../types/appearance.types';
 import multer from 'multer';
 import path from 'path';
