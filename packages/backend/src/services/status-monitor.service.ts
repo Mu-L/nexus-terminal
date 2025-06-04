@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { ClientState } from '../websocket';
-import { settingsService } from './settings.service';
+import { settingsService } from '../settings/settings.service';
 
 
 interface ServerStatus {

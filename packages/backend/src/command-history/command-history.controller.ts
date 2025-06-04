@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as CommandHistoryService from '../services/command-history.service';
+import * as CommandHistoryService from './command-history.service';
 
 /**
  * 处理添加新命令历史记录的请求

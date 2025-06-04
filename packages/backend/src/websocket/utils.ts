@@ -2,7 +2,7 @@ import { PortInfo, ClientState } from './types';
 import { SftpService } from '../sftp/sftp.service';
 import { StatusMonitorService } from '../services/status-monitor.service';
 import { clientStates, sftpService, statusMonitorService } from './state';
-import { sshSuspendService } from '../services/ssh-suspend.service';
+import { sshSuspendService } from '../ssh-suspend/ssh-suspend.service';
 
 // --- 解析 Ports 字符串的辅助函数 ---
 export function parsePortsString(portsString: string | undefined | null): PortInfo[] {

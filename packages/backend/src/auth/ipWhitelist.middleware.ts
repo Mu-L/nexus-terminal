@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import ipaddr from 'ipaddr.js';
-import { settingsService } from '../services/settings.service';
+import { settingsService } from '../settings/settings.service';
 
 const IP_WHITELIST_SETTING_KEY = 'ipWhitelist';
 

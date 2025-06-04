@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as SshKeyService from '../services/ssh_key.service';
-import { CreateSshKeyInput, UpdateSshKeyInput } from '../services/ssh_key.service';
+import * as SshKeyService from './ssh_key.service';
+import { CreateSshKeyInput, UpdateSshKeyInput } from './ssh_key.service';
 
 /**
  * 获取所有 SSH 密钥的名称列表 (GET /api/v1/ssh-keys)

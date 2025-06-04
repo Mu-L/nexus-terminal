@@ -1,10 +1,10 @@
 import { ClientState } from './types';
 import { SftpService } from '../sftp/sftp.service';
 import { StatusMonitorService } from '../services/status-monitor.service';
-import { AuditLogService } from '../services/audit.service';
-import { NotificationService } from '../services/notification.service';
+import { AuditLogService } from '../audit/audit.service';
+import { NotificationService } from '../notifications/notification.service';
 import { DockerService } from '../docker/docker.service';
-import { settingsService } from '../services/settings.service'; // 添加导入
+import { settingsService } from '../settings/settings.service'; // 添加导入
 
 // 存储所有活动客户端的状态 (key: sessionId)
 export const clientStates = new Map<string, ClientState>();

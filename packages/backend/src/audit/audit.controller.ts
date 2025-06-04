@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuditLogService } from '../services/audit.service';
+import { AuditLogService } from './audit.service';
 import { AuditLogActionType } from '../types/audit.types';
 
 const auditLogService = new AuditLogService();

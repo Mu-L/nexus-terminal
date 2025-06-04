@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sshSuspendService } from '../services/ssh-suspend.service';
+import { sshSuspendService } from './ssh-suspend.service';
 import { SuspendedSessionInfo } from '../types/ssh-suspend.types';
 
 export class SshSuspendController {

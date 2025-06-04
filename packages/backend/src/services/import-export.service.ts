@@ -1,10 +1,10 @@
 
 import * as ConnectionRepository from '../connections/connection.repository';
 import * as ProxyRepository from '../proxies/proxy.repository';
-import * as TagService from '../services/tag.service'; 
+import * as TagService from '../tags/tag.service'; 
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
 import { decrypt, getEncryptionKeyBuffer as getCryptoKeyBuffer } from '../utils/crypto'; 
-import { getAllDecryptedSshKeys, DecryptedSshKeyDetails } from '../services/ssh_key.service'; 
+import { getAllDecryptedSshKeys, DecryptedSshKeyDetails } from '../ssh_keys/ssh_key.service'; 
 import archiver from 'archiver';
 archiver.registerFormat('zip-encrypted', require("archiver-zip-encrypted"));
 

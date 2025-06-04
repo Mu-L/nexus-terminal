@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as TagService from '../services/tag.service';
-import { AuditLogService } from '../services/audit.service';
+import * as TagService from './tag.service';
+import { AuditLogService } from '../audit/audit.service';
 
 const auditLogService = new AuditLogService();
 

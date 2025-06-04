@@ -3,11 +3,11 @@ import bcrypt from 'bcrypt';
 import { getDbInstance, runDb, getDb, allDb } from '../database/connection';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
-import { NotificationService } from '../services/notification.service';
-import { AuditLogService } from '../services/audit.service';
-import { ipBlacklistService } from '../services/ip-blacklist.service';
-import { captchaService } from '../services/captcha.service';
-import { settingsService } from '../services/settings.service';
+import { NotificationService } from '../notifications/notification.service';
+import { AuditLogService } from '../audit/audit.service';
+import { ipBlacklistService } from '../auth/ip-blacklist.service';
+import { captchaService } from '../auth/captcha.service';
+import { settingsService } from '../settings/settings.service';
 import { passkeyService } from '../passkey/passkey.service'; // +++ Passkey Service
 import { passkeyRepository } from '../passkey/passkey.repository'; // +++ Passkey Repository
 import { userRepository } from '../user/user.repository'; // For passkey auth success

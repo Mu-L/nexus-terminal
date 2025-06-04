@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as terminalThemeService from '../services/terminal-theme.service';
+import * as terminalThemeService from './terminal-theme.service';
 import { CreateTerminalThemeDto, UpdateTerminalThemeDto } from '../types/terminal-theme.types';
 import type { ITheme } from 'xterm';
 import multer from 'multer';

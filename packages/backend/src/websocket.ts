@@ -5,7 +5,7 @@ import { initializeHeartbeat } from './websocket/heartbeat';
 import { initializeUpgradeHandler } from './websocket/upgrade';
 import { initializeConnectionHandler } from './websocket/connection';
 import { clientStates } from './websocket/state';
-import { sshSuspendService } from './services/ssh-suspend.service';
+import { sshSuspendService } from './ssh-suspend/ssh-suspend.service';
 import { SftpService } from './sftp/sftp.service';
 import { cleanupClientConnection } from './websocket/utils';
 

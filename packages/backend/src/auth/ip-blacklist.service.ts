@@ -1,7 +1,7 @@
 
 import { getDbInstance, runDb, getDb as getDbRow, allDb } from '../database/connection';
-import { settingsService } from './settings.service';
-import { NotificationService } from './notification.service'; 
+import { settingsService } from '../settings/settings.service';
+import { NotificationService } from '../notifications/notification.service'; 
 
 
 const notificationService = new NotificationService(); // 实例化 NotificationService

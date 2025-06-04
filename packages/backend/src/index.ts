@@ -61,7 +61,7 @@ import { ipWhitelistMiddleware } from './auth/ipWhitelist.middleware';
 
 
 import './services/event.service'; 
-import './services/notification.processor.service'; 
+import './notifications/notification.processor.service'; 
 import './notifications/notification.dispatcher.service'; 
 
 

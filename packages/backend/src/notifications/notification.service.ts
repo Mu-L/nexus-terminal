@@ -13,7 +13,7 @@ import {
 import * as nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 import i18next, { defaultLng, supportedLngs } from "../i18n";
-import { settingsService } from "./settings.service";
+import { settingsService } from "../settings/settings.service";
 import { formatInTimeZone } from "date-fns-tz";
 
 const testSubjectKey = "testNotification.subject";

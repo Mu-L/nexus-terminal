@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { settingsService } from './settings.service';
+import { settingsService } from '../settings/settings.service';
 
 // CAPTCHA 验证 API 端点
 const HCAPTCHA_VERIFY_URL = 'https://api.hcaptcha.com/siteverify';

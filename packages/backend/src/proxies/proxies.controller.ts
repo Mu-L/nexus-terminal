@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as ProxyService from '../services/proxy.service';
-import { AuditLogService } from '../services/audit.service';
+import * as ProxyService from '../proxies/proxy.service';
+import { AuditLogService } from '../audit/audit.service';
 
 const auditLogService = new AuditLogService(); 
 

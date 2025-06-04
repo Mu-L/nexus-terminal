@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { ipBlacklistService } from '../services/ip-blacklist.service';
-import { settingsService } from '../services/settings.service'; 
+import { ipBlacklistService } from '../auth/ip-blacklist.service';
+import { settingsService } from '../settings/settings.service'; 
 
 /**
  * IP 黑名单检查中间件

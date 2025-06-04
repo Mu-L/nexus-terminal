@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as QuickCommandsService from '../services/quick-commands.service';
-import { QuickCommandSortBy } from '../services/quick-commands.service';
+import * as QuickCommandsService from './quick-commands.service';
+import { QuickCommandSortBy } from './quick-commands.service';
 
 /**
  * 处理添加新快捷指令的请求
