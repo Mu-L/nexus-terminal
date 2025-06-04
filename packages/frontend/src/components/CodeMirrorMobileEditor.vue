@@ -77,14 +77,14 @@ const onTouchMove = (event: TouchEvent) => {
         let newFontSize = currentFontSize.value * scale;
         newFontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newFontSize));
         
-        if (Math.abs(currentFontSize.value - newFontSize) > 0.1) { // Only update if change is meaningful
+        if (Math.abs(currentFontSize.value - newFontSize) > 0.1) { 
             currentFontSize.value = newFontSize;
             debouncedSetMobileEditorFontSize(newFontSize);
         }
       }
       if (newPinchDistance > 0) {
         lastPinchDistance = newPinchDistance;
-      } else if (event.touches.length === 2) { // if newPinchDistance is 0 but still 2 touches, try to re-calculate
+      } else if (event.touches.length === 2) { 
         lastPinchDistance = getDistance(event.touches);
       }
     }
@@ -100,34 +100,32 @@ const createEditorState = (doc: string, languageExtension: any) => {
   return EditorState.create({
     doc,
     extensions: [
-      // Minimal set of extensions for testing highlighting
-      languageCompartment.of(languageExtension), // Crucial: applies the CSS language pack
-      // oneDark, // REMOVING oneDark theme
-      vscodeDark, // Use the pre-built vscodeDark theme
-      lineNumbers(), // RE-ADDING lineNumbers
-      history(), // RE-ADDING history
-      highlightActiveLineGutter(), // RE-ADDING highlightActiveLineGutter
-      foldGutter(), // RE-ADDING foldGutter
-      drawSelection(), // RE-ADDING drawSelection
-      dropCursor(), // RE-ADDING dropCursor
-      EditorState.allowMultipleSelections.of(true), // RE-ADDING allowMultipleSelections
-      indentOnInput(), // RE-ADDING indentOnInput
-      bracketMatching(), // RE-ADDING bracketMatching
-      highlightActiveLine(), // RE-ADDING highlightActiveLine
-      closeBrackets(), // RE-ADDING closeBrackets
-      autocompletion(), // RE-ADDING autocompletion
-      highlightSelectionMatches(), // RE-ADDING highlightSelectionMatches
+      languageCompartment.of(languageExtension), 
+      vscodeDark,
+      lineNumbers(), 
+      history(),
+      highlightActiveLineGutter(),
+      foldGutter(), 
+      drawSelection(), 
+      dropCursor(),
+      EditorState.allowMultipleSelections.of(true),
+      indentOnInput(), 
+      bracketMatching(), 
+      highlightActiveLine(),
+      closeBrackets(), 
+      autocompletion(),
+      highlightSelectionMatches(), 
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           emit('update:modelValue', update.state.doc.toString());
         }
       }),
       keymap.of([
-        ...closeBracketsKeymap, // RE-ADDING closeBracketsKeymap
-        ...defaultKeymap, // RE-ADDING defaultKeymap
-        ...historyKeymap, // RE-ADDING historyKeymap
-        ...foldKeymap, // RE-ADDING foldKeymap
-        { key: "Mod-s", run: () => { emit('request-save'); return true; } } // Optional: keep for testing save
+        ...closeBracketsKeymap, 
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...foldKeymap, 
+        { key: "Mod-s", run: () => { emit('request-save'); return true; } } 
       ]),
     ],
   });
@@ -155,6 +153,63 @@ const getLanguageExtension = async (lang: string) => {
     const { html } = await import('@codemirror/lang-html');
     return html();
   }
+  if (lang === 'python') {
+    const { python } = await import('@codemirror/lang-python');
+    return python();
+  }
+  if (lang === 'java') {
+    const { java } = await import('@codemirror/lang-java');
+    return java();
+  }
+  if (lang === 'cpp') {
+    const { cpp } = await import('@codemirror/lang-cpp');
+    return cpp();
+  }
+  if (lang === 'php') {
+    const { php } = await import('@codemirror/lang-php');
+    return php();
+  }
+  if (lang === 'go') {
+    const { go } = await import('@codemirror/lang-go');
+    return go();
+  }
+  if (lang === 'rust') {
+    const { rust } = await import('@codemirror/lang-rust');
+    return rust();
+  }
+  if (lang === 'sql') {
+    const { sql } = await import('@codemirror/lang-sql');
+    return sql();
+  }
+  if (lang === 'json') {
+    const { json } = await import('@codemirror/lang-json');
+    return json();
+  }
+  if (lang === 'yaml') {
+    const { yaml } = await import('@codemirror/lang-yaml');
+    return yaml();
+  }
+  if (lang === 'xml') {
+    const { xml } = await import('@codemirror/lang-xml');
+    return xml();
+  }
+  if (lang === 'shell' || lang === 'bash') {
+    const { StreamLanguage } = await import('@codemirror/language');
+    const { shell } = await import('@codemirror/legacy-modes/mode/shell');
+    return StreamLanguage.define(shell);
+  }
+  if (lang === 'markdown') {
+    const { markdown, commonmarkLanguage } = await import('@codemirror/lang-markdown');
+    const { GFM } = await import('@lezer/markdown');
+    return markdown({
+        base: commonmarkLanguage, 
+        extensions: GFM 
+    });
+  }
+  if (lang === 'typescript' || lang === 'ts' || lang === 'tsx') {
+    const { javascript } = await import('@codemirror/lang-javascript');
+    return javascript({ typescript: true, jsx: true });
+  }
   return [];
 };
 
@@ -172,7 +227,6 @@ onMounted(async () => {
       state: startState,
       parent: editorRef.value,
     });
-    // Add touch event listeners for pinch-to-zoom
     editorRef.value.addEventListener('touchstart', onTouchStart, { passive: false });
     editorRef.value.addEventListener('touchmove', onTouchMove, { passive: false });
     editorRef.value.addEventListener('touchend', onTouchEnd, { passive: false });
@@ -184,13 +238,11 @@ onBeforeUnmount(() => {
     view.value.destroy();
     view.value = null;
   }
-  // Remove touch event listeners
   if (editorRef.value) {
     editorRef.value.removeEventListener('touchstart', onTouchStart);
     editorRef.value.removeEventListener('touchmove', onTouchMove);
     editorRef.value.removeEventListener('touchend', onTouchEnd);
   }
-  // Clear debounce timeout if it exists
   if (debounceTimeout.value !== null) {
     clearTimeout(debounceTimeout.value);
   }
