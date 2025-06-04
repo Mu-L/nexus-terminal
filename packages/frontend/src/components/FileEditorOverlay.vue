@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import MonacoEditor from './MonacoEditor.vue';
+import CodeMirrorMobileEditor from './CodeMirrorMobileEditor.vue'; // +++ Import new mobile editor
 import FileEditorTabs from './FileEditorTabs.vue';
 import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useSettingsStore } from '../stores/settings.store';
@@ -575,9 +576,11 @@ onBeforeUnmount(() => {
       <div class="editor-content-area">
         <div v-if="currentTabIsLoading" class="editor-loading">{{ t('fileManager.loadingFile') }}</div>
         <div v-else-if="currentTabLoadingError" class="editor-error">{{ currentTabLoadingError }}</div>
+        
+        <!-- Desktop Editor -->
         <MonacoEditor
-          v-else-if="activeTab"
-          :key="activeTab.id"
+          v-else-if="activeTab && !props.isMobile"
+          :key="`monaco-${activeTab.id}`"
           v-model="activeEditorContent"
           :language="currentTabLanguage"
           :font-family="currentEditorFontFamily"
@@ -586,9 +589,18 @@ onBeforeUnmount(() => {
           :font-size="currentEditorFontSize"
           @request-save="handleSaveRequest"
           @update:fontSize="handleEditorFontSizeUpdate"
-         :initialScrollTop="activeTab?.scrollTop ?? 0"
-         :initialScrollLeft="activeTab?.scrollLeft ?? 0"
-         @update:scrollPosition="handleEditorScroll"
+          :initialScrollTop="activeTab?.scrollTop ?? 0"
+          :initialScrollLeft="activeTab?.scrollLeft ?? 0"
+          @update:scrollPosition="handleEditorScroll"
+        />
+        <!-- Mobile Editor -->
+        <CodeMirrorMobileEditor
+          v-else-if="activeTab && props.isMobile"
+          :key="`cm-${activeTab.id}`"
+          v-model="activeEditorContent"
+          :language="currentTabLanguage"
+          class="editor-instance"
+          @request-save="handleSaveRequest"
         />
          <!-- 如果容器可见但没有活动标签页 -->
         <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
