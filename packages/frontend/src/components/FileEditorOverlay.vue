@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import MonacoEditor from './MonacoEditor.vue';
+import CodeMirrorMobileEditor from './CodeMirrorMobileEditor.vue'; // +++ Import new mobile editor
 import FileEditorTabs from './FileEditorTabs.vue';
 import { useFileEditorStore, type FileTab } from '../stores/fileEditor.store';
 import { useSettingsStore } from '../stores/settings.store';
@@ -93,6 +94,7 @@ const startHeightPx = ref(0);
 const minWidth = 400; // 最小宽度
 const minHeight = 300; // 最小高度
 const encodingSelectRef = ref<HTMLSelectElement | null>(null); // +++ Ref for the select element +++
+const codeMirrorMobileEditorRef = ref<InstanceType<typeof CodeMirrorMobileEditor> | null>(null); // +++ Ref for CodeMirrorMobileEditor +++
 
 // --- 计算属性，用于模板绑定 ---
 const popupStyle = computed(() => {
@@ -337,7 +339,7 @@ const handleCloseTab = (tabId: string) => {
 const handleCloseOtherTabs = (targetTabId: string) => {
     console.log(`[FileEditorOverlay] handleCloseOtherTabs called for target: ${targetTabId}`); // Add log
     if (shareFileEditorTabsBoolean.value) {
-        closeOtherTabs(targetTabId); // 修正：调用正确的 action 名称
+        closeOtherTabs(targetTabId); 
     } else {
         const sessionId = popupFileInfo.value?.sessionId;
         if (sessionId) {
@@ -351,7 +353,7 @@ const handleCloseOtherTabs = (targetTabId: string) => {
 const handleCloseRightTabs = (targetTabId: string) => {
     console.log(`[FileEditorOverlay] handleCloseRightTabs called for target: ${targetTabId}`); // Add log
     if (shareFileEditorTabsBoolean.value) {
-        closeTabsToTheRight(targetTabId); // 修正：调用正确的 action 名称
+        closeTabsToTheRight(targetTabId); 
     } else {
         const sessionId = popupFileInfo.value?.sessionId;
         if (sessionId) {
@@ -421,20 +423,19 @@ const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scro
 const handleEditorFontSizeUpdate = (newSize: number) => {
     appearanceStore.setEditorFontSize(newSize);
 };
+
+// +++ 打开搜索面板 +++
+const handleOpenSearch = () => {
+  if (codeMirrorMobileEditorRef.value) {
+    codeMirrorMobileEditorRef.value.openSearch();
+  }
+};
  
 // 关闭弹窗 (保持不变)
 const handleCloseContainer = () => {
-    // 关闭前不再检查本地修改状态，因为没有本地状态了
-    // 如果需要检查 store 中 activeTab 的修改状态，可以在这里添加逻辑
-    // if (activeTab.value?.isModified) { ... }
     isVisible.value = false;
-    // 不需要重置本地状态了
 };
 
-// 最小化编辑器容器 (如果需要实现)
-// const handleMinimizeContainer = () => {
-//   setEditorVisibility('minimized');
-// };
 
 // --- 拖拽调整大小逻辑 ---
 const startResize = (event: MouseEvent) => {
@@ -478,20 +479,8 @@ watch(popupTrigger, () => {
     const { filePath, sessionId } = popupFileInfo.value;
     console.log(`[FileEditorOverlay] Triggered for file: ${filePath} in session: ${sessionId}`);
 
-    // 仅显示弹窗，激活逻辑由各自 store 的 openFile/openFileInSession 处理
-    // 或者由 handleActivateTab 处理用户点击
     isVisible.value = true;
 
-    // --- 确保激活状态正确 (重要) ---
-    // 在非共享模式下，FileManager 调用 openFileInSession 时会设置会话内的 activeTabId。
-    // 在共享模式下，FileManager 调用 openFile 时会设置全局的 activeTabId。
-    // 这里不再需要强制调用 setActiveTab，因为触发弹窗时，对应的 store 应该已经处理了激活。
-    // 如果发现激活不正确，问题可能在 FileManager 或对应的 store action 中。
-
-    // 检查激活状态 (调试用)
-    // nextTick(() => { // 确保在 DOM 更新后检查
-    //     console.log(`[FileEditorOverlay] Popup shown. Current activeTabId: ${activeTabId.value}, Active Tab Object:`, activeTab.value);
-    // });
 
 });
 
@@ -500,7 +489,6 @@ watch(activeTab, () => {
     updateSelectWidth();
 }, { immediate: true }); // immediate: true ensures it runs on initial load too
 
-// +++ Watch for changes in the selected encoding to update width +++
 watch(currentSelectedEncoding, () => {
   updateSelectWidth();
 });
@@ -557,6 +545,15 @@ onBeforeUnmount(() => {
           <span v-if="currentTabSaveStatus === 'saving'" class="save-status saving">{{ t('fileManager.saving') }}...</span>
           <span v-if="currentTabSaveStatus === 'success'" class="save-status success">✅ {{ t('fileManager.saveSuccess') }}</span>
           <span v-if="currentTabSaveStatus === 'error'" class="save-status error">❌ {{ t('fileManager.saveError') }}: {{ currentTabSaveError }}</span>
+          <!-- +++ 移动端搜索按钮 (Font Awesome) +++ -->
+          <button
+            v-if="props.isMobile && activeTab && !currentTabIsLoading"
+            @click="handleOpenSearch"
+            class="search-btn"
+            :title="t('fileManager.actions.search', 'Search')"
+          >
+            <i class="fas fa-search"></i>
+          </button>
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab" class="save-btn">
             {{ t('fileManager.actions.save') }}
           </button>
@@ -575,9 +572,11 @@ onBeforeUnmount(() => {
       <div class="editor-content-area">
         <div v-if="currentTabIsLoading" class="editor-loading">{{ t('fileManager.loadingFile') }}</div>
         <div v-else-if="currentTabLoadingError" class="editor-error">{{ currentTabLoadingError }}</div>
+        
+        <!-- Desktop Editor -->
         <MonacoEditor
-          v-else-if="activeTab"
-          :key="activeTab.id"
+          v-else-if="activeTab && !props.isMobile"
+          :key="`monaco-${activeTab.id}`"
           v-model="activeEditorContent"
           :language="currentTabLanguage"
           :font-family="currentEditorFontFamily"
@@ -586,9 +585,19 @@ onBeforeUnmount(() => {
           :font-size="currentEditorFontSize"
           @request-save="handleSaveRequest"
           @update:fontSize="handleEditorFontSizeUpdate"
-         :initialScrollTop="activeTab?.scrollTop ?? 0"
-         :initialScrollLeft="activeTab?.scrollLeft ?? 0"
-         @update:scrollPosition="handleEditorScroll"
+          :initialScrollTop="activeTab?.scrollTop ?? 0"
+          :initialScrollLeft="activeTab?.scrollLeft ?? 0"
+          @update:scrollPosition="handleEditorScroll"
+        />
+        <!-- Mobile Editor -->
+        <CodeMirrorMobileEditor
+          v-else-if="activeTab && props.isMobile"
+          :key="`cm-${activeTab.id}`"
+          v-model="activeEditorContent"
+          :language="currentTabLanguage"
+          class="editor-instance"
+          @request-save="handleSaveRequest"
+          ref="codeMirrorMobileEditorRef"
         />
          <!-- 如果容器可见但没有活动标签页 -->
         <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
@@ -805,6 +814,29 @@ onBeforeUnmount(() => {
     background-color: #45a049;
 }
 
+.search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem; 
+  height: 1.75rem; 
+  background-color: transparent;
+  border: none;
+  border-radius: 0.25rem; 
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s; 
+  padding: 0; 
+  color: #ccc;
+}
+.search-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1); 
+  color: #f0f0f0; 
+}
+.search-btn i {
+  font-size: 1rem;
+  line-height: 1; 
+}
+
 .save-status {
     font-size: 0.9em;
     padding: 0.2rem 0.5rem;
@@ -838,33 +870,7 @@ onBeforeUnmount(() => {
 }
 
 
-/* 最小化状态样式 (可选) */
-/*
-.editor-minimized-bar {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: #f0f0f0;
-    padding: 0.5rem 1rem;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    cursor: pointer;
-    z-index: 1001;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-.editor-minimized-bar button {
-    background: none;
-    border: none;
-    color: #ccc;
-    cursor: pointer;
-}
-*/
 
-/* +++ 编码选择器样式 (copied from FileEditorContainer) +++ */
 .encoding-select-wrapper {
   display: inline-block; /* 让 wrapper 包裹内容 */
   vertical-align: middle; /* 垂直居中对齐 */
@@ -879,7 +885,6 @@ onBeforeUnmount(() => {
   font-size: 0.85em;
   cursor: pointer;
   outline: none;
-  /* width: auto; */ /* JS will control width via style property */
 }
 
 .encoding-select:hover {

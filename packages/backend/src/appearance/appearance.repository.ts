@@ -55,6 +55,9 @@ let terminalTextStrokeEnabledFound = false;
             case 'editorFontSize':
                 settings.editorFontSize = parseInt(row.value, 10);
                 break;
+            case 'mobileEditorFontSize':
+                settings.mobileEditorFontSize = parseInt(row.value, 10);
+                break;
             case 'terminalBackgroundImage':
                 settings.terminalBackgroundImage = row.value || undefined;
                 break;
@@ -122,6 +125,7 @@ case 'terminalTextStrokeEnabled':
         terminalFontSize: settings.terminalFontSize ?? defaults.terminalFontSize,
         terminalFontSizeMobile: settings.terminalFontSizeMobile ?? defaults.terminalFontSizeMobile,
         editorFontSize: settings.editorFontSize ?? defaults.editorFontSize,
+        mobileEditorFontSize: settings.mobileEditorFontSize ?? defaults.mobileEditorFontSize, 
         editorFontFamily: settings.editorFontFamily ?? defaults.editorFontFamily,
         terminalBackgroundImage: settings.terminalBackgroundImage ?? defaults.terminalBackgroundImage,
         pageBackgroundImage: settings.pageBackgroundImage ?? defaults.pageBackgroundImage,
@@ -172,6 +176,7 @@ const getDefaultAppearanceSettings = (): Omit<AppearanceSettings, '_id'> => {
         terminalFontSize: 14,
         terminalFontSizeMobile: 14, // 移动端默认字体大小
         editorFontSize: 14,
+        mobileEditorFontSize: 16, //移动端编辑器默认字体大小
         editorFontFamily: 'Consolas, "Noto Sans SC", "Microsoft YaHei"',
         terminalBackgroundImage: undefined,
         pageBackgroundImage: undefined,
@@ -213,6 +218,7 @@ export const ensureDefaultSettingsExist = async (db: sqlite3.Database): Promise<
         { key: 'terminalFontSize', value: defaults.terminalFontSize },
         { key: 'terminalFontSizeMobile', value: defaults.terminalFontSizeMobile },
         { key: 'editorFontSize', value: defaults.editorFontSize },
+        { key: 'mobileEditorFontSize', value: defaults.mobileEditorFontSize }, 
         { key: 'editorFontFamily', value: defaults.editorFontFamily },
         { key: 'terminalBackgroundImage', value: defaults.terminalBackgroundImage ?? '' }, // 数据库中使用空字符串
         { key: 'pageBackgroundImage', value: defaults.pageBackgroundImage ?? '' }, // 数据库中使用空字符串

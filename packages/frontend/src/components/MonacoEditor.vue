@@ -29,7 +29,7 @@ const props = defineProps({
     type: String,
     default: 'Consolas, "Courier New", monospace',
   },
-  fontSize: { // 新增 prop
+  fontSize: { 
     type: Number,
     default: 14, // 默认字体大小
   },
