@@ -22,7 +22,7 @@ import {
     SshUnmarkedForSuspendAck,      
     ClientState
 } from './types';
-import { SshSuspendService } from '../services/ssh-suspend.service';
+import { SshSuspendService } from '../ssh-suspend/ssh-suspend.service';
 import { SftpService } from '../sftp/sftp.service';
 import { cleanupClientConnection } from './utils';
 import { clientStates } from './state';
