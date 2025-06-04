@@ -220,3 +220,7 @@ button:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
+/* 当鼠标悬停在按钮上时，鼠标指针变为手型 */
+button:hover {
+  cursor: pointer;
+}
