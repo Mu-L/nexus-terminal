@@ -1,13 +1,17 @@
 <template>
-  <div ref="editorRef" class="codemirror-mobile-editor-container" :style="{ fontSize: currentFontSize + 'px' }"></div>
+  <div ref="editorRef" class="codemirror-mobile-editor-container" :style="{ fontSize: currentFontSize + 'px', fontFamily: editorFontFamily }"></div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, shallowRef, computed } from 'vue';
 import { EditorState, Compartment } from '@codemirror/state';
 import { useAppearanceStore } from '../stores/appearance.store';
-import { EditorView, keymap } from '@codemirror/view';
-import { basicSetup } from 'codemirror'; // Use basicSetup from the main 'codemirror' package
+import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightActiveLine, drawSelection, dropCursor } from '@codemirror/view'; 
+import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'; 
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
+import { history, historyKeymap, defaultKeymap } from '@codemirror/commands'; 
+import { autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { highlightSelectionMatches } from '@codemirror/search'; 
 
 const props = defineProps({
   modelValue: {
@@ -16,7 +20,7 @@ const props = defineProps({
   },
   language: {
     type: String,
-    default: 'plaintext', // Default to plaintext if no language is specified
+    default: 'plaintext', 
   },
 });
 
@@ -25,15 +29,15 @@ const emit = defineEmits(['update:modelValue', 'request-save']);
 const appearanceStore = useAppearanceStore();
 const editorRef = ref<HTMLDivElement | null>(null);
 const view = shallowRef<EditorView | null>(null);
-const languageCompartment = new Compartment(); // For dynamic language switching
-// Pinch to zoom state and handlers
-// Initialize with a default, will be overwritten by store value in onMounted
+const languageCompartment = new Compartment();
 const currentFontSize = ref(appearanceStore.currentMobileEditorFontSize);
 const MIN_FONT_SIZE = 8;
 const MAX_FONT_SIZE = 40;
 let lastPinchDistance = 0;
 const debounceTimeout = ref<number | null>(null);
 const DEBOUNCE_DELAY = 500; // 500ms 防抖延迟
+
+const editorFontFamily = computed(() => appearanceStore.currentEditorFontFamily);
 
 const getDistance = (touches: TouchList): number => {
   if (touches.length < 2) return 0;
@@ -75,7 +79,6 @@ const onTouchMove = (event: TouchEvent) => {
         
         if (Math.abs(currentFontSize.value - newFontSize) > 0.1) { // Only update if change is meaningful
             currentFontSize.value = newFontSize;
-            // Persist the new font size to the store with debounce
             debouncedSetMobileEditorFontSize(newFontSize);
         }
       }
@@ -93,21 +96,39 @@ const onTouchEnd = (event: TouchEvent) => {
     lastPinchDistance = 0;
   }
 };
-
 const createEditorState = (doc: string, languageExtension: any) => {
   return EditorState.create({
     doc,
     extensions: [
-      basicSetup, // Includes many common features like line numbers, history, default keymaps etc.
-      keymap.of([
-        { key: "Mod-s", run: () => { emit('request-save'); return true; } }
-      ]),
+      // Minimal set of extensions for testing highlighting
+      languageCompartment.of(languageExtension), // Crucial: applies the CSS language pack
+      // oneDark, // REMOVING oneDark theme
+      vscodeDark, // Use the pre-built vscodeDark theme
+      lineNumbers(), // RE-ADDING lineNumbers
+      history(), // RE-ADDING history
+      highlightActiveLineGutter(), // RE-ADDING highlightActiveLineGutter
+      foldGutter(), // RE-ADDING foldGutter
+      drawSelection(), // RE-ADDING drawSelection
+      dropCursor(), // RE-ADDING dropCursor
+      EditorState.allowMultipleSelections.of(true), // RE-ADDING allowMultipleSelections
+      indentOnInput(), // RE-ADDING indentOnInput
+      bracketMatching(), // RE-ADDING bracketMatching
+      highlightActiveLine(), // RE-ADDING highlightActiveLine
+      closeBrackets(), // RE-ADDING closeBrackets
+      autocompletion(), // RE-ADDING autocompletion
+      highlightSelectionMatches(), // RE-ADDING highlightSelectionMatches
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           emit('update:modelValue', update.state.doc.toString());
         }
       }),
-      languageCompartment.of(languageExtension), // Initial language
+      keymap.of([
+        ...closeBracketsKeymap, // RE-ADDING closeBracketsKeymap
+        ...defaultKeymap, // RE-ADDING defaultKeymap
+        ...historyKeymap, // RE-ADDING historyKeymap
+        ...foldKeymap, // RE-ADDING foldKeymap
+        { key: "Mod-s", run: () => { emit('request-save'); return true; } } // Optional: keep for testing save
+      ]),
     ],
   });
 };
@@ -118,8 +139,22 @@ const getLanguageExtension = async (lang: string) => {
     return javascript();
   }
   if (lang === 'css') {
-    const { css } = await import('@codemirror/lang-css');
-    return css();
+    try {
+      console.log('[CodeMirrorMobileEditor DEBUG] Attempting to import @codemirror/lang-css for language:', lang);
+      const cssModule = await import('@codemirror/lang-css');
+      console.log('[CodeMirrorMobileEditor DEBUG] @codemirror/lang-css imported:', cssModule);
+      if (cssModule && typeof cssModule.css === 'function') {
+        const cssExtension = cssModule.css();
+        console.log('[CodeMirrorMobileEditor DEBUG] CSS extension object created:', cssExtension);
+        return cssExtension;
+      } else {
+        console.error('[CodeMirrorMobileEditor DEBUG] @codemirror/lang-css module or css function is invalid. Module:', cssModule);
+        return [];
+      }
+    } catch (error) {
+      console.error('[CodeMirrorMobileEditor DEBUG] Error loading/initializing CSS language support:', error);
+      return [];
+    }
   }
   if (lang === 'html') {
     const { html } = await import('@codemirror/lang-html');
@@ -135,6 +170,7 @@ onMounted(async () => {
 
   if (editorRef.value) {
     const langExt = await getLanguageExtension(props.language);
+    console.log('[CodeMirrorMobileEditor DEBUG] onMounted - Initial language:', props.language, 'Fetched langExt:', langExt);
     const startState = createEditorState(props.modelValue, langExt);
     
     view.value = new EditorView({
@@ -177,6 +213,7 @@ watch(() => props.language, async (newLanguage, oldLanguage) => {
   if (view.value && newLanguage !== oldLanguage) {
     console.log(`Language changing from ${oldLanguage} to: ${newLanguage}.`);
     const langExt = await getLanguageExtension(newLanguage);
+    console.log(`[CodeMirrorMobileEditor DEBUG] watch props.language - New language: ${newLanguage}, Fetched langExt:`, langExt);
     view.value.dispatch({
       effects: languageCompartment.reconfigure(langExt)
     });
