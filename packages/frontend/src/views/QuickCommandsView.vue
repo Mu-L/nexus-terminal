@@ -575,11 +575,7 @@ const executeCommand = (cmd: QuickCommandFE) => {
     }
   });
 
-  if (undefinedVariables.length > 0) {
-    uiNotificationsStore.showWarning(
-      t('quickCommands.form.warningUndefinedVariables', { variables: undefinedVariables.join(', ') })
-    );
-  }
+
 
   // 4. 获取当前激活的 SSH 会话 ID
   const activeSessionId = sessionStore.activeSessionId;
