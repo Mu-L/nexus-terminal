@@ -3,8 +3,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, shallowRef } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, shallowRef, computed } from 'vue';
 import { EditorState, Compartment } from '@codemirror/state';
+import { useAppearanceStore } from '../stores/appearance.store';
 import { EditorView, keymap } from '@codemirror/view';
 import { basicSetup } from 'codemirror'; // Use basicSetup from the main 'codemirror' package
 
@@ -21,14 +22,18 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'request-save']);
 
+const appearanceStore = useAppearanceStore();
 const editorRef = ref<HTMLDivElement | null>(null);
 const view = shallowRef<EditorView | null>(null);
 const languageCompartment = new Compartment(); // For dynamic language switching
 // Pinch to zoom state and handlers
-const currentFontSize = ref(16); // Initial font size in pixels
+// Initialize with a default, will be overwritten by store value in onMounted
+const currentFontSize = ref(appearanceStore.currentMobileEditorFontSize);
 const MIN_FONT_SIZE = 8;
 const MAX_FONT_SIZE = 40;
 let lastPinchDistance = 0;
+const debounceTimeout = ref<number | null>(null);
+const DEBOUNCE_DELAY = 500; // 500ms 防抖延迟
 
 const getDistance = (touches: TouchList): number => {
   if (touches.length < 2) return 0;
@@ -49,6 +54,15 @@ const onTouchStart = (event: TouchEvent) => {
   }
 };
 
+const debouncedSetMobileEditorFontSize = (size: number) => {
+  if (debounceTimeout.value !== null) {
+    clearTimeout(debounceTimeout.value);
+  }
+  debounceTimeout.value = window.setTimeout(() => {
+    appearanceStore.setMobileEditorFontSize(size);
+  }, DEBOUNCE_DELAY);
+};
+
 const onTouchMove = (event: TouchEvent) => {
   if (editorRef.value && editorRef.value.contains(event.target as Node)) {
     if (event.touches.length === 2) {
@@ -60,7 +74,9 @@ const onTouchMove = (event: TouchEvent) => {
         newFontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newFontSize));
         
         if (Math.abs(currentFontSize.value - newFontSize) > 0.1) { // Only update if change is meaningful
-             currentFontSize.value = newFontSize;
+            currentFontSize.value = newFontSize;
+            // Persist the new font size to the store with debounce
+            debouncedSetMobileEditorFontSize(newFontSize);
         }
       }
       if (newPinchDistance > 0) {
@@ -114,6 +130,9 @@ const getLanguageExtension = async (lang: string) => {
 
 
 onMounted(async () => {
+  // Initialize font size from store
+  currentFontSize.value = appearanceStore.currentMobileEditorFontSize;
+
   if (editorRef.value) {
     const langExt = await getLanguageExtension(props.language);
     const startState = createEditorState(props.modelValue, langExt);
@@ -140,6 +159,10 @@ onBeforeUnmount(() => {
     editorRef.value.removeEventListener('touchmove', onTouchMove);
     editorRef.value.removeEventListener('touchend', onTouchEnd);
   }
+  // Clear debounce timeout if it exists
+  if (debounceTimeout.value !== null) {
+    clearTimeout(debounceTimeout.value);
+  }
 });
 
 watch(() => props.modelValue, (newValue) => {
@@ -157,6 +180,13 @@ watch(() => props.language, async (newLanguage, oldLanguage) => {
     view.value.dispatch({
       effects: languageCompartment.reconfigure(langExt)
     });
+  }
+});
+
+// Watch for changes from the store (e.g., if changed in settings panel)
+watch(() => appearanceStore.currentMobileEditorFontSize, (newSize) => {
+  if (newSize !== currentFontSize.value) {
+    currentFontSize.value = newSize;
   }
 });
 

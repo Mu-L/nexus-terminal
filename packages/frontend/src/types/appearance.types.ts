@@ -11,7 +11,8 @@ export interface AppearanceSettings {
   terminalFontSizeMobile?: number; // 移动端字体大小
   terminalBackgroundImage?: string;
   pageBackgroundImage?: string;
-  editorFontSize?: number;
+  editorFontSize?: number; // 桌面端编辑器字号
+  mobileEditorFontSize?: number; // 移动端编辑器字号
   editorFontFamily?: string | null; // Monaco Editor 字体偏好
   terminalBackgroundEnabled?: boolean; // 终端背景是否启用
   terminalBackgroundOverlayOpacity?: number; // 终端背景蒙版透明度 (0-1)

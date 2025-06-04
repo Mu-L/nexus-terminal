@@ -114,6 +114,16 @@ export const updateSettings = async (settingsDto: UpdateAppearanceDto): Promise<
       settingsDto.editorFontSize = size;
   }
 
+  // 验证 mobileEditorFontSize (如果提供了)
+  if (settingsDto.mobileEditorFontSize !== undefined && settingsDto.mobileEditorFontSize !== null) {
+      const size = Number(settingsDto.mobileEditorFontSize);
+      if (isNaN(size) || size <= 0) {
+          throw new Error(`无效的移动端编辑器字体大小: ${settingsDto.mobileEditorFontSize}。必须是一个正数。`);
+      }
+      // 确保类型正确传递给仓库层
+      settingsDto.mobileEditorFontSize = size;
+  }
+
   // 验证 editorFontFamily (如果提供了)
   if (settingsDto.hasOwnProperty('editorFontFamily')) {
     if (settingsDto.editorFontFamily === null) {
