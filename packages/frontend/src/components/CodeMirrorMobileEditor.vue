@@ -6,12 +6,12 @@
 import { ref, onMounted, onBeforeUnmount, watch, shallowRef, computed } from 'vue';
 import { EditorState, Compartment } from '@codemirror/state';
 import { useAppearanceStore } from '../stores/appearance.store';
-import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightActiveLine, drawSelection, dropCursor } from '@codemirror/view'; 
-import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'; 
+import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightActiveLine, drawSelection, dropCursor } from '@codemirror/view';
+import { syntaxHighlighting, defaultHighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language';
 import { vscodeDark } from '@uiw/codemirror-theme-vscode';
-import { history, historyKeymap, defaultKeymap } from '@codemirror/commands'; 
+import { history, historyKeymap, defaultKeymap } from '@codemirror/commands';
 import { autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import { highlightSelectionMatches } from '@codemirror/search'; 
+import { highlightSelectionMatches, searchKeymap, openSearchPanel } from '@codemirror/search'; // + Import search functionalities
 
 const props = defineProps({
   modelValue: {
@@ -121,11 +121,12 @@ const createEditorState = (doc: string, languageExtension: any) => {
         }
       }),
       keymap.of([
-        ...closeBracketsKeymap, 
+        ...closeBracketsKeymap,
         ...defaultKeymap,
         ...historyKeymap,
-        ...foldKeymap, 
-        { key: "Mod-s", run: () => { emit('request-save'); return true; } } 
+        ...foldKeymap,
+        ...searchKeymap, // + Add search keymap
+        { key: "Mod-s", run: () => { emit('request-save'); return true; } }
       ]),
     ],
   });
@@ -271,8 +272,15 @@ watch(() => appearanceStore.currentMobileEditorFontSize, (newSize) => {
   }
 });
 
+const openSearch = () => {
+  if (view.value) {
+    openSearchPanel(view.value);
+  }
+};
+
 defineExpose({
   focus: () => view.value?.focus(),
+  openSearch, // + Expose openSearch method
 });
 
 </script>

@@ -94,6 +94,7 @@ const startHeightPx = ref(0);
 const minWidth = 400; // 最小宽度
 const minHeight = 300; // 最小高度
 const encodingSelectRef = ref<HTMLSelectElement | null>(null); // +++ Ref for the select element +++
+const codeMirrorMobileEditorRef = ref<InstanceType<typeof CodeMirrorMobileEditor> | null>(null); // +++ Ref for CodeMirrorMobileEditor +++
 
 // --- 计算属性，用于模板绑定 ---
 const popupStyle = computed(() => {
@@ -422,6 +423,13 @@ const handleEditorScroll = ({ scrollTop, scrollLeft }: { scrollTop: number; scro
 const handleEditorFontSizeUpdate = (newSize: number) => {
     appearanceStore.setEditorFontSize(newSize);
 };
+
+// +++ 打开搜索面板 +++
+const handleOpenSearch = () => {
+  if (codeMirrorMobileEditorRef.value) {
+    codeMirrorMobileEditorRef.value.openSearch();
+  }
+};
  
 // 关闭弹窗 (保持不变)
 const handleCloseContainer = () => {
@@ -561,6 +569,17 @@ onBeforeUnmount(() => {
           <button @click="handleSaveRequest" :disabled="currentTabIsSaving || currentTabIsLoading || !!currentTabLoadingError || !activeTab" class="save-btn">
             {{ t('fileManager.actions.save') }}
           </button>
+          <!-- +++ 移动端搜索按钮 +++ -->
+          <button
+            v-if="props.isMobile && activeTab && !currentTabIsLoading"
+            @click="handleOpenSearch"
+            class="search-btn"
+            :title="t('fileManager.actions.search', 'Search')"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+            </svg>
+          </button>
 
           <button v-if="!props.isMobile" @click="handleCloseContainer" class="close-editor-btn" :title="t('fileManager.actions.closeEditor')">✖</button>
         </div>
@@ -601,6 +620,7 @@ onBeforeUnmount(() => {
           :language="currentTabLanguage"
           class="editor-instance"
           @request-save="handleSaveRequest"
+          ref="codeMirrorMobileEditorRef"
         />
          <!-- 如果容器可见但没有活动标签页 -->
         <div v-else class="editor-placeholder">{{ t('fileManager.selectFileToEdit') }}</div>
@@ -816,6 +836,27 @@ onBeforeUnmount(() => {
 .save-btn:hover:not(:disabled) {
     background-color: #45a049;
 }
+
+/* +++ 搜索按钮样式 +++ */
+.search-btn {
+  background-color: #555; /* 与其他按钮风格类似 */
+  color: white;
+  border: none;
+  padding: 0.4rem 0.6rem; /* 调整内边距以适应图标 */
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.9em;
+  display: inline-flex; /* 使图标居中 */
+  align-items: center;
+  justify-content: center;
+}
+.search-btn:hover {
+  background-color: #666;
+}
+.search-btn svg {
+  pointer-events: none; /* 防止 SVG 捕获点击事件 */
+}
+
 
 .save-status {
     font-size: 0.9em;
