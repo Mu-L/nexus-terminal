@@ -140,19 +140,14 @@ const getLanguageExtension = async (lang: string) => {
   }
   if (lang === 'css') {
     try {
-      console.log('[CodeMirrorMobileEditor DEBUG] Attempting to import @codemirror/lang-css for language:', lang);
       const cssModule = await import('@codemirror/lang-css');
-      console.log('[CodeMirrorMobileEditor DEBUG] @codemirror/lang-css imported:', cssModule);
       if (cssModule && typeof cssModule.css === 'function') {
         const cssExtension = cssModule.css();
-        console.log('[CodeMirrorMobileEditor DEBUG] CSS extension object created:', cssExtension);
         return cssExtension;
       } else {
-        console.error('[CodeMirrorMobileEditor DEBUG] @codemirror/lang-css module or css function is invalid. Module:', cssModule);
         return [];
       }
     } catch (error) {
-      console.error('[CodeMirrorMobileEditor DEBUG] Error loading/initializing CSS language support:', error);
       return [];
     }
   }
@@ -211,16 +206,13 @@ watch(() => props.modelValue, (newValue) => {
 
 watch(() => props.language, async (newLanguage, oldLanguage) => {
   if (view.value && newLanguage !== oldLanguage) {
-    console.log(`Language changing from ${oldLanguage} to: ${newLanguage}.`);
     const langExt = await getLanguageExtension(newLanguage);
-    console.log(`[CodeMirrorMobileEditor DEBUG] watch props.language - New language: ${newLanguage}, Fetched langExt:`, langExt);
     view.value.dispatch({
       effects: languageCompartment.reconfigure(langExt)
     });
   }
 });
 
-// Watch for changes from the store (e.g., if changed in settings panel)
 watch(() => appearanceStore.currentMobileEditorFontSize, (newSize) => {
   if (newSize !== currentFontSize.value) {
     currentFontSize.value = newSize;
@@ -237,15 +229,15 @@ defineExpose({
 .codemirror-mobile-editor-container {
   width: 100%;
   height: 100%;
-  min-height: 200px; /* Adjust as needed for mobile */
+  min-height: 200px;
   text-align: left;
-  overflow: auto; /* Enable both horizontal and vertical scrolling */
+  overflow: auto;
 }
 
 .codemirror-mobile-editor-container :deep(.cm-gutters) {
-  background-color: #1E1E1E !important; /* Match typical dark editor background */
-  color: #858585 !important; /* Ensure line numbers are visible */
-  border-right: 1px solid var(--border-color, #cccccc) !important; /* Use theme border color */
+  background-color: #1E1E1E !important;
+  color: #858585 !important;
+  border-right: 1px solid var(--border-color, #cccccc) !important;
 }
 
 .codemirror-mobile-editor-container :deep(.cm-selectionBackground) {
