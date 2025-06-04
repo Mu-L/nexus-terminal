@@ -231,7 +231,7 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
         const allSshKeys = includeSshKeys ? await getAllDecryptedSshKeys() : [];
 
         const tagsMap = new Map(allTags.map(tag => [tag.id, tag.name]));
-        const sshKeysMap = new Map(allSshKeys.map(key => [key.id, key.name]));
+        const fullSshKeysMap = new Map(allSshKeys.map(key => [key.id, key])); // Store full key details, not just name
 
         const scriptLines: string[] = [];
 
@@ -247,14 +247,17 @@ export const exportConnectionsAsEncryptedZip = async (includeSshKeys: boolean = 
                 if (conn.auth_method === 'password' && conn.password) {
                     line += ` -p ${escapeCliArgument(conn.password)}`;
                 } else if (conn.auth_method === 'key') {
-                    // PlaintextExportConnectionData now includes ssh_key_id
-                    if (conn.ssh_key_id && sshKeysMap.has(conn.ssh_key_id)) {
-                        line += ` -k ${escapeCliArgument(sshKeysMap.get(conn.ssh_key_id)!)}`;
-                        // Passphrase for named key is not directly supported in simple script line.
-                        // It's assumed the key is usable or passphrase handled by agent.
+                    if (conn.ssh_key_id && fullSshKeysMap.has(conn.ssh_key_id)) {
+                        const referencedKey = fullSshKeysMap.get(conn.ssh_key_id)!;
+                        line += ` -k ${escapeCliArgument(referencedKey.name!)}`;
+                        if (referencedKey.passphrase) {
+                            line += ` -passphrase ${escapeCliArgument(referencedKey.passphrase)}`;
+                        }
                     } else if (conn.private_key) {
-                        // This case (direct private key without a named ref) is not cleanly exportable to the simple script.
-                        console.warn(`Connection ${conn.name} uses an SSH key by content, which cannot be directly represented by '-k <keyname>' in script export.`);
+                        console.warn(`Connection ${conn.name} uses an SSH key by content (not by reference), which cannot be directly represented by '-k <keyname>' in script export.`);
+                        if (conn.passphrase) {
+                            console.warn(`The passphrase for the direct SSH key of connection ${conn.name} (from connections table) is also not exported as direct key content export is not supported.`);
+                        }
                     }
                 }
             } else if ((conn.type === 'RDP' || conn.type === 'VNC') && conn.password) {
