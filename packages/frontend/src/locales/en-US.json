@@ -163,7 +163,15 @@
     "textShadowOffsetY": "Shadow Y Offset (px)",
     "textShadowBlur": "Shadow Blur Radius (px)",
     "textShadowColor": "Shadow Color",
-    "saveShadowSettings": "Save Shadow Settings"
+    "saveShadowSettings": "Save Shadow Settings",
+    "setActiveThemeSuccess": "Theme {themeName} applied successfully.",
+    "errorEditThemeNoId": "Error editing theme: Theme has no ID.",
+    "errorLoadThemeDataFailed": "Failed to load theme data.",
+    "errorEditThemeFailed": "Failed to edit theme.",
+    "errorJsonSyntax": "JSON Syntax Error",
+    "noThemeSelected": "No theme selected",
+    "unknownTheme": "Unknown theme",
+    "noThemesFound": "No matching themes found"
   },
   "login": {
     "title": "User Login",

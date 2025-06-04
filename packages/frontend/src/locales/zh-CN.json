@@ -164,7 +164,15 @@
     "textShadowOffsetY": "阴影 Y 偏移 (px)",
     "textShadowBlur": "阴影模糊半径 (px)",
     "textShadowColor": "阴影颜色",
-    "saveShadowSettings": "保存阴影设置"
+    "saveShadowSettings": "保存阴影设置",
+    "setActiveThemeSuccess": "主题 {themeName} 已成功应用。",
+    "errorEditThemeNoId": "编辑主题错误：主题没有 ID。",
+    "errorLoadThemeDataFailed": "加载主题数据失败。",
+    "errorEditThemeFailed": "编辑主题失败。",
+    "errorJsonSyntax": "JSON 语法错误",
+    "noThemeSelected": "未选择主题",
+    "unknownTheme": "未知主题",
+    "noThemesFound": "未找到匹配的主题"
   },
   "login": {
     "title": "用户登录",

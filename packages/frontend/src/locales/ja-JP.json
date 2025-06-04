@@ -1367,10 +1367,17 @@
     "textShadowOffsetY": "影の Y オフセット (px)",
     "textShadowBlur": "影のぼかし半径 (px)",
     "textShadowColor": "影の色",
-    "saveShadowSettings": "影の設定を保存"
-
-      },
-      "tags": {
+    "saveShadowSettings": "影の設定を保存",
+    "setActiveThemeSuccess": "テーマ {themeName} が正常に適用されました。",
+    "errorEditThemeNoId": "テーマ編集エラー：テーマに ID がありません。",
+    "errorLoadThemeDataFailed": "テーマデータの読み込みに失敗しました。",
+    "errorEditThemeFailed": "テーマの編集に失敗しました。",
+    "errorJsonSyntax": "JSON 構文エラー",
+    "noThemeSelected": "テーマが選択されていません",
+    "unknownTheme": "不明なテーマ",
+    "noThemesFound": "一致するテーマが見つかりません"
+  },
+  "tags": {
         "addTag": "新しいタグを追加",
         "deleteTagGlobally": "このタグをグローバルに削除",
         "error": "タグリストのロードに失敗しました: {error}",
