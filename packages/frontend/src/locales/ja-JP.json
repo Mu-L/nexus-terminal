@@ -316,7 +316,10 @@
             "remove": "削除",
             "restart": "再起動",
             "start": "起動",
-            "stop": "停止"
+            "stop": "停止",
+            "enter": "入力",
+            "logs": "ログ"
+
         },
         "error": {
             "commandFailed": "リモートコマンド'{command}'の実行に失敗しました",

@@ -1391,7 +1391,9 @@
       "restart": "重启",
       "stop": "停止",
       "start": "启动",
-      "remove": "移除"
+      "remove": "移除",
+      "enter": "进入",
+      "logs": "日志"
     },
     "waitingForSsh": "等待 SSH 连接...",
     "stats": {

@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useSessionStore } from '../stores/session.store'; 
+import { useSessionStore } from '../stores/session.store';
 import { storeToRefs } from 'pinia';
+import { useWorkspaceEventEmitter } from '../composables/workspaceEvents';
 
 
 
 const { t } = useI18n();
 const sessionStore = useSessionStore();
 const { activeSession } = storeToRefs(sessionStore); // Get reactive active session
+const emitWorkspaceEvent = useWorkspaceEventEmitter();
 
 // --- Get Docker Manager Instance from Active Session ---
 const dockerManager = computed(() => activeSession.value?.dockerManager);
@@ -31,6 +33,20 @@ const sendDockerCommand = (containerId: string, command: 'start' | 'stop' | 'res
 
 const toggleExpand = (containerId: string) => {
   dockerManager.value?.toggleExpand(containerId);
+};
+
+const enterContainer = (containerId: string) => {
+  if (activeSession.value?.sessionId) {
+    const command = `docker exec -it ${containerId} sh\n`; // \n for auto-execution
+    emitWorkspaceEvent('terminal:sendCommand', { command, sessionId: activeSession.value.sessionId });
+  }
+};
+
+const viewContainerLogs = (containerId: string) => {
+  if (activeSession.value?.sessionId) {
+    const command = `docker logs --tail 1000 -f ${containerId}\n`; // \n for auto-execution
+    emitWorkspaceEvent('terminal:sendCommand', { command, sessionId: activeSession.value.sessionId });
+  }
 };
 
 // --- Removed internal state, methods (setupWsListeners, clearWsListeners, requestDockerStatus), watcher, and lifecycle hooks (onMounted, onUnmounted) ---
@@ -142,8 +158,14 @@ const toggleExpand = (containerId: string) => {
                   <button @click="sendDockerCommand(container.id, 'restart')" :title="t('dockerManager.action.restart')" class="text-text-secondary hover:text-blue-500 disabled:text-text-disabled disabled:cursor-not-allowed transition-colors duration-150 p-0.5 text-base" :disabled="container.State !== 'running'">
                      <i class="fas fa-sync-alt"></i>
                   </button>
-                   <button @click="sendDockerCommand(container.id, 'remove')" :title="t('dockerManager.action.remove')" class="text-text-secondary hover:text-red-500 disabled:text-text-disabled disabled:cursor-not-allowed transition-colors duration-150 p-0.5 text-base" :disabled="container.State === 'running'">
+                   <button @click="sendDockerCommand(container.id, 'remove')" :title="t('dockerManager.action.remove')" class="text-text-secondary hover:text-red-500 disabled:text-text-disabled disabled:cursor-not-allowed transition-colors duration-150 p-0.5 text-base" >
                      <i class="fas fa-trash-alt"></i>
+                  </button>
+                  <button @click="enterContainer(container.id)" :title="t('dockerManager.action.enter')" class="text-text-secondary hover:text-blue-400 transition-colors duration-150 p-0.5 text-base">
+                    <i class="fas fa-terminal"></i>
+                  </button>
+                  <button @click="viewContainerLogs(container.id)" :title="t('dockerManager.action.logs')" class="text-text-secondary hover:text-gray-400 transition-colors duration-150 p-0.5 text-base">
+                    <i class="fas fa-file-alt"></i>
                   </button>
                 </div>
               </td>

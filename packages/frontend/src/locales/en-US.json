@@ -1387,7 +1387,9 @@
       "restart": "Restart",
       "stop": "Stop",
       "start": "Start",
-      "remove": "Remove"
+      "remove": "Remove",
+      "enter": "Enter",
+      "logs": "Logs"
     },
     "waitingForSsh": "Waiting for SSH connection...",
     "stats": {
