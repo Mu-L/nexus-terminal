@@ -1,5 +1,5 @@
 <template>
-  <div ref="editorRef" class="codemirror-mobile-editor-container"></div>
+  <div ref="editorRef" class="codemirror-mobile-editor-container" :style="{ fontSize: currentFontSize + 'px' }"></div>
 </template>
 
 <script setup lang="ts">
@@ -24,6 +24,59 @@ const emit = defineEmits(['update:modelValue', 'request-save']);
 const editorRef = ref<HTMLDivElement | null>(null);
 const view = shallowRef<EditorView | null>(null);
 const languageCompartment = new Compartment(); // For dynamic language switching
+// Pinch to zoom state and handlers
+const currentFontSize = ref(16); // Initial font size in pixels
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 40;
+let lastPinchDistance = 0;
+
+const getDistance = (touches: TouchList): number => {
+  if (touches.length < 2) return 0;
+  const touch1 = touches[0];
+  const touch2 = touches[1];
+  return Math.sqrt(
+    Math.pow(touch2.pageX - touch1.pageX, 2) +
+    Math.pow(touch2.pageY - touch1.pageY, 2)
+  );
+};
+
+const onTouchStart = (event: TouchEvent) => {
+  if (editorRef.value && editorRef.value.contains(event.target as Node)) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      lastPinchDistance = getDistance(event.touches);
+    }
+  }
+};
+
+const onTouchMove = (event: TouchEvent) => {
+  if (editorRef.value && editorRef.value.contains(event.target as Node)) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      const newPinchDistance = getDistance(event.touches);
+      if (lastPinchDistance > 0 && newPinchDistance > 0) {
+        const scale = newPinchDistance / lastPinchDistance;
+        let newFontSize = currentFontSize.value * scale;
+        newFontSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newFontSize));
+        
+        if (Math.abs(currentFontSize.value - newFontSize) > 0.1) { // Only update if change is meaningful
+             currentFontSize.value = newFontSize;
+        }
+      }
+      if (newPinchDistance > 0) {
+        lastPinchDistance = newPinchDistance;
+      } else if (event.touches.length === 2) { // if newPinchDistance is 0 but still 2 touches, try to re-calculate
+        lastPinchDistance = getDistance(event.touches);
+      }
+    }
+  }
+};
+
+const onTouchEnd = (event: TouchEvent) => {
+  if (event.touches.length < 2) {
+    lastPinchDistance = 0;
+  }
+};
 
 const createEditorState = (doc: string, languageExtension: any) => {
   return EditorState.create({
@@ -69,6 +122,10 @@ onMounted(async () => {
       state: startState,
       parent: editorRef.value,
     });
+    // Add touch event listeners for pinch-to-zoom
+    editorRef.value.addEventListener('touchstart', onTouchStart, { passive: false });
+    editorRef.value.addEventListener('touchmove', onTouchMove, { passive: false });
+    editorRef.value.addEventListener('touchend', onTouchEnd, { passive: false });
   }
 });
 
@@ -76,6 +133,12 @@ onBeforeUnmount(() => {
   if (view.value) {
     view.value.destroy();
     view.value = null;
+  }
+  // Remove touch event listeners
+  if (editorRef.value) {
+    editorRef.value.removeEventListener('touchstart', onTouchStart);
+    editorRef.value.removeEventListener('touchmove', onTouchMove);
+    editorRef.value.removeEventListener('touchend', onTouchEnd);
   }
 });
 
