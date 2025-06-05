@@ -303,8 +303,29 @@ const setupInputListeners = () => {
              }
         };
         
-        // Listen for display focus to sync clipboard
+        // Listen for display focus to sync clipboard (Host -> RDP)
         displayEl.addEventListener('focus', trySyncClipboardOnDisplayFocus);
+
+        // Listen for clipboard data from RDP (RDP -> Host)
+        // @ts-ignore
+        guacClient.value.onclipboard = async (stream, mimetype) => {
+          if (mimetype === 'text/plain') {
+            // @ts-ignore
+            const reader = new Guacamole.StringReader(stream);
+            let text = '';
+            reader.ontext = (chunk: string) => {
+              text += chunk;
+            };
+            reader.onend = async () => {
+              try {
+                await navigator.clipboard.writeText(text);
+                console.log('[RemoteDesktopModal] Received clipboard from RDP and wrote to host:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+              } catch (err) {
+                console.warn('[RemoteDesktopModal] Could not write to host clipboard:', err);
+              }
+            };
+          }
+        };
 
     } catch (inputError) {
         console.error("Error setting up input listeners:", inputError); // 添加错误日志
@@ -338,6 +359,11 @@ const removeInputListeners = () => {
         mouse.value.onmouseup = null;
         mouse.value.onmousemove = null;
         mouse.value = null;
+    }
+    // 清理剪贴板监听器
+    if (guacClient.value) {
+        // @ts-ignore
+        guacClient.value.onclipboard = null;
     }
 };
 
