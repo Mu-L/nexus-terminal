@@ -441,7 +441,8 @@
       "copy": "Copy",
       "cut": "Cut",
       "paste": "Paste",
-      "openEditor": "Open Editor"
+      "openEditor": "Open Editor",
+      "copyPath": "Copy Path"
     },
 "contextMenu": {
       "compress": "Compress",
@@ -495,16 +496,18 @@
       "decompressErrorDetailed": "Decompression failed: {error}",
       "commandNotFoundCompress": "Command '{command}' not found on server, cannot complete compression.",
       "commandNotFoundDecompress": "Command '{command}' not found on server, cannot complete decompression.",
-      "genericCommandNotFound": "Command '{command}' not found on server, cannot complete '{operation}' operation."
+      "genericCommandNotFound": "Command '{command}' not found on server, cannot complete '{operation}' operation.",
+      "copyPathFailed": "Failed to copy path"
   },
   "notifications": {
-      "copySuccess": "Copy successful",
-      "moveSuccess": "Move successful",
-      "cdCommandSent": "CD command sent to terminal",
-      "compressSuccess": "Compressed {name} successfully",
-      "decompressSuccess": "Decompressed {name} successfully"
+    "copySuccess": "Copy successful",
+    "moveSuccess": "Move successful",
+    "cdCommandSent": "CD command sent to terminal",
+    "compressSuccess": "Compressed {name} successfully",
+    "decompressSuccess": "Decompressed {name} successfully",
+    "pathCopied": "Path copied to clipboard"
   },
-   "warnings": {
+  "warnings": {
         "moveSameDirectory": "Cannot cut and paste in the same directory."
     },
     "prompts": {

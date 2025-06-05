@@ -48,6 +48,7 @@ export interface UseFileManagerContextMenuOptions {
   // --- 压缩/解压回调 ---
   onCompressRequest: (items: FileListItem[], format: CompressFormat) => void; // +++ 压缩回调 +++
   onDecompressRequest: (item: FileListItem) => void; // +++ 解压回调 +++
+  onCopyPath?: (item: FileListItem) => void; // +++ 复制路径回调 +++
 }
 
 // 辅助函数：检查文件是否为支持的压缩格式
@@ -82,6 +83,7 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
     onDownloadDirectory, // +++ 解构文件夹下载回调 +++
     onCompressRequest, // +++ 解构压缩回调 +++
     onDecompressRequest, // +++ 解构解压回调 +++
+    onCopyPath, // +++ 解构复制路径回调 +++
   } = options;
 
   const contextMenuVisible = ref(false);
@@ -175,6 +177,10 @@ export function useFileManagerContextMenu(options: UseFileManagerContextMenuOpti
         if (targetItem.attrs.isDirectory) {
              menu.push({ label: t('fileManager.actions.paste'), action: onPaste, disabled: !(isConnected.value && isSftpReady.value) || !hasClipboardContent });
         }
+       // +++ 添加复制路径菜单项 +++
+       if (onCopyPath) {
+         menu.push({ label: t('fileManager.actions.copyPath', 'Copy Path'), action: () => onCopyPath(targetItem), disabled: !(isConnected.value && isSftpReady.value) });
+       }
 
         // --- 分隔符 (视觉) ---
         // The invalid object literal was here and is now removed.

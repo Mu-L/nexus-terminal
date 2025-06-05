@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, watchEffect, type PropType, readonly, defineExpose, shallowRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { storeToRefs } from 'pinia'; 
+import { storeToRefs } from 'pinia';
 import { createSftpActionsManager, type WebSocketDependencies } from '../composables/useSftpActions';
 import { useFileUploader } from '../composables/useFileUploader';
 import { useFileEditorStore, type FileInfo } from '../stores/fileEditor.store';
@@ -12,15 +12,16 @@ import { useFocusSwitcherStore } from '../stores/focusSwitcher.store';
 import { useFileManagerContextMenu, type ClipboardState, type CompressFormat } from '../composables/file-manager/useFileManagerContextMenu';
 import { useFileManagerSelection } from '../composables/file-manager/useFileManagerSelection';
 import { useFileManagerDragAndDrop } from '../composables/file-manager/useFileManagerDragAndDrop';
-import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation'; 
+import { useFileManagerKeyboardNavigation } from '../composables/file-manager/useFileManagerKeyboardNavigation';
 import FileUploadPopup from './FileUploadPopup.vue';
 import FileManagerContextMenu from './FileManagerContextMenu.vue';
-import FileManagerActionModal from './FileManagerActionModal.vue'; 
+import FileManagerActionModal from './FileManagerActionModal.vue';
 import type { FileListItem } from '../types/sftp.types';
 import type { WebSocketMessage } from '../types/websocket.types';
 import PathHistoryDropdown from './PathHistoryDropdown.vue';
 import { usePathHistoryStore } from '../stores/pathHistory.store';
-import FavoritePathsModal from './FavoritePathsModal.vue'; // +++ Import FavoritePathsModal +++
+import FavoritePathsModal from './FavoritePathsModal.vue';
+import { useUiNotificationsStore } from '../stores/uiNotifications.store';
 
 
 type SftpManagerInstance = ReturnType<typeof createSftpActionsManager>;
@@ -102,8 +103,9 @@ const fileEditorStore = useFileEditorStore(); // 实例化 File Editor Store
 const settingsStore = useSettingsStore(); // +++ 实例化 Settings Store +++
 const focusSwitcherStore = useFocusSwitcherStore(); // +++ 实例化焦点切换 Store +++
 const pathHistoryStore = usePathHistoryStore(); // +++ 实例化 PathHistoryStore +++
-
-// 从 Settings Store 获取共享设置
+const uiNotificationsStore = useUiNotificationsStore(); // +++ 实例化通知 store +++
+ 
+ // 从 Settings Store 获取共享设置
 const {
   shareFileEditorTabsBoolean,
   fileManagerRowSizeMultiplierNumber, // +++ 获取行大小 getter +++
@@ -118,8 +120,6 @@ const {
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const sortKey = ref<keyof FileListItem | 'type' | 'size' | 'mtime'>('filename');
 const sortDirection = ref<'asc' | 'desc'>('asc');
-// const initialLoadDone = ref(false); // 状态移至 SFTP Manager
-// const isFetchingInitialPath = ref(false); // 通过 isLoading 和 !initialLoadDone 推断
 const isEditingPath = ref(false);
 const searchQuery = ref(''); // 搜索查询 ref
 const isMultiSelectMode = ref(false); // 多选模式状态 (主要用于移动端)
@@ -129,7 +129,6 @@ const pathInputRef = ref<HTMLInputElement | null>(null);
 const editablePath = ref('');
 const fileListContainerRef = ref<HTMLDivElement | null>(null); // 文件列表容器引用
 const dropOverlayRef = ref<HTMLDivElement | null>(null); // +++ 拖拽蒙版引用 +++
-// const scrollIntervalId = ref<number | null>(null); // 已移至 useFileManagerDragAndDrop
 
 // +++ Favorite Paths Modal State +++
 const showFavoritePathsModal = ref(false);
@@ -172,10 +171,8 @@ const startX = ref(0);
 const startWidth = ref(0);
 
 // --- 辅助函数 ---
-// 重新添加 generateRequestId，因为 watchEffect 中需要它
 const generateRequestId = (): string => `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-// joinPath 由 props.sftpManager 提供
-// sortFiles 在此组件内部用于排序显示
+
 
 // UI 格式化函数保持不变
 const formatSize = (size: number): string => {
@@ -896,6 +893,22 @@ const handleDecompress = (item: FileListItem) => {
 };
 
 
+// +++ 复制路径到剪贴板 +++
+const handleCopyPath = async (item: FileListItem) => {
+  if (!currentSftpManager.value) return;
+  const fullPath = currentSftpManager.value.joinPath(currentSftpManager.value.currentPath.value, item.filename);
+  try {
+    await navigator.clipboard.writeText(fullPath);
+    // 可选：显示成功通知
+    console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Copied path to clipboard: ${fullPath}`);
+    uiNotificationsStore.showSuccess(t('fileManager.notifications.pathCopied', 'Path copied to clipboard'));
+  } catch (err) {
+    console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Failed to copy path: `, err);
+    // 可选：显示错误通知
+    uiNotificationsStore.showError(t('fileManager.errors.copyPathFailed', 'Failed to copy path'));
+  }
+};
+
 // --- 上下文菜单逻辑 (使用 Composable, 需要 Selection 和 Action Handlers) ---
 const {
   contextMenuVisible,
@@ -936,6 +949,7 @@ const {
   // +++ 传递压缩/解压回调 +++
   onCompressRequest: handleCompress,
   onDecompressRequest: handleDecompress,
+  onCopyPath: handleCopyPath, // +++ 传递复制路径回调 +++
 });
 
 // --- 目录加载与导航 ---
@@ -1198,17 +1212,10 @@ watch(() => props.sessionId, (newSessionId, oldSessionId) => {
         isEditingPath.value = false;
         sortKey.value = 'filename'; // 重置排序
         sortDirection.value = 'asc';
-        // initialLoadDone.value = false; // 移除本地状态重置
-        // isFetchingInitialPath.value = false; // 移除本地状态重置
-
-        // 3. 触发新会话的初始路径加载 (watchEffect 会处理)
-        // watchEffect 会在 currentSftpManager.value 改变后重新运行
-        // 并检查新 manager 的状态来决定是否加载初始路径
     }
 }, { immediate: false }); // immediate: false 避免初始挂载时触发
 
 
-// onBeforeUnmount 中 cleanupSftpHandlers 的调用已移至新的 onBeforeUnmount 逻辑中
 
 // +++ 注册/注销自定义聚焦动作 +++
 let unregisterSearchFocusAction: (() => void) | null = null; // 搜索框注销函数
@@ -1234,9 +1241,6 @@ onMounted(() => {
        console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Executing path edit focus action for active session.`);
        // startPathEdit 本身不是 async，但注册时需要包装成 async 以匹配类型
        startPathEdit(); // 调用暴露的方法
-       // 假设 startPathEdit 总是尝试聚焦，这里返回 true 表示已尝试
-       // 注意：startPathEdit 内部没有返回成功与否，这里乐观返回 true
-       // 如果需要更精确，startPathEdit 需要返回 boolean
        return true;
      } else {
        console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Path edit focus action skipped for inactive session.`);
@@ -1262,9 +1266,6 @@ onBeforeUnmount(() => {
  }
  unregisterPathFocusAction = null;
  document.removeEventListener('click', handleClickOutsidePathInput);
- // // 调用注入的 SFTP 管理器提供的清理函数 (移除，由 store 处理)
- // cleanupSftpHandlers();
- // 调用 store 的清理方法
  sessionStore.removeSftpManager(props.sessionId, props.instanceId);
 });
 
@@ -1275,7 +1276,6 @@ watch(showExternalDropOverlay, (isVisible) => {
       if (dropOverlayRef.value && fileListContainerRef.value) {
         const scrollHeight = fileListContainerRef.value.scrollHeight;
         dropOverlayRef.value.style.height = `${scrollHeight}px`;
-        // console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Overlay shown. Setting height to scrollHeight: ${scrollHeight}px`);
       }
     });
   } else {
@@ -1458,8 +1458,6 @@ const handlePathInput = async (event?: Event | FocusEvent) => {
       return;
     }
 
-    // If it's a blur event, and the dropdown is not the target, close dropdown.
-    // The timeout ensures that a click on the dropdown item can be processed first.
     if (event && event.type === 'blur') {
       setTimeout(() => {
         const activeEl = document.activeElement;
@@ -1468,16 +1466,15 @@ const handlePathInput = async (event?: Event | FocusEvent) => {
           // Focus is within the dropdown, do nothing yet
           return;
         }
-        if (pathInputRef.value !== activeEl) { // Focus moved away from input and not into dropdown
-            isEditingPath.value = false; // Only set to false if focus truly left
+        if (pathInputRef.value !== activeEl) { 
+            isEditingPath.value = false;
             closePathHistory();
         }
-      }, 150); // Slightly longer delay to allow dropdown item click
-      return; // Don't navigate on blur, only close dropdown
+      }, 150); 
+      return; 
     }
 
-    // If it's an Enter key press not handled by keydown (e.g. from a button click if any)
-    // or if the function is called directly without an event.
+  
     if (!currentSftpManager.value) return;
 
     const newPath = editablePath.value.trim();
@@ -1505,19 +1502,12 @@ const cancelPathEdit = () => {
 const handleClickOutsidePathInput = (event: MouseEvent) => {
   if (pathInputWrapperRef.value && !pathInputWrapperRef.value.contains(event.target as Node)) {
     if (isEditingPath.value || showPathHistoryDropdown.value) {
-        // editablePath.value might be different from current manager path
-        // if user typed something and then clicked outside.
-        // Decide if we should commit or revert. For now, just close.
         isEditingPath.value = false;
         closePathHistory();
     }
   }
 };
 
-// 清除错误消息的函数 - 不再需要，错误由 UI 通知处理
-// const clearError = () => {
-//     clearSftpError();
-// };
 
 // --- 搜索框激活/取消逻辑 ---
 const activateSearch = () => {
@@ -1528,12 +1518,8 @@ const activateSearch = () => {
 };
 
 const deactivateSearch = () => {
-  // 延迟失活以允许点击内部元素（如果需要）
-  // setTimeout(() => {
-  //   if (!searchInputRef.value?.contains(document.activeElement)) { // 检查焦点是否还在输入框内
         isSearchActive.value = false;
-  //   }
-  // }, 100); // 100ms 延迟
+
 };
 
 const cancelSearch = () => {
@@ -1577,14 +1563,8 @@ const sendCdCommandToTerminal = () => {
     }
     // 使用 terminalManager 的 sendData 方法发送命令
     activeSession.terminalManager.sendData(command);
-    // 可选：添加 UI 通知
-    // import { useUiNotificationsStore } from '../stores/uiNotifications.store'; // 需要导入
-    // const uiNotificationsStore = useUiNotificationsStore(); // 需要实例化
-    // uiNotificationsStore.addNotification({ message: t('fileManager.notifications.cdCommandSent', 'CD command sent to terminal.'), type: 'success', duration: 3000 });
   } catch (error) {
     console.error(`[FileManager ${props.sessionId}-${props.instanceId}] Failed to send command to terminal:`, error);
-    // 可选：添加 UI 通知
-    // uiNotificationsStore.addNotification({ message: t('fileManager.errors.sendCommandFailed', 'Failed to send command.'), type: 'error' });
   }
 };
 
@@ -1608,8 +1588,6 @@ const handleWheel = (event: WheelEvent) => {
         const newMultiplier = Math.max(0.5, Math.min(2, rowSizeMultiplier.value + delta));
         const oldMultiplier = rowSizeMultiplier.value;
         rowSizeMultiplier.value = parseFloat(newMultiplier.toFixed(2)); // 保留两位小数避免浮点数问题
-        // console.log(`Row size multiplier: ${rowSizeMultiplier.value}`); // 调试日志
-        // +++ 在行大小变化后保存设置 +++
         if (rowSizeMultiplier.value !== oldMultiplier) {
             // +++ 日志：记录触发保存 +++
             console.log(`[FileManager ${props.sessionId}-${props.instanceId}] handleWheel triggered saveLayoutSettings.`);
@@ -1656,8 +1634,6 @@ const handleOpenEditorClick = () => {
     return;
   }
   console.log(`[FileManager ${props.sessionId}-${props.instanceId}] Triggering popup editor directly.`);
-  // 暂时使用 triggerPopup，传递空字符串表示空编辑器
-  // 后续可能需要 fileEditorStore.triggerEmptyPopup(props.sessionId);
   fileEditorStore.triggerPopup('', props.sessionId); // 修复：传递空字符串而不是 null
  };
  
@@ -1670,8 +1646,6 @@ const handleOpenEditorClick = () => {
  const handleNavigateToPathFromFavorites = (path: string) => {
    if (currentSftpManager.value) {
      currentSftpManager.value.loadDirectory(path);
-     // Optionally, add to local path history if not already handled by the store/modal
-     // pathHistoryStore.addPath(path);
    }
    showFavoritePathsModal.value = false; // Close modal after navigation
  };

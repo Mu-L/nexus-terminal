@@ -441,7 +441,8 @@
       "copy": "复制",
       "cut": "剪切",
       "paste": "粘贴",
-      "openEditor": "打开编辑器"
+      "openEditor": "打开编辑器",
+      "copyPath": "复制路径"
     },
 "contextMenu": {
       "compress": "压缩",
@@ -495,14 +496,16 @@
       "decompressErrorDetailed": "解压失败: {error}",
       "commandNotFoundCompress": "服务器上缺少 '{command}' 命令，无法完成压缩操作。",
       "commandNotFoundDecompress": "服务器上缺少 '{command}' 命令，无法完成解压操作。",
-      "genericCommandNotFound": "服务器上缺少 '{command}' 命令，无法完成 '{operation}' 操作。"
+      "genericCommandNotFound": "服务器上缺少 '{command}' 命令，无法完成 '{operation}' 操作。",
+      "copyPathFailed": "复制路径失败"
   },
   "notifications": {
-      "copySuccess": "复制成功",
-      "moveSuccess": "移动成功",
-      "cdCommandSent": "CD 命令已发送到终端",
-      "compressSuccess": "压缩 {name} 成功",
-      "decompressSuccess": "解压 {name} 成功"
+    "copySuccess": "复制成功",
+    "moveSuccess": "移动成功",
+    "cdCommandSent": "CD 命令已发送到终端",
+    "compressSuccess": "压缩 {name} 成功",
+    "decompressSuccess": "解压 {name} 成功",
+    "pathCopied": "路径已复制到剪贴板"
   },
   "warnings": {
         "moveSameDirectory": "不能在同一目录下剪切和粘贴。"
